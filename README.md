@@ -14,6 +14,7 @@
 |---|---|
 | [docs/CONCEPT.md](docs/CONCEPT.md) | ゲームデザイン（ルール・ヒーロー・操作・逆転の仕組み） |
 | [docs/WORLD.md](docs/WORLD.md) | 世界観（都市・TaG・歴史・ヒーロー・マップ・アート） |
+| [docs/BEYOND.md](docs/BEYOND.md) | **現実のバスケを超える**：臨界コア／ケージ・アリーナ／三層リング／ストライク／降下式コート／タッグ交代 |
 | [docs/ABILITY_DESIGN.md](docs/ABILITY_DESIGN.md) | アビリティ×バスケの設計原則（ズレ／ギャザー制／コア場） |
 | [docs/ROSTER.md](docs/ROSTER.md) | 体格システムとヒーロー一覧（構想24体） |
 | [docs/WORLD_IDEAS.md](docs/WORLD_IDEAS.md) | 世界観の候補集（12案の比較） |
