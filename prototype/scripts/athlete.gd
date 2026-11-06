@@ -45,7 +45,9 @@ const STEAL_CD := 1.2
 const STEAL_RANGE := 1.8
 const DOWN_T := 1.2
 const STAGGER_T := 0.7
-const SHOT_METER_T := 0.55
+const SHOT_METER_T := 0.7
+const SHOT_AUTO_RELEASE := 1.3
+const ZONE_T := 2.0
 
 var game
 var team := 0
@@ -66,6 +68,10 @@ var yaw := 0.0
 var pitch := 0.0
 var dribble_t := 0.0
 var team_color := Color(0.2, 0.8, 0.9)
+var zone_t := 0.0  # 読み勝ちの後の「ゾーン」：速くなり、次のシュートが入りやすい
+var stagger_len := STAGGER_T
+var pretell := ""  # BOTの「構え」（弱いBOTは技の前に構えが見える）
+var pretell_t := 0.0
 
 # 意図（毎フレーム設定される）
 var i_move := Vector2.ZERO
@@ -151,7 +157,7 @@ func setup(p_game, p_team: int, p_human: bool, color: Color) -> void:
 	fm.size = Vector3(2.0, 2.3, 0.06)
 	field_mesh.mesh = fm
 	var fmat := StandardMaterial3D.new()
-	fmat.albedo_color = Color(1.0, 0.25, 0.2, 0.28)
+	fmat.albedo_color = Color(1.0, 0.25, 0.2, 0.16)
 	fmat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 	fmat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	fmat.cull_mode = BaseMaterial3D.CULL_DISABLED
@@ -270,12 +276,16 @@ func set_move_world(dir: Vector3, mag := 1.0) -> void:
 	i_move = Vector2(dir.dot(right_vec()), dir.dot(forward()))
 
 
+func _tps() -> bool:
+	return is_human and game != null and game.camera_tps
+
+
 func ball_hold_point() -> Vector3:
 	var bob := absf(sin(dribble_t * 7.5))
-	if is_human and camera:
+	if is_human and camera and not _tps():
 		var local := Vector3(0.24, -0.3 - (1.0 - bob) * 0.32, -0.62)
 		if state == S.SHOOT:
-			local = Vector3(0.0, -0.12, -0.45)
+			local = Vector3(0.2, -0.3, -0.62)
 		var p := camera.global_transform * local
 		p.y = max(p.y, 0.13)
 		return p
@@ -288,7 +298,7 @@ func ball_hold_point() -> Vector3:
 
 func hand_reach_point() -> Vector3:
 	## ブロック判定用の手の位置（人間は視線の先、BOTは頭上前方）
-	if is_human and camera:
+	if is_human and camera and not _tps():
 		return eye_pos() + look_dir() * 0.55 + Vector3(0, 0.25, 0)
 	return global_position + Vector3(0, eye_height + 0.55, 0) + forward() * 0.3
 
@@ -299,6 +309,11 @@ func _physics_process(delta: float) -> void:
 		return
 	for k in cd.keys():
 		cd[k] = max(0.0, cd[k] - delta)
+	zone_t = max(0.0, zone_t - delta)
+	if pretell_t > 0.0:
+		pretell_t -= delta
+		if pretell_t <= 0.0:
+			pretell = ""
 	if is_human:
 		_read_human_input(delta)
 	elif brain:
@@ -331,6 +346,13 @@ func _read_human_input(delta: float) -> void:
 	yaw -= game.mouse_delta.x * 0.0028
 	pitch -= game.mouse_delta.y * 0.0028
 	game.mouse_delta = Vector2.ZERO
+	if state == S.SHOOT:
+		# シュートのロックオン：溜めている間、視点がリングへ吸い付く
+		var d: Vector3 = game.rim_center() - eye_pos()
+		var ty := atan2(-d.x, -d.z)
+		var tp := atan2(d.y, Vector2(d.x, d.z).length())
+		yaw = lerp_angle(yaw, ty, clamp(14.0 * delta, 0.0, 1.0))
+		pitch = lerp(pitch, tp, clamp(14.0 * delta, 0.0, 1.0))
 	pitch = clamp(pitch, -1.25, 1.25)
 	i_jump = Input.is_action_just_pressed("jump")
 	i_shoot_held = Input.is_action_pressed("shoot")
@@ -390,7 +412,7 @@ func _update_state(delta: float) -> void:
 			shoot_charge += delta / SHOT_METER_T
 			if role() != 1:
 				_enter(S.NORMAL)
-			elif not i_shoot_held or shoot_charge >= 1.45:
+			elif not i_shoot_held or shoot_charge >= SHOT_AUTO_RELEASE:
 				_release_shot()
 		S.DASH_START:
 			if state_t >= DASH_START_T:
@@ -456,7 +478,7 @@ func _update_state(delta: float) -> void:
 			if state_t >= DOWN_T:
 				_enter(S.NORMAL)
 		S.STAGGER:
-			if state_t >= STAGGER_T:
+			if state_t >= stagger_len:
 				_enter(S.NORMAL)
 		S.STEAL_RECOVER:
 			if state_t >= 0.45:
@@ -492,6 +514,8 @@ func _apply_movement(delta: float) -> void:
 				spd = CONTEST_MOVE_SPEED
 			elif state == S.STAGGER:
 				spd = 1.0
+			if zone_t > 0.0 and state != S.STAGGER:
+				spd *= 1.25
 			var wish := right_vec() * i_move.x + forward() * i_move.y
 			wish.y = 0
 			if wish.length() > 1.0:
@@ -505,7 +529,7 @@ func _apply_movement(delta: float) -> void:
 		velocity.y = 0
 	move_and_slide()
 	rotation.y = yaw
-	if camera:
+	if camera and not _tps():
 		camera.rotation.x = pitch
 
 
@@ -584,10 +608,11 @@ func knock_down(push: Vector3) -> void:
 	_tell("down")
 
 
-func stagger() -> void:
+func stagger(t := STAGGER_T) -> void:
 	if state == S.DOWN:
 		return
 	cd.contest = CONTEST_CD
+	stagger_len = t
 	_enter(S.STAGGER)
 
 
@@ -596,6 +621,8 @@ func reset_for_play(pos: Vector3, face: Vector3) -> void:
 	velocity = Vector3.ZERO
 	collision_mask = 11
 	_enter(S.NORMAL)
+	zone_t = 0.0
+	pretell = ""
 	var d := face - pos
 	yaw = atan2(-d.x, -d.z)
 	pitch = -0.08
@@ -629,6 +656,12 @@ func _update_visuals(_delta: float) -> void:
 			tell = Color(1, 1, 1)
 		S.CONTEST_START, S.CONTEST:
 			tell = Color(1.0, 0.2, 0.2)
+	if state == S.NORMAL and pretell == "tackle":
+		tell = Color(1.0, 0.45, 0.1)
+	elif state == S.NORMAL and pretell == "contest":
+		tell = Color(1.0, 0.2, 0.2)
+	elif zone_t > 0.0:
+		tell = Color(1.0, 0.85, 0.2)
 	ring1_mat.emission = tell
 	ring2_mat.emission = tell
 	ring1_mat.albedo_color = tell if r1_ready else Color(0.15, 0.15, 0.18)
@@ -638,13 +671,15 @@ func _update_visuals(_delta: float) -> void:
 	var tilt := 0.0
 	if state == S.TACKLE_START:
 		crouch = 0.82
+	elif state == S.NORMAL and pretell == "tackle":
+		crouch = 0.88
 	elif state == S.DOWN:
 		tilt = -1.35
 	elif state == S.STAGGER:
 		tilt = 0.25
 	pivot.scale.y = crouch
 	pivot.rotation.x = tilt
-	var up := state == S.CONTEST or state == S.CONTEST_START or (not is_on_floor() and role() != 1)
+	var up := state == S.CONTEST or state == S.CONTEST_START or (not is_on_floor() and role() != 1) or (state == S.NORMAL and pretell == "contest")
 	for h in [hand_l, hand_r]:
 		var rest: Vector3 = h.get_meta("rest")
 		if is_human:
@@ -653,10 +688,21 @@ func _update_visuals(_delta: float) -> void:
 		else:
 			h.position = rest + (Vector3(0, 1.15, -0.1) if up else Vector3.ZERO)
 	if camera:
+		var tps := _tps()
+		pivot.visible = tps
 		var target_y := eye_height
 		if state == S.DOWN:
 			target_y = 0.6
 		elif state == S.TACKLE_START:
 			target_y = eye_height - 0.25
-		camera.position.y = lerp(camera.position.y, target_y, 0.25)
-		camera.rotation.z = lerp(camera.rotation.z, 0.35 if state == S.DOWN else 0.0, 0.2)
+		if tps:
+			# 三人称：右肩の後ろ上から
+			camera.position = camera.position.lerp(Vector3(0.6, 2.4 if state != S.DOWN else 1.6, 3.3), 0.25)
+			camera.rotation.x = pitch - 0.2
+			for h in [hand_l, hand_r]:
+				h.visible = false
+		else:
+			camera.position = camera.position.lerp(Vector3(0, target_y, 0), 0.25)
+		camera.rotation.z = lerp(camera.rotation.z, 0.35 if state == S.DOWN and not tps else 0.0, 0.2)
+		var fov_target := 78.0 + (6.0 if zone_t > 0.0 else 0.0)
+		camera.fov = lerp(camera.fov, fov_target, 0.15)

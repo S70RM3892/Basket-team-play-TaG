@@ -11,12 +11,16 @@ const B = BallScript.B
 const RIM_Y := 3.05
 const RIM_Z := 1.575
 const SCALES := [1.0, 1.15, 1.3]
-const SKILLS := [0.4, 0.7, 1.0]
+const SKILLS := [0.2, 0.4, 0.7, 1.0]
+const SKILL_NAMES := ["練習", "ふつう", "強い", "鬼"]
 const TARGET_SCORE := 11
 const SHOT_CLOCK := 12.0
 
 var scale_idx := 1
 var skill_idx := 1
+var camera_tps := false
+var hitstop_until := 0
+var slowmo_until := 0
 var court_scale := 1.15
 var athletes: Array = []
 var human
@@ -43,6 +47,7 @@ var planned_pending: Array = []
 var snap_path := ""
 var snap_t := 0.0
 var snap_play := false
+var snap_demo := false
 var failed_makes: Array = []
 var st_list: Array = []
 var st_i := -1
@@ -61,6 +66,11 @@ func _ready() -> void:
 			snap_path = arg.substr(7)
 		if arg == "--snap-play":
 			snap_play = true
+		if arg == "--snap-tps":
+			camera_tps = true
+		if arg == "--snap-demo":
+			snap_play = true
+			snap_demo = true
 	if shottest:
 		autotest = true
 	_setup_input()
@@ -101,6 +111,7 @@ func _setup_input() -> void:
 	_act("menu_restart", [_btn(JOY_BUTTON_Y), _key(KEY_R)])
 	_act("menu_scale", [_btn(JOY_BUTTON_BACK), _key(KEY_C)])
 	_act("menu_skill", [_btn(JOY_BUTTON_X), _key(KEY_B)])
+	_act("menu_camera", [_btn(JOY_BUTTON_LEFT_SHOULDER), _key(KEY_V)])
 
 
 func _act(name: String, events: Array, deadzone := 0.2) -> void:
@@ -155,6 +166,8 @@ func _build_sfx() -> void:
 	sfx_bank["score"] = _tone(880.0, 0.35, 0.4, 0)
 	sfx_bank["win"] = _tone(660.0, 0.2, 0.45, 0)
 	sfx_bank["lose"] = _tone(180.0, 0.25, 0.45, 1)
+	sfx_bank["read"] = _tone(440.0, 0.45, 0.55, 3)
+	sfx_bank["perfect"] = _tone(1320.0, 0.18, 0.35, 0)
 	ui_sfx = AudioStreamPlayer.new()
 	add_child(ui_sfx)
 
@@ -179,6 +192,9 @@ func _tone(freq: float, dur: float, vol: float, kind: int) -> AudioStreamWAV:
 				s *= 0.6
 			2:
 				s = randf_range(-1.0, 1.0) * 0.8 + sin(TAU * phase) * 0.2
+			3:
+				var k: float = 1.0 + floor(t / dur * 4.0) * 0.26
+				s = sin(TAU * t * freq * k) * 0.6 + sin(TAU * t * freq * k * 1.5) * 0.3
 		data.encode_s16(i * 2, int(clamp(s * env * vol, -1.0, 1.0) * 32767.0))
 	var w := AudioStreamWAV.new()
 	w.format = AudioStreamWAV.FORMAT_16_BITS
@@ -433,7 +449,7 @@ func new_game() -> void:
 		"poss": [0, 0], "pts": [0, 0], "shots": [0, 0], "makes": [0, 0],
 		"tackle_beats_dash": 0, "tackle_hit": 0, "dash_beats_contest": 0, "dash_tie": 0, "dash_clear": 0,
 		"dodge_beats_tackle": 0, "dodge_read": 0, "open_shot": 0, "contested_shot": 0, "contact_shot": 0,
-		"steal": 0, "block": 0, "turnover": 0, "exp_makes": 0.0, "planned_makes": 0,
+		"steal": 0, "block": 0, "turnover": 0, "exp_makes": 0.0, "planned_makes": 0, "reads": [0, 0],
 	}
 	give_ball(0)
 
@@ -463,10 +479,22 @@ func team_name(t: int) -> String:
 
 # ───────── 進行 ─────────
 func _process(_delta: float) -> void:
+	if not autotest:
+		var now := Time.get_ticks_msec()
+		if now < hitstop_until:
+			Engine.time_scale = 0.05
+		elif now < slowmo_until:
+			Engine.time_scale = 0.4
+		else:
+			Engine.time_scale = 1.0
 	if snap_path != "":
 		snap_t += _delta
 		if snap_play and paused and snap_t > 0.3:
 			set_paused(false)
+		if snap_demo and snap_t > 1.9 and not Input.is_action_pressed("shoot"):
+			Input.action_press("shoot")
+		if snap_demo and snap_t > 2.25 and stats.reads[0] == 0:
+			on_read_win(human, bot, "かわし ＞ タックル")
 		if snap_t > 2.6:
 			get_viewport().get_texture().get_image().save_png(snap_path)
 			print("[snap] saved ", snap_path)
@@ -487,7 +515,9 @@ func _process(_delta: float) -> void:
 			new_game()
 		elif Input.is_action_just_pressed("menu_skill"):
 			skill_idx = (skill_idx + 1) % SKILLS.size()
-			bot.brain.skill = SKILLS[skill_idx]
+			new_game()
+		elif Input.is_action_just_pressed("menu_camera"):
+			camera_tps = not camera_tps
 	hud.refresh()
 
 
@@ -588,13 +618,32 @@ func _col(t: int) -> Color:
 
 
 # ───────── じゃんけんの結果 ─────────
+func on_read_win(w, l, rule: String) -> void:
+	## 読み勝ちのご褒美：ヒットストップ → スロー、画面のフラッシュ、勝った側は「ゾーン」
+	w.zone_t = AthleteScript.ZONE_T
+	stats.reads[w.team] += 1
+	if autotest:
+		return
+	var now := Time.get_ticks_msec()
+	hitstop_until = now + 90
+	slowmo_until = now + 90 + 380
+	if w.team == 0:
+		hud.big("読み勝ち！", rule, Color(0.35, 1.0, 0.95))
+		hud.flash(Color(0.4, 1.0, 0.95, 0.35))
+		play_ui("read")
+	else:
+		hud.big("読まれた…", rule, Color(1.0, 0.45, 0.4))
+		hud.flash(Color(1.0, 0.2, 0.2, 0.3))
+		play_ui("lose")
+
+
 func resolve_tackle(t, o) -> void:
 	if o.state == S.DODGE:
+		# かわし ＞ タックル：タックルした側は長く動けない
 		o.dodge_evaded = true
-		t.recover_len = AthleteScript.TACKLE_RECOVER_T + AthleteScript.TACKLE_WHIFF_EXTRA
+		t.recover_len = 1.0
 		stats.dodge_beats_tackle += 1
-		hud.popup("空振りさせた！  かわし ＞ タックル", _col(o.team))
-		play_ui("win" if o.team == 0 else "lose")
+		on_read_win(o, t, "かわし ＞ タックル")
 		return
 	if o.state == S.DOWN:
 		return
@@ -611,29 +660,29 @@ func resolve_tackle(t, o) -> void:
 	if had_ball and not was_dash:
 		# 突破していない相手へのタックルは「当たり負け」させるだけ（ボールは奪えない）
 		o.velocity += t.forward() * 2.5
-		o._enter(S.STAGGER)
-		o.state_t = AthleteScript.STAGGER_T - 0.35
+		o.stagger(0.35)
 		stats.tackle_hit += 1
 		hud.popup("当たっただけ（タックルは突破に刺す技）", Color(1, 1, 0.6))
 		return
 	o.knock_down(t.forward())
-	if had_ball:
-		ball.last_touch_team = o.team
-		ball.drop(t.forward() * 2.0)
-		stats.turnover += 1
 	stats.tackle_hit += 1
+	if had_ball:
+		# タックル ＞ 突破：ボールはそのままタックルした側のものになる
+		stats.turnover += 1
+		ball.last_touch_team = t.team
+		_pickup(t)
 	if was_dash:
 		stats.tackle_beats_dash += 1
-		hud.popup("タックル成功！  タックル ＞ 突破", _col(t.team))
+		on_read_win(t, o, "タックル ＞ 突破")
 	else:
 		hud.popup("タックル成功！", _col(t.team))
-	play_ui("win" if t.team == 0 else "lose")
 
 
 func on_dash_beats_contest(d, o) -> void:
+	# 突破 ＞ シュート妨害：妨害した側は1.2秒動けない
 	stats.dash_beats_contest += 1
-	hud.popup("抜き去り！  突破 ＞ シュート妨害", _col(d.team))
-	play_ui("win" if d.team == 0 else "lose")
+	o.stagger(1.2)
+	on_read_win(d, o, "突破 ＞ シュート妨害")
 
 
 func on_dash_end(d) -> void:
@@ -652,11 +701,17 @@ func on_dash_end(d) -> void:
 
 
 func on_dodge_read(d) -> void:
+	# 間合い ＞ かわし：我慢していた守備が、隙だらけのボールを自動で奪う
 	var o = opponent_of(d)
-	if (o.flat_pos() - d.flat_pos()).length() < 3.0 and ball.holder == d:
+	var dist: float = (o.flat_pos() - d.flat_pos()).length()
+	if ball.holder != d:
+		return
+	if dist < 2.2 and o.state == S.NORMAL:
 		stats.dodge_read += 1
-		hud.popup("見切られた…  間合い ＞ かわし", _col(o.team))
-		play_ui("lose" if d.team == 0 else "win")
+		on_read_win(o, d, "間合い ＞ かわし")
+		steal(o, d)
+	elif dist < 3.0:
+		hud.popup("かわしが空振り（相手は遠かった）", Color(1, 1, 0.6))
 
 
 func steal(a, h) -> void:
@@ -673,63 +728,82 @@ func on_shot_start(_a) -> void:
 	pass
 
 
+const GOOD_LO := 0.52
+const GOOD_HI := 0.94
+const PERFECT_LO := 0.68
+const PERFECT_HI := 0.80
+
+
 func timing_quality(c: float) -> float:
-	if c >= 0.70 and c <= 0.90:
+	if c >= PERFECT_LO and c <= PERFECT_HI:
+		return 1.12
+	if c >= GOOD_LO and c <= GOOD_HI:
 		return 1.0
-	if c < 0.70:
-		return lerp(0.5, 1.0, clamp(c / 0.70, 0.0, 1.0))
-	return clamp(lerp(1.0, 0.45, (c - 0.90) / 0.55), 0.4, 1.0)
+	if c < GOOD_LO:
+		return lerp(0.7, 1.0, clamp(c / GOOD_LO, 0.0, 1.0))
+	return clamp(lerp(1.0, 0.7, (c - GOOD_HI) / 0.36), 0.65, 1.0)
 
 
-func aim_factor(a) -> float:
-	if not a.is_human:
-		return randf_range(0.9, 1.0)
-	var to: Vector3 = (rim_center() + Vector3(0, 0.15, 0)) - a.eye_pos()
-	var ang := rad_to_deg(a.look_dir().angle_to(to))
-	if ang < 5.0:
-		return 1.0
-	if ang < 14.0:
-		return lerp(1.0, 0.6, (ang - 5.0) / 9.0)
-	return 0.3
-
-
-func release_shot(a, charge: float, contact: bool) -> void:
+func shot_chance(a, charge: float, contact: bool) -> Dictionary:
+	## シュートの成功率。照準はロックオンするので、腕前はタイミングと「どこで・誰に寄られて打つか」
 	var fp: Vector3 = a.flat_pos()
 	var dist := Vector2(fp.x - rim_floor().x, fp.z - rim_floor().z).length()
 	var nd := dist / court_scale
 	var base: float
 	if nd < 1.3:
-		base = 0.86
+		base = 0.92
 	elif nd < 6.75:
-		base = lerp(0.72, 0.56, (nd - 1.3) / 5.45)
+		base = lerp(0.78, 0.6, (nd - 1.3) / 5.45)
 	elif nd < 9.5:
-		base = lerp(0.5, 0.3, (nd - 6.75) / 2.75)
+		base = lerp(0.55, 0.35, (nd - 6.75) / 2.75)
 	else:
-		base = 0.08
+		base = 0.1
 	var q := timing_quality(charge)
-	var aim := aim_factor(a)
 	var cont := 1.0
-	var label := ""
+	var kind := ""
 	var o = opponent_of(a)
 	var od: float = (o.flat_pos() - fp).length()
 	var facing: float = o.forward().dot((fp - o.flat_pos()).normalized())
+	var o_active: bool = o.state != S.STAGGER and o.state != S.DOWN and o.state != S.TACKLE_RECOVER
 	if o.state == S.CONTEST and od < AthleteScript.CONTEST_RANGE and facing > 0.2:
-		cont = 0.35
-		label = "シュート妨害 ＞ シュート"
-		stats.contested_shot += 1
+		cont = 0.3
+		kind = "contested"
 	elif o.state == S.CONTEST_START and od < AthleteScript.CONTEST_RANGE:
 		cont = 0.6
+	elif not o_active or a.zone_t > 0.0:
+		cont = 1.0
+		kind = "free"
 	elif od < 1.1:
-		cont = 0.7
+		cont = 0.75
 	elif od < 1.8:
-		cont = 0.85
+		cont = 0.88
 	elif od < 2.3:
-		cont = 0.95
+		cont = 0.96
 	elif od < 5.0:
-		label = "ノーマーク！  シュート ＞ 間合い"
-		stats.open_shot += 1
+		kind = "open"
+	var zone := 1.15 if a.zone_t > 0.0 else 1.0
 	var contact_m := 0.55 if contact else 1.0
-	var p: float = clamp(base * q * aim * cont * contact_m, 0.02, 0.95)
+	var p: float = clamp(base * q * cont * contact_m * zone, 0.02, 0.97)
+	return {"p": p, "q": q, "cont": cont * contact_m, "kind": kind, "nd": nd, "zone": zone}
+
+
+func release_shot(a, charge: float, contact: bool) -> void:
+	var fp: Vector3 = a.flat_pos()
+	var sc := shot_chance(a, charge, contact)
+	var p: float = sc.p
+	var q: float = sc.q
+	var nd: float = sc.nd
+	var o = opponent_of(a)
+	var label := ""
+	if sc.kind == "contested":
+		stats.contested_shot += 1
+		on_read_win(o, a, "シュート妨害 ＞ シュート")
+	elif sc.kind == "open":
+		stats.open_shot += 1
+		label = "ノーマーク！  シュート ＞ 間合い"
+	if q > 1.05:
+		hud.popup("パーフェクト・リリース！", Color(1, 0.95, 0.4))
+		play_ui("perfect")
 	var make := randf() < p
 	var points := 2 if is_two_point(fp) else 1
 	var valid: bool = not (needs_clear and a.team == possession)
@@ -760,8 +834,10 @@ func release_shot(a, charge: float, contact: bool) -> void:
 	ball.shoot(from, v, a, points, valid)
 	shot_clock = SHOT_CLOCK
 	if label != "":
-		hud.popup(label, _col(o.team) if cont < 1.0 else _col(a.team))
-	hud.last_shot_info = "%s のシュート: 成功率 %d%%（タイミング %.2f / 照準 %.2f / 妨害 %.2f）" % [team_name(a.team), int(p * 100), q, aim, cont * contact_m]
+		hud.popup(label, _col(a.team))
+	if a.zone_t > 0.0:
+		a.zone_t = 0.0
+	hud.last_shot_info = "%s のシュート: 成功率 %d%%（タイミング %.2f / 妨害 %.2f / ゾーン %.2f）" % [team_name(a.team), int(p * 100), q, sc.cont, sc.zone]
 
 
 func _solve(from: Vector3, target: Vector3, angle_deg: float) -> Vector3:

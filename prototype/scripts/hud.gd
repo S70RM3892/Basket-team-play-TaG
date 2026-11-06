@@ -20,6 +20,11 @@ var meter_zone: ColorRect
 var cross: ColorRect
 var popups: VBoxContainer
 var last_shot_info := ""
+var meter_perfect: ColorRect
+var meter_pct: Label
+var flash_rect: ColorRect
+var big_l: Label
+var big_sub: Label
 
 
 func setup(p_game) -> void:
@@ -57,21 +62,48 @@ func setup(p_game) -> void:
 	meter_bg.color = Color(0, 0, 0, 0.55)
 	root.add_child(meter_bg)
 	_place(meter_bg, Control.PRESET_CENTER_BOTTOM, -160, -150, 160, -132)
+	var full: float = AthleteScript.SHOT_AUTO_RELEASE
 	meter_zone = ColorRect.new()
-	meter_zone.color = Color(0.2, 0.9, 0.4, 0.6)
-	meter_zone.position = Vector2(320 * 0.70 / 1.45, 0)
-	meter_zone.size = Vector2(320 * 0.20 / 1.45, 18)
+	meter_zone.color = Color(0.2, 0.9, 0.4, 0.55)
+	meter_zone.position = Vector2(320 * game.GOOD_LO / full, 0)
+	meter_zone.size = Vector2(320 * (game.GOOD_HI - game.GOOD_LO) / full, 18)
 	meter_bg.add_child(meter_zone)
+	meter_perfect = ColorRect.new()
+	meter_perfect.color = Color(1.0, 0.95, 0.4, 0.8)
+	meter_perfect.position = Vector2(320 * game.PERFECT_LO / full, 0)
+	meter_perfect.size = Vector2(320 * (game.PERFECT_HI - game.PERFECT_LO) / full, 18)
+	meter_bg.add_child(meter_perfect)
+	meter_pct = Label.new()
+	meter_pct.add_theme_font_size_override("font_size", 24)
+	meter_pct.add_theme_color_override("font_outline_color", Color(0, 0, 0))
+	meter_pct.add_theme_constant_override("outline_size", 6)
+	meter_pct.position = Vector2(0, -34)
+	meter_pct.size = Vector2(320, 30)
+	meter_pct.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	meter_bg.add_child(meter_pct)
 	meter_fill = ColorRect.new()
 	meter_fill.color = Color(1, 1, 1, 0.9)
 	meter_fill.size = Vector2(0, 18)
 	meter_bg.add_child(meter_fill)
 
+	flash_rect = ColorRect.new()
+	flash_rect.color = Color(1, 1, 1, 0)
+	flash_rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	root.add_child(flash_rect)
+	_place(flash_rect, Control.PRESET_FULL_RECT, 0, 0, 0, 0)
+	big_l = _label(64, HORIZONTAL_ALIGNMENT_CENTER)
+	_place(big_l, Control.PRESET_CENTER, -500, -235, 500, -155)
+	big_l.add_theme_constant_override("outline_size", 12)
+	big_l.modulate.a = 0.0
+	big_sub = _label(30, HORIZONTAL_ALIGNMENT_CENTER)
+	_place(big_sub, Control.PRESET_CENTER, -500, -155, 500, -115)
+	big_sub.modulate.a = 0.0
+
 	popups = VBoxContainer.new()
 	popups.alignment = BoxContainer.ALIGNMENT_END
 	popups.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	root.add_child(popups)
-	_place(popups, Control.PRESET_CENTER, -450, -190, 450, -60)
+	_place(popups, Control.PRESET_CENTER, -450, -112, 450, -14)
 
 	pause_panel = PanelContainer.new()
 	var sb := StyleBoxFlat.new()
@@ -135,6 +167,31 @@ func popup(text: String, c := Color.WHITE) -> void:
 	tw.tween_callback(l.queue_free)
 
 
+func flash(c: Color) -> void:
+	if game.autotest:
+		return
+	flash_rect.color = c
+	var tw := flash_rect.create_tween()
+	tw.set_ignore_time_scale(true)
+	tw.tween_property(flash_rect, "color:a", 0.0, 0.45)
+
+
+func big(text: String, sub: String, c: Color) -> void:
+	if game.autotest:
+		return
+	big_l.text = text
+	big_sub.text = sub
+	big_l.add_theme_color_override("font_color", c)
+	big_sub.add_theme_color_override("font_color", c.lightened(0.3))
+	for l in [big_l, big_sub]:
+		l.modulate.a = 1.0
+		l.scale = Vector2(1.0, 1.0)
+		var tw: Tween = l.create_tween()
+		tw.set_ignore_time_scale(true)
+		tw.tween_interval(0.9)
+		tw.tween_property(l, "modulate:a", 0.0, 0.4)
+
+
 func _cd_text(name: String, v: float) -> String:
 	return "%s 使用可" % name if v <= 0.0 else "%s %.1f秒" % [name, v]
 
@@ -163,7 +220,16 @@ func refresh() -> void:
 	var charging: bool = h.state == S.SHOOT
 	meter_bg.visible = charging
 	if charging:
-		meter_fill.size.x = clamp(h.shoot_charge / 1.45, 0.0, 1.0) * 320.0
+		meter_fill.size.x = clamp(h.shoot_charge / AthleteScript.SHOT_AUTO_RELEASE, 0.0, 1.0) * 320.0
+		var sc: Dictionary = game.shot_chance(h, h.shoot_charge, false)
+		var pct := int(sc.p * 100.0)
+		var note := ""
+		if sc.kind == "contested":
+			note = "  妨害されている！"
+		elif sc.kind == "free" or sc.kind == "open":
+			note = "  フリー"
+		meter_pct.text = "成功率 %d%%%s" % [pct, note]
+		meter_pct.add_theme_color_override("font_color", Color(0.4, 1.0, 0.5) if pct >= 50 else (Color(1, 0.9, 0.4) if pct >= 30 else Color(1, 0.4, 0.4)))
 	info_l.text = last_shot_info
 	pause_panel.visible = game.paused
 	if game.paused:
@@ -175,24 +241,27 @@ func refresh() -> void:
 
 func _pause_text() -> String:
 	var g = game
-	var head := "TaG プロトタイプ v0.1 ── 1on1 アビリティじゃんけん\n"
+	var head := "TaG プロトタイプ v0.2 ── 1on1 アビリティじゃんけん\n"
 	if g.game_over:
-		head = "試合終了  YOU %d - %d BOT\n" % [g.score[0], g.score[1]]
+		head = "試合終了  YOU %d - %d BOT     BOTのクセ: %s\n" % [g.score[0], g.score[1], g.bot.brain.habit_text()]
 	var t := head
-	t += "[A] %s   [Y] リスタート   [BACK] コート倍率 %.2fx   [X] BOT強さ %.1f\n\n" % ["新しい試合" if g.game_over else "プレイ", g.court_scale, g.SKILLS[g.skill_idx]]
+	t += "[A] %s  [Y] リスタート  [BACK] コート %.2fx  [X] BOT強さ: %s  [LB] カメラ: %s\n" % ["新しい試合" if g.game_over else "プレイ", g.court_scale, g.SKILL_NAMES[g.skill_idx], "三人称" if g.camera_tps else "一人称"]
+	t += "BOTには試合ごとに「好きな手（クセ）」がある。読んで裏をかけ。弱いBOTは技の前に「構え」が見える（橙＋しゃがむ＝タックル、赤＋手を上げる＝妨害）\n\n"
 	t += "■ 操作（コントローラー）\n"
 	t += "左スティック: 移動 ／ 右スティック: 視点 ／ A: ジャンプ（ブロック） ／ START: ポーズ\n"
-	t += "攻撃: RT（またはY）長押し→緑で離してシュート ／ LB: 突破 ／ RB: かわし\n"
+	t += "攻撃: RT（またはY）長押し→リングに自動で照準→緑（黄色ならパーフェクト）で離す ／ LB: 突破 ／ RB: かわし\n"
 	t += "守備: LB: タックル ／ RB長押し: シュート妨害 ／ X: スティール ／ B（またはLT）: 追走ステップ\n"
 	t += "（PC: WASD・マウス・左クリック=シュート・Q・E・F・Shift・Space・Esc）\n\n"
 	t += "■ じゃんけん\n"
 	t += "突破 ＞ シュート妨害 ／ シュート ＞ 間合い ／ かわし ＞ タックル\n"
 	t += "タックル ＞ 突破 ／ シュート妨害 ＞ シュート ／ 間合い ＞ かわし\n"
+	t += "読み勝つと: 相手が1秒以上動けなくなり、自分は2秒間「ゾーン」（速く、次のシュートが入りやすい）\n"
 	t += "相手の腰のリングが光っていればアビリティ使用可（上=LB系、下=RB系）\n"
 	t += "ルール: 3x3方式。アーク内1点・外2点。守備側がボールを取ったらアーク外へクリアしてから攻める\n\n"
 	t += "■ この試合の計測\n"
 	t += "YOU: 攻撃 %d回 / %d点 / 1回あたり %.2f点（シュート %d本・成功 %d）\n" % [g.stats.poss[0], g.stats.pts[0], g.ppp(0), g.stats.shots[0], g.stats.makes[0]]
 	t += "BOT: 攻撃 %d回 / %d点 / 1回あたり %.2f点（シュート %d本・成功 %d）\n" % [g.stats.poss[1], g.stats.pts[1], g.ppp(1), g.stats.shots[1], g.stats.makes[1]]
+	t += "読み勝ち YOU %d回 / BOT %d回\n" % [g.stats.reads[0], g.stats.reads[1]]
 	t += "タックル＞突破 %d ／ 突破＞妨害 %d ／ かわし＞タックル %d ／ 間合い＞かわし %d\n" % [g.stats.tackle_beats_dash, g.stats.dash_beats_contest, g.stats.dodge_beats_tackle, g.stats.dodge_read]
 	t += "ノーマーク %d ／ 妨害されたシュート %d ／ 当たられながら %d ／ スティール %d ／ ブロック %d" % [g.stats.open_shot, g.stats.contested_shot, g.stats.contact_shot, g.stats.steal, g.stats.block]
 	return t

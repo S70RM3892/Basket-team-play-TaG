@@ -1,5 +1,6 @@
 extends RefCounted
-## BOTの思考。じゃんけんの手を「混合戦略＋相手の状態への反応」で選ぶ。
+## BOTの思考。じゃんけんの手を「クセのある混合戦略＋相手の状態への反応」で選ぶ。
+## 読み合いが成り立つように、BOTは試合ごとに「好きな手（クセ）」を持ち、弱いBOTは技の前に「構え」が見える。
 
 const A = preload("res://scripts/athlete.gd")
 const BL = preload("res://scripts/ball.gd")
@@ -13,10 +14,35 @@ var contest_hold := 0.0
 var reacted_state := -1
 var reacted_owner_t := -1.0
 var queue: Array = []  # [{"t": float, "act": String}]
+var def_fav := "tackle"
+var off_fav := "dash"
+const DEF_NAMES := {"tackle": "タックル", "contest": "シュート妨害", "wait": "間合い（待つ）"}
+const OFF_NAMES := {"dash": "突破", "dodge": "かわし", "shoot": "シュート"}
 
 
 func _init(p_skill := 0.7) -> void:
 	skill = p_skill
+	def_fav = ["tackle", "contest", "wait"][randi() % 3]
+	off_fav = ["dash", "dodge", "shoot"][randi() % 3]
+
+
+func habit_text() -> String:
+	return "守備では「%s」、攻撃では「%s」が好き" % [DEF_NAMES[def_fav], OFF_NAMES[off_fav]]
+
+
+func pretell_time() -> float:
+	return max(0.0, 0.5 - skill * 0.65)
+
+
+func _commit(a, act: String) -> void:
+	## 守備の技を出す。弱いBOTほど「構え」が長く見える
+	var pt := pretell_time()
+	if pt <= 0.02:
+		_do(a, act)
+		return
+	a.pretell = act
+	a.pretell_t = pt
+	_schedule(act, pt)
 
 
 func _schedule(act: String, delay: float) -> void:
@@ -48,7 +74,7 @@ func _do(a, act: String) -> void:
 			if a.role() == 2 and a.cd.contest <= 0.0:
 				a.i_ab2 = true
 				a.i_ab2_held = true
-				contest_hold = randf_range(0.5, 0.9)
+				contest_hold = randf_range(0.6, 1.0)
 		"jump":
 			a.i_jump = true
 		"dodge":
@@ -60,7 +86,7 @@ func _do(a, act: String) -> void:
 
 
 func _react_delay() -> float:
-	return randf_range(0.22, 0.34) - skill * 0.06
+	return randf_range(0.25, 0.4) - skill * 0.08
 
 
 func think(a, delta: float) -> void:
@@ -109,7 +135,7 @@ func _offense(a, opp, rim: Vector3, delta: float) -> void:
 	# 反応：タックルの出始めを見てかわす（反応時間より発生が速いので、成功は一部だけ）
 	if opp.state == A.S.TACKLE_START and reacted_state != A.S.TACKLE_START:
 		reacted_state = A.S.TACKLE_START
-		if randf() < skill * 0.45:
+		if randf() < skill * 0.3:
 			_schedule("dodge", _react_delay() * 0.5)
 	elif opp.state != A.S.TACKLE_START:
 		reacted_state = -1
@@ -129,7 +155,8 @@ func _offense(a, opp, rim: Vector3, delta: float) -> void:
 		return
 	if not between:
 		return
-	var w := {"dash": 1.0, "dodge": 0.35, "shoot": 0.7 if nd < 7.5 else 0.15, "wait": 0.6}
+	var w := {"dash": 1.0, "dodge": 0.5, "shoot": 0.7 if nd < 7.5 else 0.15, "wait": 0.6}
+	w[off_fav] = float(w[off_fav]) * 2.5
 	if opp.state == A.S.CONTEST or opp.state == A.S.CONTEST_START:
 		w.dash = 3.0
 		w.shoot = 0.05
@@ -151,7 +178,7 @@ func _offense(a, opp, rim: Vector3, delta: float) -> void:
 
 func _start_shot(a) -> void:
 	shooting = true
-	release_at = clamp(0.8 + randfn(0.0, 0.16 * (1.2 - skill)), 0.45, 1.2)
+	release_at = clamp(0.74 + randfn(0.0, 0.22 * (1.15 - skill)), 0.35, 1.3)
 	a.i_shoot_held = true
 
 
@@ -171,12 +198,12 @@ func _defense(a, h, rim: Vector3, delta: float) -> void:
 		reacted_state = h.state
 		match h.state:
 			A.S.SHOOT:
-				if d < 2.6 and a.cd.contest <= 0.0 and randf() < 0.45 + skill * 0.3:
+				if d < 2.6 and a.cd.contest <= 0.0 and randf() < 0.05 + skill * 0.45:
 					_schedule("contest", _react_delay())
-				elif d < 1.9 and randf() < 0.15 + skill * 0.3:
+				elif d < 1.9 and randf() < 0.05 + skill * 0.25:
 					_schedule("jump", _react_delay() + 0.1)
 			A.S.DASH_START:
-				if d < 3.0 and randf() < skill * 0.5:
+				if d < 3.0 and randf() < skill * 0.35:
 					_schedule("tackle", _react_delay() * 0.6)
 			A.S.DODGE_RECOVER:
 				if d < 2.0:
@@ -188,13 +215,14 @@ func _defense(a, h, rim: Vector3, delta: float) -> void:
 			a.i_step = true
 			a.set_move_world(to_gp)
 
-	if a.state != A.S.NORMAL or d > 2.4:
+	if a.state != A.S.NORMAL or d > 2.4 or a.pretell != "":
 		return
 	think_t -= delta
 	if think_t > 0.0:
 		return
 	think_t = randf_range(0.4, 0.8) / (0.6 + skill * 0.6)
-	var w := {"tackle": 0.6, "contest": 0.6, "wait": 1.8, "steal": 0.25}
+	var w := {"tackle": 0.6, "contest": 0.6, "wait": 1.6, "steal": 0.2}
+	w[def_fav] = float(w[def_fav]) * 2.5
 	if a.cd.tackle > 0.0:
 		w.tackle = 0.0
 	if a.cd.contest > 0.0:
@@ -205,11 +233,9 @@ func _defense(a, h, rim: Vector3, delta: float) -> void:
 		w.contest *= 0.3
 	match _pick(w):
 		"tackle":
-			a.i_ab1 = true
+			_commit(a, "tackle")
 		"contest":
-			a.i_ab2 = true
-			a.i_ab2_held = true
-			contest_hold = randf_range(0.5, 0.9)
+			_commit(a, "contest")
 		"steal":
 			a.i_steal = true
 
