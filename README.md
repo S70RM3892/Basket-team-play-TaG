@@ -12,6 +12,7 @@
 
 | ドキュメント | 中身 |
 |---|---|
+| [prototype/](prototype/README.md) | **Godotのプロトタイプ v0.1**：1on1アビリティじゃんけん（コントローラー対応のAndroid APK） |
 | [docs/RULES_V1.md](docs/RULES_V1.md) | **最新の競技ルール**：攻守バランスの理論、アビリティじゃんけん、コートの決定 |
 | [docs/STRATEGY.md](docs/STRATEGY.md) | 勝ち筋の戦略：市場の現実、核を1つに絞る、規模の棚卸し |
 | [docs/ABILITY_DESIGN.md](docs/ABILITY_DESIGN.md) | アビリティ設計の原則（ズレ／ギャザー制／バスケの動作で対抗できる） |

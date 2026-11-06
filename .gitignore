@@ -13,3 +13,10 @@ Plugins/**/Intermediate/
 .vs/
 .vscode/
 .idea/
+
+# Godot
+.godot/
+build/
+*.apk
+*.idsig
+*.keystore
