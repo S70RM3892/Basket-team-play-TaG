@@ -14,5 +14,6 @@
 |---|---|
 | [docs/CONCEPT.md](docs/CONCEPT.md) | ゲームデザイン（ルール・ヒーロー・操作・逆転の仕組み） |
 | [docs/WORLD.md](docs/WORLD.md) | 世界観（都市・TaG・歴史・ヒーロー・マップ・アート） |
+| [docs/ROSTER.md](docs/ROSTER.md) | 体格システムとヒーロー一覧（構想24体） |
 | [docs/WORLD_IDEAS.md](docs/WORLD_IDEAS.md) | 世界観の候補集（12案の比較） |
 | [docs/TECH.md](docs/TECH.md) | UE5の技術設計（クラス構成・ボールの同期・P1のタスク） |
