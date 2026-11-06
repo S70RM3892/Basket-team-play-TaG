@@ -12,6 +12,7 @@
 
 | ドキュメント | 中身 |
 |---|---|
+| [docs/STRATEGY.md](docs/STRATEGY.md) | **勝ち筋の戦略**：なぜ覇権が見えないか、核を1つに絞る、規模の棚卸し（最優先で読む） |
 | [docs/CONCEPT.md](docs/CONCEPT.md) | ゲームデザイン（ルール・ヒーロー・操作・逆転の仕組み） |
 | [docs/WORLD.md](docs/WORLD.md) | 世界観（都市・TaG・歴史・ヒーロー・マップ・アート） |
 | [docs/BEYOND.md](docs/BEYOND.md) | **現実のバスケを超える**：臨界コア／ケージ・アリーナ／三層リング／ストライク／降下式コート／タッグ交代 |
