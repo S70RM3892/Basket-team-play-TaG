@@ -1,22 +1,23 @@
 # Basket Team-play TaG
 
-ロール制ヒーローFPS × バスケットボール。PC・一人称視点・Unreal Engine 5.8（構想段階）。
+**普通のバスケ ＋ アビリティじゃんけん**。PC・一人称視点・Unreal Engine 5.8（構想段階）。
 
 > 海に沈みかけた積層都市「ナギサ」では、バスケで電気をつくる。勝った地区に明かりが灯る。
 
-- 3on3「ストリート」と5on5「アリーナ」の2モード
-- シュート・パス・ブロック・スティールはすべて照準で狙う
-- キルなし：ダウンさせても、味方が触れれば即座に復帰（TaGの再同期）
-- 連携（チェイン／アシスト優遇／シンクロ技）が一番得をする設計
-- 最後までチャンスがある逆転の仕組み（クラッチタイム／オーバーコア）
+- 1対1の攻防は3すくみ：**突破・シュート・かわし** 対 **タックル・シュート妨害・間合い**
+- 理論値では攻めを少しだけ強くする。1対1より連携したほうが得をする数値設計
+- 普通のコート（バックボードあり）。3on3と5on5
+- シュート・パス・ブロック・スティールは照準で狙う
+- キルなし：ダウンさせても、味方が触れれば即座に復帰
 
 | ドキュメント | 中身 |
 |---|---|
-| [docs/STRATEGY.md](docs/STRATEGY.md) | **勝ち筋の戦略**：なぜ覇権が見えないか、核を1つに絞る、規模の棚卸し（最優先で読む） |
-| [docs/CONCEPT.md](docs/CONCEPT.md) | ゲームデザイン（ルール・ヒーロー・操作・逆転の仕組み） |
-| [docs/WORLD.md](docs/WORLD.md) | 世界観（都市・TaG・歴史・ヒーロー・マップ・アート） |
-| [docs/BEYOND.md](docs/BEYOND.md) | **現実のバスケを超える**：臨界コア／ケージ・アリーナ／三層リング／ストライク／降下式コート／タッグ交代 |
-| [docs/ABILITY_DESIGN.md](docs/ABILITY_DESIGN.md) | アビリティ×バスケの設計原則（ズレ／ギャザー制／コア場） |
+| [docs/RULES_V1.md](docs/RULES_V1.md) | **最新の競技ルール**：攻守バランスの理論、アビリティじゃんけん、コートの決定 |
+| [docs/STRATEGY.md](docs/STRATEGY.md) | 勝ち筋の戦略：市場の現実、核を1つに絞る、規模の棚卸し |
+| [docs/ABILITY_DESIGN.md](docs/ABILITY_DESIGN.md) | アビリティ設計の原則（ズレ／ギャザー制／バスケの動作で対抗できる） |
 | [docs/ROSTER.md](docs/ROSTER.md) | 体格システムとヒーロー一覧（構想24体） |
+| [docs/CONCEPT.md](docs/CONCEPT.md) | ゲームデザインの全体（古い記述はRULES_V1.mdが優先） |
+| [docs/WORLD.md](docs/WORLD.md) | 世界観（都市・TaG・住人の種類・ヒーロー・アート） |
+| [docs/TECH.md](docs/TECH.md) | UE5の技術設計 |
 | [docs/WORLD_IDEAS.md](docs/WORLD_IDEAS.md) | 世界観の候補集（12案の比較） |
-| [docs/TECH.md](docs/TECH.md) | UE5の技術設計（クラス構成・ボールの同期・P1のタスク） |
+| [docs/BEYOND.md](docs/BEYOND.md) | （廃案）現実のバスケを超えるルール案 |
