@@ -243,10 +243,10 @@ func refresh() -> void:
 
 func _pause_text() -> String:
 	var g = game
-	var t := "TaG プロトタイプ v0.3 ── 1on1 アビリティじゃんけん\n"
+	var t := "TaG プロトタイプ v0.4 ── 1on1 アビリティじゃんけん\n"
 	if g.game_over:
 		t = "試合終了  YOU %d - %d BOT     BOTのクセ: %s\n" % [g.score[0], g.score[1], g.bot.brain.habit_text()]
-	t += "[A] %s  [Y] リスタート  [BACK] コート %.2fx  [X] BOT: %s  [LB] カメラ: %s\n\n" % ["新しい試合" if g.game_over else "プレイ", g.court_scale, g.SKILL_NAMES[g.skill_idx], "三人称" if g.camera_tps else "一人称"]
+	t += "[A] %s  [Y] リスタート  [BACK] コート %.2fx  [X] BOT: %s  [LB] カメラ: %s  [RB] テンポ: %s\n\n" % ["新しい試合" if g.game_over else "プレイ", g.court_scale, g.SKILL_NAMES[g.skill_idx], "三人称" if g.camera_tps else "一人称", g.TEMPO_NAMES[g.tempo_idx]]
 	t += "■ シュート（RT長押し→リングに自動照準→緑で離す。黄色はパーフェクト）  ↑＝リングへ向かう ／ ↓＝リングから離れる\n"
 	t += "RT＝ジャンプショット ／ ↑+RT＝レイアップ（近い）・フローター（中距離） ／ ↓+RT＝ステップバック\n"
 	t += "A→空中で↓+RT＝フェイダウェイ（寄せとブロックに強い） ／ LB突破→RT＝ダンク（近い）・ユーロステップ\n\n"

@@ -4,29 +4,29 @@ extends CharacterBody3D
 
 enum S { NORMAL, DASH_START, DASH, DODGE_START, DODGE, DODGE_RECOVER, TACKLE_START, TACKLE, TACKLE_RECOVER, CONTEST_START, CONTEST, STEP, DOWN, STAGGER, STEAL_RECOVER, SHOOT }
 
-const WALK_SPEED := 6.2
-const DRIBBLE_SPEED := 5.6
-const SHOOT_MOVE_SPEED := 1.6
-const CONTEST_MOVE_SPEED := 1.4
-const ACCEL := 34.0
-const GRAVITY := 13.0
-const JUMP_VEL := 4.6
+const WALK_SPEED := 4.8
+const DRIBBLE_SPEED := 4.4
+const SHOOT_MOVE_SPEED := 1.2
+const CONTEST_MOVE_SPEED := 1.2
+const ACCEL := 14.0
+const GRAVITY := 9.8
+const JUMP_VEL := 3.8
 
 # 突破（攻撃・移動系）
 const DASH_START_T := 0.15
-const DASH_T := 0.30
-const DASH_SPEED := 13.0
+const DASH_T := 0.45
+const DASH_SPEED := 7.5
 const DASH_CD := 4.0
 # かわし（攻撃・妨害回避系）
 const DODGE_START_T := 0.08
-const DODGE_T := 0.36
-const DODGE_SPEED := 4.8
+const DODGE_T := 0.4
+const DODGE_SPEED := 3.5
 const DODGE_RECOVER_T := 0.45
 const DODGE_CD := 5.0
 # タックル（守備・タックル系）
 const TACKLE_START_T := 0.15
-const TACKLE_T := 0.20
-const TACKLE_SPEED := 9.0
+const TACKLE_T := 0.25
+const TACKLE_SPEED := 6.5
 const TACKLE_RECOVER_T := 0.50
 const TACKLE_WHIFF_EXTRA := 0.35
 const TACKLE_CD := 5.0
@@ -37,8 +37,8 @@ const CONTEST_MAX_T := 1.2
 const CONTEST_CD := 5.0
 const CONTEST_RANGE := 2.4
 # 追走ステップ（守備・移動系＝間合い）
-const STEP_T := 0.2
-const STEP_SPEED := 8.5
+const STEP_T := 0.25
+const STEP_SPEED := 5.5
 const STEP_CD := 2.5
 # 素の守備
 const STEAL_CD := 1.2
@@ -50,13 +50,13 @@ const SHOT_METER_T := 0.7
 #  meter=溜めが1.0になるまでの秒数 / mult=成功率の倍率 / prox=寄せの効きやすさ（小さいほど寄せに強い）
 #  block=ブロックされやすさ / angle=弾道の角度（0は距離で自動）/ jump_at・jump_v=自動ジャンプ（頂点が「パーフェクト」付近に来る）
 const SHOT_TYPES := {
-	"jumper": {"name": "ジャンプショット", "meter": 0.7, "mult": 1.0, "prox": 1.0, "block": 1.0, "angle": 0.0, "jump_at": 0.2, "jump_v": 4.0},
-	"stepback": {"name": "ステップバック", "meter": 0.75, "mult": 0.95, "prox": 1.0, "block": 0.8, "angle": 0.0, "jump_at": 0.25, "jump_v": 4.0},
-	"fade": {"name": "フェイダウェイ", "meter": 0.45, "mult": 0.86, "prox": 0.45, "block": 0.4, "angle": 56.0, "jump_at": -1.0, "jump_v": 0.0},
-	"layup": {"name": "レイアップ", "meter": 0.8, "mult": 1.05, "prox": 1.0, "block": 1.3, "angle": 0.0, "jump_at": 0.25, "jump_v": 4.4},
-	"euro": {"name": "ユーロステップ", "meter": 0.8, "mult": 1.0, "prox": 0.5, "block": 0.6, "angle": 0.0, "jump_at": 0.25, "jump_v": 4.4},
-	"floater": {"name": "フローター", "meter": 0.6, "mult": 0.95, "prox": 0.6, "block": 0.3, "angle": 66.0, "jump_at": 0.19, "jump_v": 3.2},
-	"dunk": {"name": "ダンク", "meter": 0.5, "mult": 1.0, "prox": 0.7, "block": 1.5, "angle": 0.0, "jump_at": 0.0, "jump_v": 5.0},
+	"jumper": {"name": "ジャンプショット", "meter": 1.0, "mult": 1.0, "prox": 1.0, "block": 1.0, "angle": 0.0, "jump_at": 0.4, "jump_v": 3.4},
+	"stepback": {"name": "ステップバック", "meter": 1.28, "mult": 0.95, "prox": 1.0, "block": 0.8, "angle": 0.0, "jump_at": 0.6, "jump_v": 3.4},
+	"fade": {"name": "フェイダウェイ", "meter": 0.4, "mult": 0.86, "prox": 0.45, "block": 0.4, "angle": 56.0, "jump_at": -1.0, "jump_v": 0.0},
+	"layup": {"name": "レイアップ", "meter": 1.3, "mult": 1.05, "prox": 1.0, "block": 1.3, "angle": 0.0, "jump_at": 0.55, "jump_v": 4.0},
+	"euro": {"name": "ユーロステップ", "meter": 1.35, "mult": 1.0, "prox": 0.5, "block": 0.6, "angle": 0.0, "jump_at": 0.6, "jump_v": 4.0},
+	"floater": {"name": "フローター", "meter": 0.95, "mult": 0.95, "prox": 0.6, "block": 0.3, "angle": 66.0, "jump_at": 0.4, "jump_v": 3.0},
+	"dunk": {"name": "ダンク", "meter": 0.8, "mult": 1.0, "prox": 0.7, "block": 1.5, "angle": 0.0, "jump_at": 0.15, "jump_v": 4.4},
 }
 const SHOT_AUTO_RELEASE := 1.3
 const ZONE_T := 2.0
@@ -100,6 +100,8 @@ var i_ab2_held := false
 var i_step := false
 var i_steal := false
 
+const RigScript = preload("res://scripts/rig.gd")
+var rig
 var camera: Camera3D
 var pivot: Node3D
 var ring1_mat: StandardMaterial3D
@@ -131,41 +133,24 @@ func setup(p_game, p_team: int, p_human: bool, color: Color) -> void:
 	add_child(pivot)
 	body_mat = StandardMaterial3D.new()
 	body_mat.albedo_color = color.darkened(0.35)
-	var body := MeshInstance3D.new()
-	var cm := CapsuleMesh.new()
-	cm.radius = 0.3
-	cm.height = 1.55
-	body.mesh = cm
-	body.material_override = body_mat
-	body.position.y = 0.78
-	pivot.add_child(body)
-	var head := MeshInstance3D.new()
-	var hm := SphereMesh.new()
-	hm.radius = 0.16
-	hm.height = 0.32
-	head.mesh = hm
-	head.material_override = body_mat
-	head.position.y = 1.7
-	pivot.add_child(head)
-	var visor := MeshInstance3D.new()
-	var vm := BoxMesh.new()
-	vm.size = Vector3(0.24, 0.07, 0.05)
-	visor.mesh = vm
-	var vmat := StandardMaterial3D.new()
-	vmat.albedo_color = Color(0.05, 0.05, 0.08)
-	vmat.emission_enabled = true
-	vmat.emission = color
-	vmat.emission_energy_multiplier = 1.5
-	visor.material_override = vmat
-	visor.position = Vector3(0, 1.72, -0.15)
-	pivot.add_child(visor)
+	rig = RigScript.new()
+	pivot.add_child(rig)
+	rig.build(color)
 	# TaGリング：上＝アビリティ1、下＝アビリティ2。光っていれば使用可能（クールダウンが相手に見える）
 	ring1_mat = _make_glow(color)
 	ring2_mat = _make_glow(color)
-	pivot.add_child(_make_ring(1.05, ring1_mat))
-	pivot.add_child(_make_ring(0.85, ring2_mat))
-	hand_l = _make_hand(Vector3(-0.38, 0.95, -0.05))
-	hand_r = _make_hand(Vector3(0.38, 0.95, -0.05))
+	var r1 := _make_ring(0.0, ring1_mat)
+	var r2 := _make_ring(0.0, ring2_mat)
+	r1.position.y = 0.16
+	r2.position.y = -0.02
+	r1.scale = Vector3(0.8, 1.0, 0.7)
+	r2.scale = Vector3(0.8, 1.0, 0.7)
+	rig.spine_node().add_child(r1)
+	rig.spine_node().add_child(r2)
+	hand_l = Node3D.new()
+	hand_r = Node3D.new()
+	hand_l.set_meta("rest", Vector3.ZERO)
+	hand_r.set_meta("rest", Vector3.ZERO)
 	pivot.add_child(hand_l)
 	pivot.add_child(hand_r)
 	# シュート妨害フィールド
@@ -559,22 +544,22 @@ func _shot_motion(hv: Vector3, delta: float) -> Vector3:
 		"layup":
 			if dist < 0.7:
 				return Vector3.ZERO
-			return tr * (5.0 if t < 0.28 else 2.0)
+			return tr * (3.6 if t < 0.55 else 1.6)
 		"euro":
 			var side := right_vec() * shot_side
-			if t < 0.14:
-				return side * 5.5 + tr * 2.0
+			if t < 0.25:
+				return side * 3.6 + tr * 1.2
 			if dist < 0.7:
 				return Vector3.ZERO
-			return tr * (5.0 if t < 0.3 else 1.5)
+			return tr * (3.6 if t < 0.6 else 1.2)
 		"dunk":
-			return tr * 6.5 if dist > 0.55 else Vector3.ZERO
+			return tr * 5.0 if dist > 0.55 else Vector3.ZERO
 		"stepback":
-			return -tr * 6.5 if t < 0.22 else hv.move_toward(Vector3.ZERO, ACCEL * delta)
+			return -tr * 3.8 if t < 0.35 else hv.move_toward(Vector3.ZERO, ACCEL * delta)
 		"fade":
-			return -tr * 2.4
+			return -tr * 1.8
 		"floater":
-			return tr * 2.5 if dist > 1.0 else Vector3.ZERO
+			return tr * 2.0 if dist > 1.0 else Vector3.ZERO
 	return hv.move_toward(Vector3.ZERO, ACCEL * delta)
 
 
@@ -590,7 +575,7 @@ func _apply_movement(delta: float) -> void:
 		S.DASH:
 			hv = dir_lock * DASH_SPEED
 		S.DODGE:
-			hv = dir_lock * DODGE_SPEED + forward() * 1.5
+			hv = dir_lock * DODGE_SPEED + forward() * 1.0
 		S.TACKLE:
 			hv = dir_lock * TACKLE_SPEED
 		S.STEP:
@@ -732,6 +717,7 @@ func _tell(kind: String) -> void:
 
 
 func _update_visuals(_delta: float) -> void:
+	rig.animate(self, S, _delta)
 	var r1_ready: bool
 	var r2_ready: bool
 	if role() == 2:
@@ -763,22 +749,10 @@ func _update_visuals(_delta: float) -> void:
 	ring1_mat.albedo_color = tell if r1_ready else Color(0.15, 0.15, 0.18)
 	ring2_mat.albedo_color = tell if r2_ready else Color(0.15, 0.15, 0.18)
 	field_mesh.visible = state == S.CONTEST or state == S.CONTEST_START
-	var crouch := 1.0
 	var tilt := 0.0
-	if state == S.TACKLE_START:
-		crouch = 0.82
-	elif state == S.NORMAL and pretell == "tackle":
-		crouch = 0.88
-	elif state == S.DOWN:
+	if state == S.DOWN:
 		tilt = -1.35
-	elif state == S.STAGGER:
-		tilt = 0.25
-	elif state == S.SHOOT and shot_type == "fade":
-		tilt = 0.3
-	elif state == S.SHOOT and (shot_type == "layup" or shot_type == "euro" or shot_type == "dunk"):
-		tilt = -0.15
-	pivot.scale.y = crouch
-	pivot.rotation.x = tilt
+	pivot.rotation.x = lerp_angle(pivot.rotation.x, tilt, 0.2)
 	var up := state == S.CONTEST or state == S.CONTEST_START or (not is_on_floor() and role() != 1) or (state == S.NORMAL and pretell == "contest")
 	for h in [hand_l, hand_r]:
 		var rest: Vector3 = h.get_meta("rest")

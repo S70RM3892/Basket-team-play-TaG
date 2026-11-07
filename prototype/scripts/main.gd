@@ -16,7 +16,10 @@ const SKILL_NAMES := ["練習", "ふつう", "強い", "鬼"]
 const TARGET_SCORE := 11
 const SHOT_CLOCK := 12.0
 
-var scale_idx := 1
+var scale_idx := 0
+var tempo_idx := 0
+const TEMPOS := [1.0, 1.3]
+const TEMPO_NAMES := ["リアル", "速い"]
 var skill_idx := 1
 var camera_tps := false
 var hitstop_until := 0
@@ -116,6 +119,7 @@ func _setup_input() -> void:
 	_act("menu_scale", [_btn(JOY_BUTTON_BACK), _key(KEY_C)])
 	_act("menu_skill", [_btn(JOY_BUTTON_X), _key(KEY_B)])
 	_act("menu_camera", [_btn(JOY_BUTTON_LEFT_SHOULDER), _key(KEY_V)])
+	_act("menu_tempo", [_btn(JOY_BUTTON_RIGHT_SHOULDER), _key(KEY_T)])
 
 
 func _act(name: String, events: Array, deadzone := 0.2) -> void:
@@ -485,12 +489,13 @@ func team_name(t: int) -> String:
 func _process(_delta: float) -> void:
 	if not autotest:
 		var now := Time.get_ticks_msec()
+		var base: float = TEMPOS[tempo_idx]
 		if now < hitstop_until:
 			Engine.time_scale = 0.05
 		elif now < slowmo_until:
-			Engine.time_scale = 0.4
+			Engine.time_scale = 0.4 * base
 		else:
-			Engine.time_scale = 1.0
+			Engine.time_scale = base
 	if snap_path != "":
 		snap_t += _delta
 		if snap_play and paused and snap_t > 0.3:
@@ -525,6 +530,8 @@ func _process(_delta: float) -> void:
 			new_game()
 		elif Input.is_action_just_pressed("menu_camera"):
 			camera_tps = not camera_tps
+		elif Input.is_action_just_pressed("menu_tempo"):
+			tempo_idx = (tempo_idx + 1) % TEMPOS.size()
 	hud.refresh()
 
 
