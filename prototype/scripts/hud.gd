@@ -49,7 +49,7 @@ func setup(p_game) -> void:
 	status_l = _label(22, HORIZONTAL_ALIGNMENT_CENTER)
 	_place(status_l, Control.PRESET_CENTER_TOP, -500, 88, 500, 118)
 	abil_l = _label(20, HORIZONTAL_ALIGNMENT_LEFT)
-	_place(abil_l, Control.PRESET_BOTTOM_LEFT, 18, -128, 560, -10)
+	_place(abil_l, Control.PRESET_BOTTOM_LEFT, 18, -128, 640, -10)
 	info_l = _label(16, HORIZONTAL_ALIGNMENT_RIGHT)
 	_place(info_l, Control.PRESET_BOTTOM_RIGHT, -760, -36, -16, -8)
 
@@ -117,7 +117,7 @@ func setup(p_game) -> void:
 	sb.content_margin_bottom = 16
 	pause_panel.add_theme_stylebox_override("panel", sb)
 	pause_l = Label.new()
-	pause_l.add_theme_font_size_override("font_size", 19)
+	pause_l.add_theme_font_size_override("font_size", 17)
 	pause_l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	pause_panel.add_child(pause_l)
 	root.add_child(pause_panel)
@@ -216,7 +216,7 @@ func refresh() -> void:
 	if r == 2:
 		abil_l.text = "[LB] %s\n[RB長押し] %s\n[X] スティール   [B] %s\n[A] ジャンプでブロック" % [_cd_text("タックル", h.cd.tackle), _cd_text("シュート妨害", h.cd.contest), _cd_text("追走", h.cd.step)]
 	else:
-		abil_l.text = "[LB] %s\n[RB] %s\n[RT/Y] シュート（緑で離す）\n[A] ジャンプ" % [_cd_text("突破", h.cd.dash), _cd_text("かわし", h.cd.dodge)]
+		abil_l.text = "[LB] %s   [RB] %s\nRT: ジャンプショット ／ ↑+RT: レイアップ・フローター\n↓+RT: ステップバック ／ A→空中で↓+RT: フェイダウェイ\nLB突破→RT: ダンク・ユーロステップ" % [_cd_text("突破", h.cd.dash), _cd_text("かわし", h.cd.dodge)]
 	var charging: bool = h.state == S.SHOOT
 	meter_bg.visible = charging
 	if charging:
@@ -228,10 +228,12 @@ func refresh() -> void:
 			note = "  妨害されている！"
 		elif sc.kind == "free" or sc.kind == "open":
 			note = "  フリー"
-		meter_pct.text = "成功率 %d%%%s" % [pct, note]
+		meter_pct.text = "%s  成功率 %d%%%s" % [sc.name, pct, note]
 		meter_pct.add_theme_color_override("font_color", Color(0.4, 1.0, 0.5) if pct >= 50 else (Color(1, 0.9, 0.4) if pct >= 30 else Color(1, 0.4, 0.4)))
 	info_l.text = last_shot_info
 	pause_panel.visible = game.paused
+	abil_l.visible = not game.paused
+	info_l.visible = not game.paused
 	if game.paused:
 		pause_l.text = _pause_text()
 	var no_pad := Input.get_connected_joypads().is_empty()
@@ -241,27 +243,23 @@ func refresh() -> void:
 
 func _pause_text() -> String:
 	var g = game
-	var head := "TaG プロトタイプ v0.2 ── 1on1 アビリティじゃんけん\n"
+	var t := "TaG プロトタイプ v0.3 ── 1on1 アビリティじゃんけん\n"
 	if g.game_over:
-		head = "試合終了  YOU %d - %d BOT     BOTのクセ: %s\n" % [g.score[0], g.score[1], g.bot.brain.habit_text()]
-	var t := head
-	t += "[A] %s  [Y] リスタート  [BACK] コート %.2fx  [X] BOT強さ: %s  [LB] カメラ: %s\n" % ["新しい試合" if g.game_over else "プレイ", g.court_scale, g.SKILL_NAMES[g.skill_idx], "三人称" if g.camera_tps else "一人称"]
-	t += "BOTには試合ごとに「好きな手（クセ）」がある。読んで裏をかけ。弱いBOTは技の前に「構え」が見える（橙＋しゃがむ＝タックル、赤＋手を上げる＝妨害）\n\n"
-	t += "■ 操作（コントローラー）\n"
-	t += "左スティック: 移動 ／ 右スティック: 視点 ／ A: ジャンプ（ブロック） ／ START: ポーズ\n"
-	t += "攻撃: RT（またはY）長押し→リングに自動で照準→緑（黄色ならパーフェクト）で離す ／ LB: 突破 ／ RB: かわし\n"
-	t += "守備: LB: タックル ／ RB長押し: シュート妨害 ／ X: スティール ／ B（またはLT）: 追走ステップ\n"
-	t += "（PC: WASD・マウス・左クリック=シュート・Q・E・F・Shift・Space・Esc）\n\n"
-	t += "■ じゃんけん\n"
-	t += "突破 ＞ シュート妨害 ／ シュート ＞ 間合い ／ かわし ＞ タックル\n"
-	t += "タックル ＞ 突破 ／ シュート妨害 ＞ シュート ／ 間合い ＞ かわし\n"
-	t += "読み勝つと: 相手が1秒以上動けなくなり、自分は2秒間「ゾーン」（速く、次のシュートが入りやすい）\n"
-	t += "相手の腰のリングが光っていればアビリティ使用可（上=LB系、下=RB系）\n"
-	t += "ルール: 3x3方式。アーク内1点・外2点。守備側がボールを取ったらアーク外へクリアしてから攻める\n\n"
+		t = "試合終了  YOU %d - %d BOT     BOTのクセ: %s\n" % [g.score[0], g.score[1], g.bot.brain.habit_text()]
+	t += "[A] %s  [Y] リスタート  [BACK] コート %.2fx  [X] BOT: %s  [LB] カメラ: %s\n\n" % ["新しい試合" if g.game_over else "プレイ", g.court_scale, g.SKILL_NAMES[g.skill_idx], "三人称" if g.camera_tps else "一人称"]
+	t += "■ シュート（RT長押し→リングに自動照準→緑で離す。黄色はパーフェクト）  ↑＝リングへ向かう ／ ↓＝リングから離れる\n"
+	t += "RT＝ジャンプショット ／ ↑+RT＝レイアップ（近い）・フローター（中距離） ／ ↓+RT＝ステップバック\n"
+	t += "A→空中で↓+RT＝フェイダウェイ（寄せとブロックに強い） ／ LB突破→RT＝ダンク（近い）・ユーロステップ\n\n"
+	t += "■ じゃんけん  攻撃 LB突破・RBかわし ／ 守備 LBタックル・RB長押しシュート妨害・Xスティール・B追走\n"
+	t += "突破＞妨害 ／ シュート＞間合い ／ かわし＞タックル ／ タックル＞突破 ／ 妨害＞シュート ／ 間合い＞かわし\n"
+	t += "読み勝つと相手は1秒以上動けず、自分は2秒間ゾーン。BOTには試合ごとのクセがあり、弱いBOTは技の前に構えが見える\n"
+	t += "3x3方式：アーク内1点・外2点、11点先取。ボールを奪ったらアーク外へクリアしてから攻める\n\n"
 	t += "■ この試合の計測\n"
-	t += "YOU: 攻撃 %d回 / %d点 / 1回あたり %.2f点（シュート %d本・成功 %d）\n" % [g.stats.poss[0], g.stats.pts[0], g.ppp(0), g.stats.shots[0], g.stats.makes[0]]
-	t += "BOT: 攻撃 %d回 / %d点 / 1回あたり %.2f点（シュート %d本・成功 %d）\n" % [g.stats.poss[1], g.stats.pts[1], g.ppp(1), g.stats.shots[1], g.stats.makes[1]]
-	t += "読み勝ち YOU %d回 / BOT %d回\n" % [g.stats.reads[0], g.stats.reads[1]]
-	t += "タックル＞突破 %d ／ 突破＞妨害 %d ／ かわし＞タックル %d ／ 間合い＞かわし %d\n" % [g.stats.tackle_beats_dash, g.stats.dash_beats_contest, g.stats.dodge_beats_tackle, g.stats.dodge_read]
-	t += "ノーマーク %d ／ 妨害されたシュート %d ／ 当たられながら %d ／ スティール %d ／ ブロック %d" % [g.stats.open_shot, g.stats.contested_shot, g.stats.contact_shot, g.stats.steal, g.stats.block]
+	t += "YOU: 攻撃 %d回 / %d点 / 1回あたり %.2f点（%d本中%d本成功）   BOT: 攻撃 %d回 / %d点 / 1回あたり %.2f点（%d本中%d本成功）\n" % [g.stats.poss[0], g.stats.pts[0], g.ppp(0), g.stats.shots[0], g.stats.makes[0], g.stats.poss[1], g.stats.pts[1], g.ppp(1), g.stats.shots[1], g.stats.makes[1]]
+	t += "読み勝ち YOU %d / BOT %d ／ スティール %d ／ ブロック %d\n" % [g.stats.reads[0], g.stats.reads[1], g.stats.steal, g.stats.block]
+	var ty := ""
+	for k in g.stats.types.keys():
+		ty += "%s %d/%d  " % [AthleteScript.SHOT_TYPES[k].name, g.stats.types[k][1], g.stats.types[k][0]]
+	if ty != "":
+		t += "シュートの種類（成功/本数・両チーム合計）: " + ty
 	return t

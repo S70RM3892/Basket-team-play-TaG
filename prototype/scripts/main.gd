@@ -48,6 +48,7 @@ var snap_path := ""
 var snap_t := 0.0
 var snap_play := false
 var snap_demo := false
+var snap_step := false
 var failed_makes: Array = []
 var st_list: Array = []
 var st_i := -1
@@ -66,6 +67,9 @@ func _ready() -> void:
 			snap_path = arg.substr(7)
 		if arg == "--snap-play":
 			snap_play = true
+		if arg == "--snap-step":
+			snap_play = true
+			snap_step = true
 		if arg == "--snap-tps":
 			camera_tps = true
 		if arg == "--snap-demo":
@@ -81,7 +85,7 @@ func _ready() -> void:
 	new_game()
 	if shottest:
 		paused = false
-		for d in [0.8, 1.5, 3.0, 4.5, 6.0, 7.5, 9.0]:
+		for d in [-1.0, 0.8, 1.5, 3.0, 4.5, 6.0, 7.5, 9.0]:
 			for k in 4:
 				st_list.append(d)
 	elif autotest:
@@ -449,7 +453,7 @@ func new_game() -> void:
 		"poss": [0, 0], "pts": [0, 0], "shots": [0, 0], "makes": [0, 0],
 		"tackle_beats_dash": 0, "tackle_hit": 0, "dash_beats_contest": 0, "dash_tie": 0, "dash_clear": 0,
 		"dodge_beats_tackle": 0, "dodge_read": 0, "open_shot": 0, "contested_shot": 0, "contact_shot": 0,
-		"steal": 0, "block": 0, "turnover": 0, "exp_makes": 0.0, "planned_makes": 0, "reads": [0, 0],
+		"steal": 0, "block": 0, "turnover": 0, "exp_makes": 0.0, "planned_makes": 0, "reads": [0, 0], "types": {},
 	}
 	give_ball(0)
 
@@ -495,6 +499,9 @@ func _process(_delta: float) -> void:
 			Input.action_press("shoot")
 		if snap_demo and snap_t > 2.25 and stats.reads[0] == 0:
 			on_read_win(human, bot, "かわし ＞ タックル")
+		if snap_step and snap_t > 1.95 and not Input.is_action_pressed("shoot"):
+			Input.action_press("move_back")
+			Input.action_press("shoot")
 		if snap_t > 2.6:
 			get_viewport().get_texture().get_image().save_png(snap_path)
 			print("[snap] saved ", snap_path)
@@ -560,8 +567,8 @@ func _physics_process(delta: float) -> void:
 		for a in athletes:
 			if a.team == ball.shot_team or a.is_on_floor():
 				continue
-			if ball.linear_velocity.y > 0.0 and a.hand_reach_point().distance_to(ball.global_position) < 0.32:
-				if not a.is_human and (ball.block_rolled or randf() > 0.25 + 0.3 * a.brain.skill):
+			if ball.linear_velocity.y > 0.0 and a.hand_reach_point().distance_to(ball.global_position) < 0.32 * ball.block_mult:
+				if not a.is_human and (ball.block_rolled or randf() > (0.25 + 0.3 * a.brain.skill) * ball.block_mult):
 					ball.block_rolled = true
 					continue
 				ball.blocked = true
@@ -649,15 +656,15 @@ func resolve_tackle(t, o) -> void:
 		return
 	t.recover_len = 0.3
 	t._enter(S.TACKLE_RECOVER)
-	if o.state == S.SHOOT:
+	if o.state == S.SHOOT and o.dash_cancel_t <= 0.0:
 		o.shoot_contact = true
 		o._release_shot()
 		stats.contact_shot += 1
 		hud.popup("当たられながら打った（あいこ）", Color(1, 1, 0.6))
 		return
 	var had_ball: bool = ball.holder == o
-	var was_dash: bool = o.state == S.DASH or o.state == S.DASH_START
-	if had_ball and not was_dash:
+	var was_dash: bool = o.state == S.DASH or o.state == S.DASH_START or (o.state == S.SHOOT and o.dash_cancel_t > 0.0)
+	if had_ball and not was_dash and o.state != S.SHOOT:
 		# 突破していない相手へのタックルは「当たり負け」させるだけ（ボールは奪えない）
 		o.velocity += t.forward() * 2.5
 		o.stagger(0.35)
@@ -758,6 +765,11 @@ func shot_chance(a, charge: float, contact: bool) -> Dictionary:
 		base = lerp(0.55, 0.35, (nd - 6.75) / 2.75)
 	else:
 		base = 0.1
+	var st: Dictionary = AthleteScript.SHOT_TYPES[a.shot_type]
+	if a.shot_type == "dunk":
+		base = 0.96
+	else:
+		base *= float(st.mult)
 	var q := timing_quality(charge)
 	var cont := 1.0
 	var kind := ""
@@ -781,10 +793,13 @@ func shot_chance(a, charge: float, contact: bool) -> Dictionary:
 		cont = 0.96
 	elif od < 5.0:
 		kind = "open"
+	if kind == "" or kind == "open":
+		# 寄せの効きやすさはシュートの種類で変わる（フェイダウェイやユーロステップは寄せに強い）
+		cont = 1.0 - (1.0 - cont) * float(st.prox)
 	var zone := 1.15 if a.zone_t > 0.0 else 1.0
 	var contact_m := 0.55 if contact else 1.0
 	var p: float = clamp(base * q * cont * contact_m * zone, 0.02, 0.97)
-	return {"p": p, "q": q, "cont": cont * contact_m, "kind": kind, "nd": nd, "zone": zone}
+	return {"p": p, "q": q, "cont": cont * contact_m, "kind": kind, "nd": nd, "zone": zone, "name": st.name}
 
 
 func release_shot(a, charge: float, contact: bool) -> void:
@@ -801,6 +816,12 @@ func release_shot(a, charge: float, contact: bool) -> void:
 	elif sc.kind == "open":
 		stats.open_shot += 1
 		label = "ノーマーク！  シュート ＞ 間合い"
+	var st: Dictionary = AthleteScript.SHOT_TYPES[a.shot_type]
+	if a.shot_type != "jumper":
+		hud.popup(str(st.name) + "！", _col(a.team))
+	if not stats.types.has(a.shot_type):
+		stats.types[a.shot_type] = [0, 0]
+	stats.types[a.shot_type][0] += 1
 	if q > 1.05:
 		hud.popup("パーフェクト・リリース！", Color(1, 0.95, 0.4))
 		play_ui("perfect")
@@ -830,8 +851,33 @@ func release_shot(a, charge: float, contact: bool) -> void:
 		angle = 76.0
 	elif nd < 2.0:
 		angle = 64.0
+	if float(st.angle) > 0.0 and nd >= 1.2:
+		angle = float(st.angle)
 	var v := _solve(from, target, angle)
+	if a.shot_type == "dunk" and nd < 2.2:
+		# ダンク：リングの真上から叩き込む
+		var away := Vector3(fp.x, 0, fp.z - RIM_Z)
+		away = away.normalized() if away.length() > 0.05 else Vector3(0, 0, 1)
+		from = rim_center() + away * 0.3 + Vector3(0, 0.32, 0)
+		var aim := rim_center() + Vector3(0, -0.1, 0)
+		if not make:
+			aim = rim_center() + away * 0.24 + Vector3(0, 0.02, 0)
+		v = (aim - from) / 0.14
 	ball.shoot(from, v, a, points, valid)
+	ball.shot_kind = a.shot_type
+	ball.block_mult = float(st.block)
+	if a.shot_type == "dunk" and not o.is_on_floor() and (o.flat_pos() - rim_floor()).length() < 1.5:
+		# ゴール下で跳んでいた相手には、ダンクを叩かれることがある
+		if o.is_human or randf() < 0.3 + 0.4 * o.brain.skill:
+			ball.blocked = true
+			ball.state = B.LOOSE
+			ball.loose_t = 0.0
+			ball.last_touch_team = o.team
+			var out := Vector3(fp.x, 0, fp.z - RIM_Z).normalized() * 4.0
+			ball.launch(out + Vector3(0, 2.0, 0))
+			stats.block += 1
+			hud.popup("ダンクをブロック！ " + team_name(o.team), _col(o.team))
+			play_ui("win" if o.team == 0 else "lose")
 	shot_clock = SHOT_CLOCK
 	if label != "":
 		hud.popup(label, _col(a.team))
@@ -871,6 +917,8 @@ func on_basket() -> void:
 		return
 	planned_pending = []
 	score[t] += pts
+	if ball.shot_team >= 0 and stats.types.has(ball.shot_kind):
+		stats.types[ball.shot_kind][1] += 1
 	stats.pts[t] += pts
 	stats.makes[t] += 1
 	play_ui("score")
@@ -934,7 +982,13 @@ func _shottest_step(delta: float) -> void:
 		var dirv := Vector3(sin(side * 0.6), 0, cos(side * 0.6))
 		var from := rim_floor() + dirv * d + Vector3(0, 2.1, 0)
 		dead_ball_t = -1.0
-		ball.shoot(from, _solve(from, rim_center() + Vector3(0, 0.02, 0), 76.0 if d < 1.2 else (64.0 if d < 2.0 else 52.0)), human, 1, true)
+		if d < 0.0:
+			# ダンクの弾道
+			var away := dirv
+			var f2 := rim_center() + away * 0.3 + Vector3(0, 0.32, 0)
+			ball.shoot(f2, (rim_center() + Vector3(0, -0.1, 0) - f2) / 0.14, human, 1, true)
+		else:
+			ball.shoot(from, _solve(from, rim_center() + Vector3(0, 0.02, 0), 76.0 if d < 1.2 else (64.0 if d < 2.0 else 52.0)), human, 1, true)
 		ball.shot_team = 0
 	if ball.state != B.DEAD:
 		var p: Vector3 = ball.global_position

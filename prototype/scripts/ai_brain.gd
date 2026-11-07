@@ -16,6 +16,8 @@ var reacted_owner_t := -1.0
 var queue: Array = []  # [{"t": float, "act": String}]
 var def_fav := "tackle"
 var off_fav := "dash"
+var fade_wait := 0.0
+var dash_shot_rolled := false
 const DEF_NAMES := {"tackle": "タックル", "contest": "シュート妨害", "wait": "間合い（待つ）"}
 const OFF_NAMES := {"dash": "突破", "dodge": "かわし", "shoot": "シュート"}
 
@@ -121,6 +123,23 @@ func _offense(a, opp, rim: Vector3, delta: float) -> void:
 		return
 	shooting = false
 
+	# フェイダウェイ：跳んでから、後ろに倒しつつ打つ
+	if fade_wait > 0.0:
+		fade_wait -= delta
+		a.set_move_world(-to_rim)
+		if fade_wait <= 0.0:
+			_start_shot(a)
+		return
+	# 突破中にリングが近ければ、ダンクかユーロステップにつなぐ
+	if a.state == A.S.DASH:
+		if not dash_shot_rolled and nd < 3.6:
+			dash_shot_rolled = true
+			if randf() < 0.65:
+				a.set_move_world(to_rim)
+				_start_shot(a)
+		return
+	dash_shot_rolled = false
+
 	if g.needs_clear and g.possession == a.team:
 		var out: Vector3 = rim - to_rim.normalized() * (g.arc_radius() + 1.2)
 		a.set_move_world(out - a.flat_pos())
@@ -141,7 +160,7 @@ func _offense(a, opp, rim: Vector3, delta: float) -> void:
 		reacted_state = -1
 
 	if g.shot_clock < 2.0 or dist_rim < 1.5:
-		_start_shot(a)
+		_plan_shot(a, to_rim, nd, d_opp)
 		return
 	think_t -= delta
 	if think_t > 0.0:
@@ -151,7 +170,7 @@ func _offense(a, opp, rim: Vector3, delta: float) -> void:
 		strafe = -strafe
 	var open := d_opp > 2.3 or not between
 	if open and nd < 8.0 and randf() < 0.75:
-		_start_shot(a)
+		_plan_shot(a, to_rim, nd, d_opp)
 		return
 	if not between:
 		return
@@ -173,6 +192,32 @@ func _offense(a, opp, rim: Vector3, delta: float) -> void:
 		"dodge":
 			a.i_ab2 = true
 		"shoot":
+			_plan_shot(a, to_rim, nd, d_opp)
+
+
+func _plan_shot(a, to_rim: Vector3, nd: float, d_opp: float) -> void:
+	## 状況に応じてシュートの種類を選び、その操作（スティックの向き・ジャンプ）を入れる
+	var plan := "auto"
+	if nd < 3.2:
+		plan = "drive"
+	elif d_opp < 1.8:
+		plan = _pick({"stepback": 1.2, "fade": 1.0, "jumper": 0.6})
+	elif nd < 5.5:
+		plan = _pick({"drive": 1.0, "jumper": 1.0})
+	else:
+		plan = "jumper"
+	match plan:
+		"drive":
+			a.set_move_world(to_rim)
+			_start_shot(a)
+		"stepback":
+			a.set_move_world(-to_rim)
+			_start_shot(a)
+		"fade":
+			a.i_jump = true
+			fade_wait = 0.12
+		_:
+			a.i_move = Vector2.ZERO
 			_start_shot(a)
 
 

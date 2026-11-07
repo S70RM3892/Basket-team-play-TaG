@@ -46,6 +46,18 @@ const STEAL_RANGE := 1.8
 const DOWN_T := 1.2
 const STAGGER_T := 0.7
 const SHOT_METER_T := 0.7
+# シュートの種類：基本操作の組み合わせで決まる（_classify_shot）
+#  meter=溜めが1.0になるまでの秒数 / mult=成功率の倍率 / prox=寄せの効きやすさ（小さいほど寄せに強い）
+#  block=ブロックされやすさ / angle=弾道の角度（0は距離で自動）/ jump_at・jump_v=自動ジャンプ（頂点が「パーフェクト」付近に来る）
+const SHOT_TYPES := {
+	"jumper": {"name": "ジャンプショット", "meter": 0.7, "mult": 1.0, "prox": 1.0, "block": 1.0, "angle": 0.0, "jump_at": 0.2, "jump_v": 4.0},
+	"stepback": {"name": "ステップバック", "meter": 0.75, "mult": 0.95, "prox": 1.0, "block": 0.8, "angle": 0.0, "jump_at": 0.25, "jump_v": 4.0},
+	"fade": {"name": "フェイダウェイ", "meter": 0.45, "mult": 0.86, "prox": 0.45, "block": 0.4, "angle": 56.0, "jump_at": -1.0, "jump_v": 0.0},
+	"layup": {"name": "レイアップ", "meter": 0.8, "mult": 1.05, "prox": 1.0, "block": 1.3, "angle": 0.0, "jump_at": 0.25, "jump_v": 4.4},
+	"euro": {"name": "ユーロステップ", "meter": 0.8, "mult": 1.0, "prox": 0.5, "block": 0.6, "angle": 0.0, "jump_at": 0.25, "jump_v": 4.4},
+	"floater": {"name": "フローター", "meter": 0.6, "mult": 0.95, "prox": 0.6, "block": 0.3, "angle": 66.0, "jump_at": 0.19, "jump_v": 3.2},
+	"dunk": {"name": "ダンク", "meter": 0.5, "mult": 1.0, "prox": 0.7, "block": 1.5, "angle": 0.0, "jump_at": 0.0, "jump_v": 5.0},
+}
 const SHOT_AUTO_RELEASE := 1.3
 const ZONE_T := 2.0
 
@@ -63,6 +75,11 @@ var tackle_resolved := false
 var dash_beat_done := false
 var dodge_evaded := false
 var shoot_charge := 0.0
+var shot_type := "jumper"
+var shot_side := 1.0
+var shot_jumped := false
+var since_dash := 9.0
+var dash_cancel_t := 0.0  # 突破からダンク等へつないだ直後は、まだ「突破」としてタックルに負ける
 var shoot_contact := false
 var yaw := 0.0
 var pitch := 0.0
@@ -310,6 +327,8 @@ func _physics_process(delta: float) -> void:
 	for k in cd.keys():
 		cd[k] = max(0.0, cd[k] - delta)
 	zone_t = max(0.0, zone_t - delta)
+	since_dash += delta
+	dash_cancel_t = max(0.0, dash_cancel_t - delta)
 	if pretell_t > 0.0:
 		pretell_t -= delta
 		if pretell_t <= 0.0:
@@ -377,10 +396,7 @@ func _update_state(delta: float) -> void:
 			var r := role()
 			if r == 1:
 				if i_shoot_held:
-					_enter(S.SHOOT)
-					shoot_charge = 0.0
-					shoot_contact = false
-					game.on_shot_start(self)
+					_begin_shot()
 				elif i_ab1 and cd.dash <= 0.0:
 					cd.dash = DASH_CD
 					_enter(S.DASH_START)
@@ -409,7 +425,11 @@ func _update_state(delta: float) -> void:
 				elif i_step and cd.step <= 0.0:
 					_start_step()
 		S.SHOOT:
-			shoot_charge += delta / SHOT_METER_T
+			var st: Dictionary = SHOT_TYPES[shot_type]
+			shoot_charge += delta / float(st.meter)
+			if not shot_jumped and float(st.jump_at) >= 0.0 and state_t >= float(st.jump_at) and is_on_floor():
+				velocity.y = float(st.jump_v)
+				shot_jumped = true
 			if role() != 1:
 				_enter(S.NORMAL)
 			elif not i_shoot_held or shoot_charge >= SHOT_AUTO_RELEASE:
@@ -423,8 +443,14 @@ func _update_state(delta: float) -> void:
 				collision_mask = 9
 				_enter(S.DASH)
 		S.DASH:
+			since_dash = 0.0
 			_check_dash_beats()
-			if state_t >= DASH_T:
+			if i_shoot_held and role() == 1:
+				# 突破 → シュート：ダンクかユーロステップにつながる
+				collision_mask = 11
+				dash_cancel_t = 0.2
+				_begin_shot()
+			elif state_t >= DASH_T:
 				collision_mask = 11
 				_enter(S.NORMAL)
 				game.on_dash_end(self)
@@ -485,6 +511,73 @@ func _update_state(delta: float) -> void:
 				_enter(S.NORMAL)
 
 
+func _classify_shot() -> String:
+	## 基本操作の組み合わせからシュートの種類を決める
+	var to_rim: Vector3 = game.rim_floor() - flat_pos()
+	var nd: float = to_rim.length() / game.court_scale
+	var w := _wish_dir()
+	var toward := w.dot(to_rim.normalized()) if w.length() > 0.1 and to_rim.length() > 0.01 else 0.0
+	shot_side = signf(i_move.x) if absf(i_move.x) > 0.25 else (1.0 if randf() < 0.5 else -1.0)
+	if state == S.DASH or since_dash < 0.5:
+		if nd < 1.9:
+			return "dunk"
+		if nd < 3.6:
+			return "euro"
+	if not is_on_floor():
+		return "fade" if toward < -0.3 else "jumper"
+	if toward > 0.5:
+		if nd < 3.2:
+			return "layup"
+		if nd < 5.5:
+			return "floater"
+	if toward < -0.5:
+		return "stepback"
+	return "jumper"
+
+
+func _begin_shot() -> void:
+	shot_type = _classify_shot()
+	shoot_charge = 0.0
+	shoot_contact = false
+	shot_jumped = false
+	collision_mask = 9 if shot_type == "euro" else 11
+	_enter(S.SHOOT)
+	game.on_shot_start(self)
+
+
+func shot_meter_t() -> float:
+	return float(SHOT_TYPES[shot_type].meter)
+
+
+func _shot_motion(hv: Vector3, delta: float) -> Vector3:
+	## シュートの種類ごとの体の動き（レイアップの2歩、ステップバックの跳び退き など）
+	var to_rim: Vector3 = game.rim_floor() - flat_pos()
+	var dist := to_rim.length()
+	var tr: Vector3 = to_rim / dist if dist > 0.01 else forward()
+	var t := state_t
+	match shot_type:
+		"layup":
+			if dist < 0.7:
+				return Vector3.ZERO
+			return tr * (5.0 if t < 0.28 else 2.0)
+		"euro":
+			var side := right_vec() * shot_side
+			if t < 0.14:
+				return side * 5.5 + tr * 2.0
+			if dist < 0.7:
+				return Vector3.ZERO
+			return tr * (5.0 if t < 0.3 else 1.5)
+		"dunk":
+			return tr * 6.5 if dist > 0.55 else Vector3.ZERO
+		"stepback":
+			return -tr * 6.5 if t < 0.22 else hv.move_toward(Vector3.ZERO, ACCEL * delta)
+		"fade":
+			return -tr * 2.4
+		"floater":
+			return tr * 2.5 if dist > 1.0 else Vector3.ZERO
+	return hv.move_toward(Vector3.ZERO, ACCEL * delta)
+
+
 func _wish_dir() -> Vector3:
 	var w := right_vec() * i_move.x + forward() * i_move.y
 	w.y = 0
@@ -502,6 +595,8 @@ func _apply_movement(delta: float) -> void:
 			hv = dir_lock * TACKLE_SPEED
 		S.STEP:
 			hv = dir_lock * STEP_SPEED
+		S.SHOOT:
+			hv = _shot_motion(hv, delta)
 		S.DOWN, S.TACKLE_RECOVER, S.DODGE_RECOVER, S.DASH_START, S.TACKLE_START, S.STEAL_RECOVER:
 			hv = hv.move_toward(Vector3.ZERO, ACCEL * 1.5 * delta)
 		_:
@@ -597,6 +692,7 @@ func _try_steal() -> void:
 
 func _release_shot() -> void:
 	var c := shoot_charge
+	collision_mask = 11
 	_enter(S.NORMAL)
 	game.release_shot(self, c, shoot_contact)
 
@@ -677,6 +773,10 @@ func _update_visuals(_delta: float) -> void:
 		tilt = -1.35
 	elif state == S.STAGGER:
 		tilt = 0.25
+	elif state == S.SHOOT and shot_type == "fade":
+		tilt = 0.3
+	elif state == S.SHOOT and (shot_type == "layup" or shot_type == "euro" or shot_type == "dunk"):
+		tilt = -0.15
 	pivot.scale.y = crouch
 	pivot.rotation.x = tilt
 	var up := state == S.CONTEST or state == S.CONTEST_START or (not is_on_floor() and role() != 1) or (state == S.NORMAL and pretell == "contest")

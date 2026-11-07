@@ -21,6 +21,8 @@ var shot_time := 0.0
 var shooter = null
 var blocked := false
 var block_rolled := false
+var shot_kind := ""
+var block_mult := 1.0
 
 
 func setup(p_game) -> void:
