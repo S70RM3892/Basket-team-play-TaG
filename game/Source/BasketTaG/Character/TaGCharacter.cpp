@@ -3,6 +3,7 @@
 #include "Abilities/TaGAbilities.h"
 #include "Abilities/TaGTags.h"
 #include "Ball/TaGBall.h"
+#include "Core/TaGReplay.h"
 #include "Character/TaGArtActors.h"
 #include "Character/TaGMovementComponent.h"
 #include "Character/TaGPlayerController.h"
@@ -1266,10 +1267,18 @@ void ATaGCharacter::Tick(float DeltaSeconds)
 		}
 	}
 
+	if (GetCharacterMovement()->IsMovingOnGround())
+	{
+		LastFloorFeet = GetFeetLocation();
+	}
 	TickAction(DeltaSeconds);
 	if (HasAuthority())
 	{
 		TickServerChecks(DeltaSeconds);
+	}
+	if (IsLocallyControlled())
+	{
+		TickBodyContact(DeltaSeconds);
 	}
 	TickArtStatus(DeltaSeconds);
 
@@ -1574,6 +1583,74 @@ void ATaGCharacter::ForceContactShot()
 {
 	bShotContact = true;
 	ReleaseShot();
+}
+
+// ================================================================ Bodies
+
+FVector ATaGCharacter::GetShotSpot() const
+{
+	return GetCharacterMovement()->IsMovingOnGround() || LastFloorFeet.IsZero() ? GetFeetLocation() : LastFloorFeet;
+}
+
+void ATaGCharacter::TickBodyContact(float Dt)
+{
+	// Two bodies pressing into each other share the shove by weight: a heavy body holds its spot (screens, box-outs,
+	// posting up) and a light one is moved off it. It is stick input on the machine that owns the body, so the owner's
+	// prediction and the server's replay of the same input agree. A downed or airborne body is left alone.
+	UCharacterMovementComponent* Move = GetCharacterMovement();
+	BumpCooldown = FMath::Max(0.f, BumpCooldown - Dt);
+	if (IsDown() || !Move->IsMovingOnGround())
+	{
+		return;
+	}
+	const FVector Me = GetActorLocation();
+	float Hardest = 0.f;
+	float HardShare = 0.f;
+	const float Rm = GetCapsuleComponent()->GetScaledCapsuleRadius();
+	const float Wm = FMath::Max(GetHeroDef().Weight, 0.2f);
+	FVector Push = FVector::ZeroVector;
+	for (TActorIterator<ATaGCharacter> It(GetWorld()); It; ++It)
+	{
+		const ATaGCharacter* O = *It;
+		if (O == this || O->IsDown())
+		{
+			continue;
+		}
+		const FVector Ol = O->GetActorLocation();
+		FVector To(Me.X - Ol.X, Me.Y - Ol.Y, 0.f);
+		const float D = To.Size();
+		const float Contact = Rm + O->GetCapsuleComponent()->GetScaledCapsuleRadius() + 6.f;
+		if (D >= Contact || D < 1.f || FMath::Abs(Me.Z - Ol.Z) > 110.f)
+		{
+			continue;
+		}
+		const FVector N = To / D;
+		// How hard they press: the overlap, plus how fast either body is moving into the other
+		const float Closing = FMath::Max(0.f, FVector::DotProduct(O->GetVelocity(), N)) + FMath::Max(0.f, -FVector::DotProduct(GetVelocity(), N));
+		const float Share = O->GetHeroDef().Weight / (O->GetHeroDef().Weight + Wm);
+		Push += N * Share * FMath::Clamp((Contact - D) / 10.f + Closing / 350.f, 0.f, 1.5f);
+		if (Closing > Hardest)
+		{
+			Hardest = Closing;
+			HardShare = Share;
+		}
+	}
+	// Running into a body (or being run into): a dull thud and a nudge in the pad, harder the heavier the other body
+	if (Hardest > 240.f && BumpCooldown <= 0.f)
+	{
+		if (ATaGPlayerController* PC = Cast<ATaGPlayerController>(GetController()))
+		{
+			BumpCooldown = 0.6f;
+			const float K = 0.5f + 0.5f * FMath::Clamp((Hardest - 240.f) / 300.f, 0.f, 1.f);
+			TaGAudio::PlayAt(this, TEXT("Foot2"), GetFeetLocation(), 0.3f + 0.6f * HardShare * K, 0.62f);
+			PC->Feedback(0.1f + 0.35f * HardShare * K, 0.1f, 0.5f * HardShare * K);
+		}
+	}
+	const float Strength = FMath::Min(Push.Size(), 1.f);
+	if (Strength > 0.02f)
+	{
+		AddMovementInput(Push.GetSafeNormal(), Strength);
+	}
 }
 
 // ================================================================ Layups, dunks and alley-oops
@@ -2434,6 +2511,7 @@ void ATaGCharacter::TickVisuals(float Dt)
 	In.RunUpLeft = bOnFloor ? GetRunUpTimeLeft() : -1.f;
 	In.FinishRise = GetFinishRise();
 	In.bLeftHand = IsFinishingLeft();
+	LastPose = In;
 	In.DribbleT = DribbleT;
 	In.DodgeSide = FVector::DotProduct(ActionDir, GetActorRightVector()) >= 0.f ? 1.f : -1.f;
 	uint8 Pretell = 0;
@@ -2732,7 +2810,35 @@ void ATaGCharacter::OnLookStick(const FInputActionValue& Value)
 
 void ATaGCharacter::OnJumpPressed()
 {
+	if (ATaGReplay::IsPlaying(GetWorld()))
+	{
+		// A skips the highlight; offline (or as the host) the next possession comes sooner too
+		if (ATaGReplay* R = ATaGReplay::Get(GetWorld()))
+		{
+			R->Stop();
+		}
+		if (ATaGGameMode* GM = GetWorld()->GetAuthGameMode<ATaGGameMode>())
+		{
+			GM->SkipHighlight();
+		}
+		return;
+	}
 	InputJump();
+}
+
+void ATaGCharacter::SetHiddenForReplay(bool bHide)
+{
+	Rig->SetVisibility(!bHide, true);
+	if (BlobShadow)
+	{
+		BlobShadow->SetVisibility(!bHide);
+	}
+	if (bHide)
+	{
+		FPArmL->SetVisibility(false);
+		FPArmR->SetVisibility(false);
+		ContestField->SetVisibility(false);
+	}
 }
 
 void ATaGCharacter::OnJumpReleased()

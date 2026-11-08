@@ -8,6 +8,7 @@
 #include "Character/TaGPlayerController.h"
 #include "Core/TaGGameState.h"
 #include "Core/TaGPlayerState.h"
+#include "Core/TaGReplay.h"
 #include "Core/TaGRules.h"
 #include "Core/TaGStage.h"
 #include "Core/TaGTutorial.h"
@@ -421,7 +422,11 @@ void ATaGGameMode::StartMatch()
 		}
 	}
 	UE_LOG(LogTaG, Log, TEXT("Match start: %don%d, %d characters"), Size, Size, Players.Num());
-	ScheduleTurnover(0, 1.5f);
+	// A real match opens on the two lineups; tests and the tutorial start right away
+	const bool bIntro = !bAutoTest && !S->bTutorial && !FParse::Param(FCommandLine::Get(), TEXT("TaGInputTest"))
+		&& (SnapMode.IsEmpty() || SnapMode == TEXT("Lineup"));
+	S->IntroSeconds = bIntro ? 2.3f : 0.f;
+	ScheduleTurnover(0, bIntro ? 2.6f : 1.5f);
 }
 
 void ATaGGameMode::RestartMatch()
@@ -509,6 +514,7 @@ void ATaGGameMode::ScheduleTurnover(int32 ToTeam, float Delay)
 
 void ATaGGameMode::StartPossession(int32 Team)
 {
+	bHighlightShowing = false;
 	ATaGGameState* S = GS();
 	TArray<ATaGCharacter*> Off = GetTeamPlayers(Team);
 	TArray<ATaGCharacter*> Def = GetTeamPlayers(1 - Team);
@@ -684,6 +690,20 @@ void ATaGGameMode::Tick(float DeltaSeconds)
 			Popup(TEXT("ショットクロック・バイオレーション"), 1 - Team);
 			Sfx(TEXT("Buzzer"), TaG::RimCenter(), 0.8f);
 			ScheduleTurnover(1 - Team, 1.2f);
+			return;
+		}
+	}
+
+	// A ball handler whose foot touches the line or the floor beyond it is out. A body in the air keeps the status of
+	// the spot it jumped from: a player who took off inside may save a ball over the line (and is out on landing
+	// there), one who took off outside and catches the ball in the air is out at once. A shooter who took off inside
+	// and lands outside is not: the ball left the hand in the air.
+	if (Ball && Ball->GetBallState() == ETaGBallState::Held)
+	{
+		ATaGCharacter* H = Ball->GetHolder();
+		if (H && TaG::IsPlayerOutOfBounds(H->GetShotSpot()))
+		{
+			OnHandlerOutOfBounds(H);
 			return;
 		}
 	}
@@ -1131,6 +1151,13 @@ void ATaGGameMode::ResolveShot(ATaGCharacter* Shooter, float Charge, bool bConta
 	}
 
 	const bool bMake = bForceMakes || FMath::FRand() < E.Chance;
+	if (bAutoTest)
+	{
+		// One line per shot: how much the bodies decided (the reach gap of the defender that mattered, cm)
+		UE_LOG(LogTaG, Display, TEXT("SHOT team=%d hero=%s type=%d dist=%.0f chance=%.2f contest=%.2f reached=%d gap=%.0f art=%d contested=%d make=%d"),
+			Team, Shooter->GetHeroDef().Key, (int32)E.Type, E.Distance, E.Chance, E.Contest, E.bReached ? 1 : 0, E.ReachGap,
+			E.bArtContest ? 1 : 0, E.bContested ? 1 : 0, bMake ? 1 : 0);
+	}
 	const bool bValid = !NeedsClear(Team);
 	const FVector Feet = Shooter->GetFeetLocation();
 	const ETaGArtFx ShotMod = Shooter->GetShotMod();
@@ -1171,6 +1198,11 @@ void ATaGGameMode::ResolveShot(ATaGCharacter* Shooter, float Charge, bool bConta
 	if (bSlam && !bAutoTest)
 	{
 		S->MulticastWorldFx(4, TaG::RimCenter(), Team); // the rim takes the hit
+	}
+	if (bSlam || E.Type == ETaGShotType::AlleyOop)
+	{
+		LastSlamTime = GetWorld()->GetTimeSeconds();
+		LastSlamKind = E.Type == ETaGShotType::AlleyOop ? 2 : 1;
 	}
 	if (bSlam)
 	{
@@ -1296,6 +1328,15 @@ void ATaGGameMode::OnAlleyOopCaught(ATaGCharacter* Receiver)
 	Receiver->StartAlleyOopFinish();
 }
 
+void ATaGGameMode::SkipHighlight()
+{
+	if (bHighlightShowing && !bLive && bRestartAfterDead)
+	{
+		DeadTimeLeft = FMath::Min(DeadTimeLeft, 0.4f);
+	}
+	bHighlightShowing = false;
+}
+
 void ATaGGameMode::OnAlleyOopStopped(ATaGCharacter* D)
 {
 	OopStopped++;
@@ -1371,6 +1412,23 @@ void ATaGGameMode::OnBasket(ATaGCharacter* Shooter, int32 Points, bool bValid)
 		EndMatch(Team);
 		return;
 	}
+	// A slam or an alley-oop that went in is replayed during the dead ball (alley-oops always, slams at most once a
+	// minute so the game keeps its pace), if the host has replays on
+	const float Now = GetWorld()->GetTimeSeconds();
+	const ATaGPlayerController* HostPC = Cast<ATaGPlayerController>(GetWorld()->GetFirstPlayerController());
+	const bool bReplayTest = FParse::Param(FCommandLine::Get(), TEXT("TaGReplay"));
+	const bool bReplays = !bAutoTest && !S->bTutorial && (SnapMode.IsEmpty() || bReplayTest) && (!HostPC || HostPC->bReplays);
+	if (bReplays && Now - LastSlamTime < 1.5f && (LastSlamKind == 2 || S->MatchTime - LastReplayAt > 60.f))
+	{
+		const float From = LastSlamTime - 1.7f;
+		const float To = Now + 0.45f;
+		S->MulticastHighlight(From, To, LastSlamKind, FText::FromString(LastSlamKind == 2 ? TEXT("アリウープ") : TEXT("ダンク")), Shooter);
+		LastReplayAt = S->MatchTime;
+		LastSlamTime = -100.f;
+		bHighlightShowing = true;
+		ScheduleTurnover(1 - Team, ATaGReplay::HoldSeconds(To - From, ATaGGameState::HighlightDelay, ATaGGameState::HighlightSpeed));
+		return;
+	}
 	ScheduleTurnover(1 - Team, 1.4f);
 }
 
@@ -1430,6 +1488,27 @@ void ATaGGameMode::OnBallPickedUp(ATaGCharacter* Picker, bool bFromPass)
 			Popup(TEXT("アークの外へクリア！"), Team);
 		}
 	}
+}
+
+void ATaGGameMode::OnHandlerOutOfBounds(ATaGCharacter* Handler)
+{
+	ATaGGameState* S = GS();
+	if (!S || !Handler)
+	{
+		return;
+	}
+	const int32 Team = Handler->GetTeam();
+	const FVector Feet = Handler->GetFeetLocation();
+	UE_LOG(LogTaG, Display, TEXT("OUTOFBOUNDS team=%d hero=%s feet=(%.0f, %.0f) line=%.0fcm"), Team, Handler->GetHeroDef().Key, Feet.X, Feet.Y, TaG::DistToBoundary(Feet));
+	S->Stats(Team).Turnovers++;
+	EndPossession(Team, 0);
+	Popup(TEXT("アウト・オブ・バウンズ（ラインを踏んだ）"), 1 - Team);
+	Sfx(TEXT("Whistle"), Handler->GetFeetLocation(), 0.6f);
+	if (Ball)
+	{
+		Ball->SetDead();
+	}
+	ScheduleTurnover(1 - Team, 1.2f);
 }
 
 void ATaGGameMode::OnOutOfBounds(int32 LastTouchTeam)
@@ -2354,7 +2433,22 @@ void ATaGGameMode::TickOopTest(float Dt)
 		UE_LOG(LogTaG, Display, TEXT("OOPTEST%s"), *Line);
 		TestSummary += Line;
 	}
-	if (TestDoneT >= 0.f && TestT - TestDoneT > 1.2f)
+	// -TaGReplay: wait through the highlight replay of a basket and photograph it
+	const bool bReplayTest = FParse::Param(FCommandLine::Get(), TEXT("TaGReplay"));
+	if (bReplayTest && TestDoneT >= 0.f && bTestScored)
+	{
+		const float Since = TestT - TestDoneT;
+		const float Marks[3] = { 1.6f, 2.6f, 3.6f };
+		for (int32 m = 0; m < 3; ++m)
+		{
+			if (Since >= Marks[m] && Since - Dt < Marks[m])
+			{
+				TestShotAt(FString::Printf(TEXT("%s_Replay%d"), C.Name, m), true);
+				UE_LOG(LogTaG, Display, TEXT("OOPTEST %s replay=%d"), C.Name, ATaGReplay::IsPlaying(GetWorld()) ? 1 : 0);
+			}
+		}
+	}
+	if (TestDoneT >= 0.f && TestT - TestDoneT > (bReplayTest && bTestScored ? 6.5f : 1.2f))
 	{
 		TestCase++;
 		TestT = -1.f;
@@ -2565,7 +2659,7 @@ void ATaGGameMode::TickSnap(float Dt)
 			TPC->SetSettingsOpen(true);
 		}
 	}
-	if (SnapStage == 0 && (SnapMode == TEXT("Play") || SnapMode == TEXT("TPS") || SnapMode == TEXT("Results") || SnapMode == TEXT("Defense")) && SnapTimer > 2.f && S->Phase == ETaGPhase::Lobby)
+	if (SnapStage == 0 && (SnapMode == TEXT("Play") || SnapMode == TEXT("TPS") || SnapMode == TEXT("Results") || SnapMode == TEXT("Defense") || SnapMode == TEXT("Lineup")) && SnapTimer > 2.f && S->Phase == ETaGPhase::Lobby)
 	{
 		FString HeroKey;
 		if (FParse::Value(FCommandLine::Get(), TEXT("TaGHero="), HeroKey))
@@ -2597,6 +2691,10 @@ void ATaGGameMode::TickSnap(float Dt)
 	if (SnapMode == TEXT("Trail"))
 	{
 		ShotAt = 6.55f;
+	}
+	if (SnapMode == TEXT("Lineup"))
+	{
+		ShotAt = 3.4f; // about 1.3 s into the match, while the lineups are up
 	}
 	if (SnapStage == 0 && SnapTimer > ShotAt)
 	{

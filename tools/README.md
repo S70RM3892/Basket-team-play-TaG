@@ -15,17 +15,18 @@ The game project (`game/BasketTaG.uproject`) is never opened, built or run by th
 |---|---|
 | `blender/` | `sdf.py` (signed-distance modelling + surface nets), `sdfbake.py` (SDF → decimated mesh, outline hull, width fit), `heroes.py` (rig, feature library, build), `hero_designs.py` (one recipe per hero), `tagmesh.py` (mesh toolkit, `Part`, slot order), `palette.py` (colours per mesh and slot), `ball.py`, `court.py`, `city.py`, `sky.py`, `build_assets.py` (builds everything and exports FBX), `render_previews.py`, `scene_util.py` |
 | `audio/` | `synth_sfx.py` (32 sound effects incl. three footfalls and two sneaker squeaks, 16-bit mono 44.1 kHz), `synth_music.py` (two music loops) |
-| `import/` | `import_all.py` (runs in Unreal: MPC + materials, FBX import, material instances, sockets, portraits, sounds), `verify.py` (runs in Unreal: checks and the manifest), `copy_to_game.py` |
+| `ui/` | `make_icons.py` (53 flat HUD icons drawn with PIL: white glyphs on a transparent background, 128 × 128) |
+| `import/` | `import_all.py` (runs in Unreal: MPC + materials, FBX import, material instances, sockets, portraits, HUD icons, sounds), `verify.py` (runs in Unreal: checks and the manifest), `copy_to_game.py` |
 | `assetproj/` | `TaGAssets.uproject`, a content-only helper project (PythonScriptPlugin + EditorScriptingUtilities, no C++) |
 | `art/` | `roster.json` (the 30 heroes), `manifest.json`, `verify_report.txt`, `previews/`, `CREDITS.md` |
-| `build/` | generated intermediates (`fbx/`, `wav/`, `portraits/`, logs). Ignored by git through the root `build/` rule |
+| `build/` | generated intermediates (`fbx/`, `wav/`, `portraits/`, `icons/`, logs). Ignored by git through the root `build/` rule |
 | `build_all.py` | runs every step in order |
 
 ## Requirements
 
 - Blender 5.2: `C:\Program Files\Blender Foundation\Blender 5.2\blender.exe` (its bundled Python has numpy)
 - Unreal Engine 5.8.4: `C:\Epic Games\UE_5.8` (the scripts use `UnrealEditor-Cmd.exe`)
-- Python 3.12 with numpy: `C:\Users\monns\AppData\Local\Programs\Python\Python312\python.exe`
+- Python 3.12 with numpy and Pillow: `C:\Users\monns\AppData\Local\Programs\Python\Python312\python.exe`
 
 Other install locations can be set with the environment variables `TAG_BLENDER` and `TAG_UE_CMD`
 (used by `build_all.py`).
@@ -37,6 +38,7 @@ Close any Unreal Editor that has the game project open, because the copy step ov
 ```bash
 "C:/Users/monns/AppData/Local/Programs/Python/Python312/python.exe" C:/TaG/tools/build_all.py
 # options: --skip-previews  --skip-copy  --no-audio (art only: no SFX synthesis/import, copies game/Content/Art only)
+#          --check-shaders (verify twice with shader compilation, D3D12 SM6 and ES3.1, instead of -nullrhi)
 ```
 
 ### Step by step (the same commands that `build_all.py` runs)
@@ -53,22 +55,42 @@ PROJ="C:/TaG/tools/assetproj/TaGAssets.uproject"
 # 2. model everything and export one FBX per static mesh -> tools/build/fbx/**.fbx (+ assets.json)
 "$BL" -b --factory-startup -P C:/TaG/tools/blender/build_assets.py
 
-# 3. hero portraits -> tools/build/portraits/T_Portrait_<Key>.png (256x256, transparent; imported by step 4)
+# 3. hero portraits -> tools/build/portraits/T_Portrait_<Key>.png (256x256, transparent; imported by step 5)
 "$BL" -b --factory-startup -P C:/TaG/tools/blender/render_previews.py -- portraits
 
-# 4. import into the helper project: MPC_TaG + materials, meshes, material instances, sockets, portraits, sounds
-#    (add -nosounds inside the quotes to leave the sounds alone)
+# 4. HUD icons -> tools/build/icons/T_Icon_<Name>.png (128x128, white on transparent) + icons.json, and the
+#    contact sheet tools/art/previews/icons.png (every icon tinted, at 128 px and 40 px; imported by step 5)
+"$PY" C:/TaG/tools/ui/make_icons.py
+
+# 5. import into the helper project: MPC_TaG + materials, meshes, material instances, sockets, portraits, icons,
+#    sounds (add -nosounds inside the quotes to leave the sounds alone; -iconsonly imports only the icons)
 "$UE" "$PROJ" -run=pythonscript -script="C:/TaG/tools/import/import_all.py" -unattended -nop4 -nosplash -nullrhi
 
-# 5. verify inside Unreal -> tools/art/verify_report.txt and tools/art/manifest.json
+# 6. verify inside Unreal -> tools/art/verify_report.txt and tools/art/manifest.json
+#    (with -nullrhi Unreal compiles no shader: use -AllowCommandletRendering -dx12 or
+#    -AllowCommandletRendering -FeatureLevelES31 instead to also check that every material compiles, see below)
 "$UE" "$PROJ" -run=pythonscript -script="C:/TaG/tools/import/verify.py" -unattended -nop4 -nosplash -nullrhi
 
-# 6. copy tools/assetproj/Content/{Art,Audio} -> game/Content/{Art,Audio} (same paths; checked with SHA-256)
+# 7. copy tools/assetproj/Content/{Art,Audio} -> game/Content/{Art,Audio} (same paths; checked with SHA-256)
 "$PY" C:/TaG/tools/import/copy_to_game.py            # or: --only Art
 
-# 7. preview renders -> tools/art/previews/ (any of heroes,portraits,turnarounds,ball,court; default all)
+# 8. preview renders -> tools/art/previews/ (any of heroes,portraits,turnarounds,ball,court; default all)
 "$BL" -b --factory-startup -P C:/TaG/tools/blender/render_previews.py -- heroes,turnarounds,ball,court
 ```
+
+Partial rebuilds (then steps 6 and 7 with `--only Art`):
+- Only the icons changed: step 4, then step 5 with `-script="C:/TaG/tools/import/import_all.py -iconsonly"`.
+- Only the materials changed: step 5 with `-script="C:/TaG/tools/import/import_all.py -materialsonly"`.
+- Only some meshes changed (for example the hoop and the net): step 2 with `-- --only court` (it still builds
+  everything but exports only those FBX files), then step 5 with
+  `-script="C:/TaG/tools/import/import_all.py -only=SM_Hoop,SM_Net"` (names or categories). This rebuilds the
+  materials and instances, imports just those meshes and leaves every other package untouched.
+
+Material errors (for example `float3 * float4`) only show up when shaders are compiled, which `-nullrhi` skips.
+After changing a material graph, run step 6 twice with `-AllowCommandletRendering -dx12` (PC, D3D12 SM6) and
+`-AllowCommandletRendering -FeatureLevelES31` (the ES3.1 path Android uses) instead of `-nullrhi`: the report then
+lists `<material> compiles for ...` with the instruction counts, and a material that fails has none. The first run
+per platform also compiles the engine's own shaders, which takes a few minutes.
 
 `build_assets.py` reads the court and hoop numbers from `game/Source/BasketTaG/Core/TaGTypes.h` every time it runs,
 and `verify.py` compares the imported hoop against the same header. If the header changes, rebuild.
@@ -124,11 +146,26 @@ They are animated by rotating the parts around their pivots.
   `eye_height`, `width`, the rest pivots of all parts, socket positions, triangle counts, slots and `portrait`.
 - Portraits: `/Game/Art/UI/T_Portrait_<HeroId>` (256 × 256, transparent background, UI texture group, no mips).
 
+**HUD icons.** `/Game/Art/UI/Icons/T_Icon_<Name>`: 128 × 128, a pure white glyph on a transparent background (RGB is
+white everywhere, the shape is in alpha), about 10 px of margin, no baked outline. Tint them in Slate (brush tint or
+`ColorAndOpacity`). Compression UserInterface2D (`TC_EditorIcon`, uncompressed RGBA), UI texture group, no mips,
+sRGB. Strokes are drawn to read at 40 px. `manifest.json → ui.icons` maps every name to its asset path.
+- Basic actions: `Drive Dodge Tackle Contest Step Pass Steal Shoot Jump Cut Leap`
+- Roles: `Role_Wall Role_Scorer Role_Playmaker`
+- Misc: `Guard Zone Ball Down Clock Ally Enemy`
+- One per `ETaGArtKind` except `Custom`: `ArtKind_<Kind>` for `Dash Leap Shell Phase Counter Decoy ShotBuff Wall
+  ShieldFollow Root Tackle Cone Aura Bolt Field TeamAura TeamOne Pass ContestStance ContestAt`
+- The twelve hand-written arts: `Art_<Art>` for `ShoulderCharge IronWall Pull SlowField Blink Afterimage Scope SpotUp
+  ThreadPass Tether SonicWave Resync`
+
+`ui/make_icons.py` holds one small drawing function per icon; `art/previews/icons.png` shows them all.
+
 **Material slots and instances.** Slot names come from the fixed list (`Body Accent Extra Skin Hair Dark Metal
 White Team TaG Glow Jelly Window Net Board Court Paint Apron Water Sky Outline`). Every slot has its own
-`MI_<Owner>_<Slot>`, stored next to the mesh. The owner is the hero id, `Ball`, `Hoop`, `Rooftop`, `RooftopProps`,
-`RooftopProps_Furnace`, `CityA`, `CityB`, `Sea`, `SkyDome` or `Clouds`. These instances are meant to be overridden at
-runtime:
+`MI_<Owner>_<Slot>`, stored next to the mesh. The owner is the hero id, `Ball`, `Hoop`, `Net`, `Rooftop`,
+`RooftopProps`, `RooftopProps_Furnace`, `CityA`, `CityB`, `Sea`, `SkyDome` or `Clouds`. Every hero instance except
+`Outline`, `TaG`, `Glow` and `Jelly` sets `RimStrength` 0.35 (the edge light below); all other instances keep 0.
+These instances are meant to be overridden at runtime:
 
 | Slot | Default | Meant to be driven |
 |---|---|---|
@@ -144,17 +181,20 @@ Dynamic shadows are not received (use blob shadows if needed). Use manual exposu
 
 | Material | Blend | Parameters (defaults) |
 |---|---|---|
-| `M_TaGBase` | opaque | `Color`, `Emissive`, `EmissiveStrength` 0, `Roughness` 0.6, `Metallic` 0 |
-| `M_TaGTranslucent` | translucent | the same plus `Opacity` 0.5 (Jelly slot) |
+| `M_TaGBase` | opaque | `Color`, `Emissive`, `EmissiveStrength` 0, `Roughness` 0.6, `Metallic` 0, `RimStrength` 0, `RimColor` (1.0, 0.92, 0.85) |
+| `M_TaGTranslucent` | translucent | `Color`, `Emissive`, `EmissiveStrength` 0, `Roughness` 0.6, `Metallic` 0, `Opacity` 0.5 (Jelly slot) |
 | `M_TaGWater` | opaque | `Color`, `Roughness` 0.06; stylised ripple bands from world position and time, horizon tint |
 | `M_TaGOutline` | opaque | `Color` (inverted hull ink) |
 | `M_TaGSky` | opaque, two-sided | none; gradient SkyGround / SkyHorizon / SkyZenith by view direction, sun glow along SunDir |
 | `M_TaGParticle` | additive | `Falloff` 1.6, `Intensity` 2.0; colour from PerInstanceCustomData 0..2, alpha from 3 |
 | `M_TaGParticleAlpha` | translucent | `Falloff` 0.8, `Intensity` 1.0; same custom data |
 
-`M_TaGBase` result (emissive output): `Color × (lerp(ShadeColor, SunColor, band) + Ambient) + rim + Emissive ×
+`M_TaGBase` result (emissive output): `Color × (lerp(ShadeColor, SunColor, band) + Ambient) + rim + edge + Emissive ×
 EmissiveStrength × VertexColor.R`, with `band = saturate((N·normalize(SunDir) − BandOffset) × BandSharpness + 0.5)`
-and `rim = (1 − saturate(N·V))^RimPower × RimStrength × (0.45 + 0.55 band) × RimColor × Color`. `Roughness` and
+and `rim = (1 − saturate(N·V))^RimPower × RimStrength × (0.45 + 0.55 band) × RimColor × Color` (both from `MPC_TaG`,
+on every mesh). `edge` is the per-instance edge light: `RimColor × RimStrength × Fresnel(N, V; exponent 3, base
+reflect 0.04) × band` with the material parameters `RimStrength` / `RimColor` (not the MPC ones), so it is not tinted
+by the surface and shows only on the lit side. `M_TaGTranslucent` has the MPC rim but no edge light. `Roughness` and
 `Metallic` are kept as parameters for compatibility but do not change the toon result. Only the window quads carry
 vertex colours (R between 0.15 and 1.0); every other mesh reads 1.0.
 
@@ -175,11 +215,14 @@ and write RGB into 0..2 and alpha into 3 per instance (the default is 1.0 when n
 | `SkyGround` | (0.16, 0.12, 0.2) | | | |
 
 **Court and city.** All of these are authored in court coordinates: the origin is the middle of the baseline on the
-floor, and the court spans x 0..1100, y −750..750. Spawn them at the identity transform.
+floor, and the court spans x 0..1100, y −750..750. Spawn them at the identity transform, except `SM_Net`.
 - `SM_Hoop`: the board front face is at x = 120 (3 cm thick behind it), y ±90, z 290..395. The rim is a torus
   centred at (157.5, 0, 305) with a tube centre-line radius of 22.5 and a tube radius of 1.0, which is the torus that
-  `TaGBallSim` collides with. Its inner edge is therefore at r = 21.5. The net is about 40 cm. The padded pole is at
-  x = −100. Sockets `rim` and `net_bottom` are for effects.
+  `TaGBallSim` collides with. Its inner edge is therefore at r = 21.5. The padded pole is at x = −100. Sockets `rim`
+  and `net_bottom` are for effects. The net is not part of it.
+- `SM_Net`: the net (slot `Net`, `MI_Net_Net`, no outline), a 40 cm diamond lattice. Its pivot is the rim centre:
+  **spawn it at (RimX, 0, RimZ) = (157.5, 0, 305)** from `TaGTypes.h` and it sits exactly under the rim. Scale it
+  (mostly in Z) or wobble it around the pivot when a ball drops through. Socket `net_bottom` = (0, 0, −40).
 - `SM_Rooftop`: the top surface is exactly z = 0. Slot `Court` covers x 0..1100, y ±750. Slot `Paint` covers
   x 0..580, y ±245. Slot `Apron` extends to x −600..1700, y ±1300. The slab is 100 cm thick and has one simple
   collision box.
@@ -215,6 +258,10 @@ seamless and set to looping. The durations are in `manifest.json → sfx`.
 - Hero shapes: the recipe of the hero in `blender/hero_designs.py`; shared features in `blender/heroes.py`.
   `python render_previews.py -- turnarounds` (via Blender) renders `art/previews/heroes/<Key>.png` to check them.
 - Toon lighting: `MPC_VECTORS` / `MPC_SCALARS` in `import/import_all.py` (defaults), or set `MPC_TaG` at runtime.
+  The hero edge light: `RIM_COLOR`, `RIM_EXPONENT`, `RIM_BASE_REFLECT`, `HERO_RIM_STRENGTH` and `HERO_RIM_SKIP` in the
+  same file, then run step 5 with `-materialsonly` and copy `--only Art`; at runtime set `RimStrength` / `RimColor`
+  on the instance.
+- HUD icons: one drawing function per icon in `ui/make_icons.py`; check `art/previews/icons.png`.
 - City layout: the `CLUSTERS` list in `blender/city.py` (azimuth, distance, kind) and the random seeds.
 - Sky: `blender/sky.py` (`SKY_RADIUS`, cloud ring, islands, moon).
 - Previews only: court lines, lights and hero placement in `render_previews.py` are not part of the assets.

@@ -108,7 +108,14 @@ void ATaGBotController::Wish(ATaGCharacter* Me, const FVector& Dir)
 
 void ATaGBotController::Steer(ATaGCharacter* Me, const FVector& Target, float Accuracy, float Scale)
 {
-	FVector To = Flat(Target - Me->GetFeetLocation());
+	FVector Goal = Target;
+	if (Me->HasBall())
+	{
+		// With the ball, never aim at the lines: a foot on them is out of bounds
+		Goal.X = FMath::Clamp(Goal.X, 70.f, TaG::CourtDepth - 70.f);
+		Goal.Y = FMath::Clamp(Goal.Y, -TaG::CourtHalfWidth + 70.f, TaG::CourtHalfWidth - 70.f);
+	}
+	FVector To = Flat(Goal - Me->GetFeetLocation());
 	const float D = To.Size();
 	if (D > Accuracy)
 	{
@@ -648,6 +655,13 @@ void ATaGBotController::Offense(ATaGCharacter* Me, ATaGBall* Ball, float Dt)
 	if (bBetween)
 	{
 		WishDir = (WishDir + Me->GetActorRightVector() * Strafe * 0.9f).GetSafeNormal();
+	}
+	// Close to a line with the ball: lean back toward the middle of the court
+	const float LineD = TaG::DistToBoundary(Feet);
+	if (LineD < 110.f)
+	{
+		const FVector Inward = Flat(FVector(TaG::CourtDepth * 0.5f, 0.f, 0.f) - Feet).GetSafeNormal();
+		WishDir = (WishDir + Inward * (1.6f * (1.f - LineD / 110.f))).GetSafeNormal();
 	}
 	Wish(Me, WishDir);
 	if (!Me->IsForcedMove() && Me->GetAction() == ETaGAction::None)

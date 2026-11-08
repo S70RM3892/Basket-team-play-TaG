@@ -5,17 +5,22 @@ import_all.py - runs INSIDE Unreal (content-only helper project tools/assetproj/
       -run=pythonscript -script="C:/TaG/tools/import/import_all.py" -unattended -nop4 -nosplash -nullrhi
 
 1. materials  /Game/Art/Materials: MPC_TaG (toon light), M_TaGBase / M_TaGTranslucent (unlit cel shading lit from
-   MPC_TaG), M_TaGWater (toon water), M_TaGOutline (inverted hull), M_TaGSky, M_TaGParticle (additive) and
-   M_TaGParticleAlpha (per-instance custom data 0..3 = RGB, alpha)
+   MPC_TaG; M_TaGBase also has the per-instance edge light RimStrength / RimColor), M_TaGWater (toon water),
+   M_TaGOutline (inverted hull), M_TaGSky, M_TaGParticle (additive) and M_TaGParticleAlpha (per-instance custom
+   data 0..3 = RGB, alpha)
 2. every FBX listed in tools/build/fbx/assets.json -> UStaticMesh (legacy FBX importer, imported normals,
    no auto collision, UCX_ boxes become simple collision, Nanite off)
 3. one MaterialInstanceConstant per owner+slot (MI_<Owner>_<Slot>) assigned to the slot of the same name
+   (hero instances get RimStrength HERO_RIM_STRENGTH, except the slots in HERO_RIM_SKIP)
 4. sockets: the FBX importer creates them from SOCKET_ empties; this script checks every expected socket,
    adds missing ones from assets.json and normalises rotation/scale
 5. tools/build/wav/*.wav -> /Game/Audio/SFX/<Name> (SoundWave), AmbientLoop looping (skip with -nosounds)
    (-materialsonly: steps 1 and 3 only, for material fixes: -script="C:/TaG/tools/import/import_all.py -materialsonly")
+   (-only=SM_Hoop,SM_Net or -only=court: steps 1-4 for just these meshes / categories; no sounds, portraits or icons)
    (-soundsonly: step 5 only, for new or changed sound effects)
 6. tools/build/portraits/T_Portrait_<Key>.png -> /Game/Art/UI (UI textures, no mips)
+7. tools/build/icons/T_Icon_<Name>.png (tools/ui/make_icons.py) -> /Game/Art/UI/Icons (UI textures, no mips)
+   (-iconsonly: step 7 only, for new or changed HUD icons)
 """
 import json
 import os
@@ -29,6 +34,8 @@ WAV_DIR = os.path.join(TOOLS, "build", "wav")
 LOG_PATH = os.path.join(TOOLS, "build", "import_log.txt")
 MAT_DIR = "/Game/Art/Materials"
 SFX_DIR = "/Game/Audio/SFX"
+ICON_SRC = os.path.join(TOOLS, "build", "icons")
+ICON_DIR = "/Game/Art/UI/Icons"
 
 mel = unreal.MaterialEditingLibrary
 eal = unreal.EditorAssetLibrary
@@ -128,6 +135,16 @@ MPC_VECTORS = {
 }
 MPC_SCALARS = {"BandSharpness": 7.0, "BandOffset": -0.05, "RimStrength": 0.42, "RimPower": 3.0}
 
+# Edge light per material instance (M_TaGBase parameters RimStrength / RimColor, on top of the MPC rim above, which
+# is tinted by the surface colour): RimColor * RimStrength * Fresnel(N, V) * band, so it only shows on the lit side.
+# RimStrength defaults to 0 (court, city, ball unchanged); every hero instance gets HERO_RIM_STRENGTH except the slots
+# in HERO_RIM_SKIP.
+RIM_COLOR = (1.0, 0.92, 0.85)
+RIM_EXPONENT = 3.0
+RIM_BASE_REFLECT = 0.04
+HERO_RIM_STRENGTH = 0.35
+HERO_RIM_SKIP = ("Outline", "TaG", "Glow", "Jelly")
+
 
 def make_mpc():
     path = "%s/MPC_TaG" % MAT_DIR
@@ -174,12 +191,12 @@ def _finish(mat, path, kind, usages=(unreal.MaterialUsage.MATUSAGE_INSTANCED_STA
     mel.layout_material_expressions(mat)
     mel.recompile_material(mat)
     eal.save_loaded_asset(mat)
-    log("material", path, kind)
+    log("material", path, kind)     # shaders are not compiled with -nullrhi: verify.py checks them (see its header)
     return mat
 
 
 def toon_light(mat, mpc, col, x0=-1400):
-    """Returns the expression producing Color * (lerp(Shade, Sun, band) + Ambient) + rim."""
+    """Returns (the expression producing Color * (lerp(Shade, Sun, band) + Ambient) + rim, the band expression)."""
     N = _expr(mat, unreal.MaterialExpressionVertexNormalWS, x0, 200)
     L = _cp(mat, mpc, "SunDir", x0, 320)
     Ln = _op(mat, unreal.MaterialExpressionNormalize, None, None, x0 + 180, 320)
@@ -219,7 +236,34 @@ def toon_light(mat, mpc, col, x0=-1400):
     r4 = _mul(mat, (r3, ""), (rc, ""), x0 + 1560, 660)
     r5 = _mul(mat, (r4, ""), (col, ""), x0 + 1720, 660)   # rim tinted by the surface colour (no white halo)
     r6 = _add(mat, (r5, ""), (r4, ""), x0 + 1880, 660) if False else r5
-    return _add(mat, (lit, ""), (r6, ""), x0 + 1900, 300)
+    return _add(mat, (lit, ""), (r6, ""), x0 + 1900, 300), band
+
+
+def _connect(a, a_pin, b, b_pin):
+    if not mel.connect_material_expressions(a, a_pin, b, b_pin):
+        log("MATERIAL CONNECTION FAILED", type(a).__name__, a_pin, "->", type(b).__name__, b_pin)
+
+
+def edge_rim(mat, band, x0=-760, y0=1400):
+    """RimColor * RimStrength * Fresnel(exponent 3, base reflect 0.04) * band: a warm edge light on the lit side only.
+    Fresnel is a float, band a float, RimColor's default pin float3 (RGB), so the result is float3."""
+    N = _expr(mat, unreal.MaterialExpressionVertexNormalWS, x0, y0)
+    fr = _expr(mat, unreal.MaterialExpressionFresnel, x0 + 180, y0)
+    fr.set_editor_property("exponent", RIM_EXPONENT)
+    fr.set_editor_property("base_reflect_fraction", RIM_BASE_REFLECT)
+    _connect(N, "", fr, "Normal")
+    rs = _sparam(mat, "RimStrength", 0.0, x0 + 180, y0 + 160)
+    rc = _vparam(mat, "RimColor", RIM_COLOR, x0 + 180, y0 + 240)
+    lit_side = _expr(mat, unreal.MaterialExpressionMultiply, x0 + 380, y0)
+    _connect(fr, "", lit_side, "A")
+    _connect(band, "", lit_side, "B")
+    strength = _expr(mat, unreal.MaterialExpressionMultiply, x0 + 540, y0 + 40)
+    _connect(lit_side, "", strength, "A")
+    _connect(rs, "", strength, "B")
+    rim = _expr(mat, unreal.MaterialExpressionMultiply, x0 + 700, y0 + 80)
+    _connect(strength, "", rim, "A")
+    _connect(rc, "", rim, "B")
+    return rim
 
 
 def make_toon_material(name, kind, mpc):
@@ -236,7 +280,13 @@ def make_toon_material(name, kind, mpc):
     emis = _vparam(mat, "Emissive", (1.0, 1.0, 1.0), -1800, 1000)
     stren = _sparam(mat, "EmissiveStrength", 0.0, -1800, 1160)
     vcol = _expr(mat, unreal.MaterialExpressionVertexColor, -1800, 1240)
-    shaded = toon_light(mat, mpc, col)
+    shaded, band = toon_light(mat, mpc, col)
+    if kind == "opaque":
+        rim = edge_rim(mat, band)
+        with_rim = _expr(mat, unreal.MaterialExpressionAdd, -250, 700)
+        _connect(shaded, "", with_rim, "A")
+        _connect(rim, "", with_rim, "B")
+        shaded = with_rim
     m1 = _mul(mat, (emis, ""), (stren, ""), -400, 1050)
     m2 = _mul(mat, (m1, ""), (vcol, "R"), -250, 1100)
     # keep Roughness / Metallic as parameters (instances set them) without affecting the toon result
@@ -381,18 +431,14 @@ def make_particle_material(name, additive):
                    usages=(unreal.MaterialUsage.MATUSAGE_INSTANCED_STATIC_MESHES,))
 
 
-def import_portraits():
-    """tools/build/portraits/T_Portrait_<Key>.png -> /Game/Art/UI (UI texture group, no mips)."""
-    src = os.path.join(TOOLS, "build", "portraits")
-    if not os.path.isdir(src):
-        log("no portraits folder", src)
-        return []
-    files = sorted(f for f in os.listdir(src) if f.lower().endswith(".png"))
+def import_ui_textures(src, files, dest, what):
+    """PNG files -> UI textures in `dest`: UserInterface2D (TC_EditorIcon, uncompressed RGBA, crisp edges), UI texture
+    group, no mips, never streamed, sRGB."""
     tasks = []
     for f in files:
         t = unreal.AssetImportTask()
         t.filename = os.path.join(src, f)
-        t.destination_path = "/Game/Art/UI"
+        t.destination_path = dest
         t.destination_name = os.path.splitext(f)[0]
         t.replace_existing = True
         t.automated = True
@@ -401,10 +447,10 @@ def import_portraits():
     tools.import_asset_tasks(tasks)
     out = []
     for f in files:
-        p = "/Game/Art/UI/" + os.path.splitext(f)[0]
+        p = "%s/%s" % (dest, os.path.splitext(f)[0])
         tx = unreal.load_asset(p)
         if tx is None:
-            log("PORTRAIT IMPORT FAILED", f)
+            log("%s IMPORT FAILED" % what.upper(), f)
             continue
         tx.set_editor_property("compression_settings", unreal.TextureCompressionSettings.TC_EDITOR_ICON)
         tx.set_editor_property("lod_group", unreal.TextureGroup.TEXTUREGROUP_UI)
@@ -413,8 +459,33 @@ def import_portraits():
         tx.set_editor_property("srgb", True)
         eal.save_loaded_asset(tx)
         out.append(p)
-    log("imported %d / %d portraits" % (len(out), len(files)))
+    log("imported %d / %d %s" % (len(out), len(files), what))
     return out
+
+
+def import_portraits():
+    """tools/build/portraits/T_Portrait_<Key>.png -> /Game/Art/UI (UI texture group, no mips)."""
+    src = os.path.join(TOOLS, "build", "portraits")
+    if not os.path.isdir(src):
+        log("no portraits folder", src)
+        return []
+    files = sorted(f for f in os.listdir(src) if f.lower().endswith(".png"))
+    return import_ui_textures(src, files, "/Game/Art/UI", "portraits")
+
+
+def import_icons():
+    """tools/build/icons/T_Icon_<Name>.png (tools/ui/make_icons.py) -> /Game/Art/UI/Icons (white glyphs, tinted in
+    Slate). The list comes from icons.json, so stale PNGs in the folder are not imported."""
+    if not os.path.isfile(os.path.join(ICON_SRC, "icons.json")):
+        log("no icons (run tools/ui/make_icons.py)", ICON_SRC)
+        return []
+    with open(os.path.join(ICON_SRC, "icons.json"), encoding="utf-8") as f:
+        doc = json.load(f)
+    files = [i["file"] for i in doc["icons"]]
+    missing = [f for f in files if not os.path.isfile(os.path.join(ICON_SRC, f))]
+    if missing:
+        log("ICON PNG MISSING", missing)
+    return import_ui_textures(ICON_SRC, [f for f in files if f not in missing], ICON_DIR, "icons")
 
 
 def make_mi(path, parent, prm):
@@ -439,6 +510,8 @@ def make_mi(path, parent, prm):
         mel.set_material_instance_scalar_parameter_value(mi, "EmissiveStrength", prm["EmissiveStrength"])
     if "Opacity" in prm:
         mel.set_material_instance_scalar_parameter_value(mi, "Opacity", prm["Opacity"])
+    if "RimStrength" in prm:
+        mel.set_material_instance_scalar_parameter_value(mi, "RimStrength", prm["RimStrength"])
     mel.update_material_instance(mi)
     eal.save_loaded_asset(mi)
     return mi
@@ -597,6 +670,13 @@ def main():
         with open(LOG_PATH, "w", encoding="utf-8") as f:
             f.write("\n".join(_log) + "\n")
         return
+    if "-iconsonly" in sys.argv:
+        import_icons()
+        eal.save_directory(ICON_DIR, only_if_is_dirty=False, recursive=True)
+        log("icons only: done in %.1fs" % (time.time() - t0))
+        with open(LOG_PATH, "w", encoding="utf-8") as f:
+            f.write("\n".join(_log) + "\n")
+        return
     mpc = make_mpc()
     base = {"M_TaGBase": make_toon_material("M_TaGBase", "opaque", mpc),
             "M_TaGTranslucent": make_toon_material("M_TaGTranslucent", "translucent", mpc),
@@ -606,12 +686,16 @@ def main():
     make_particle_material("M_TaGParticle", True)
     make_particle_material("M_TaGParticleAlpha", False)
     mis = {}
+    rim = 0
     for e in entries:
         for slot, prm in e["materials"].items():
             key = (e["owner"], slot)
             if key not in mis:
+                if e["category"] == "hero" and slot not in HERO_RIM_SKIP and prm["base"] == "M_TaGBase":
+                    prm = dict(prm, RimStrength=HERO_RIM_STRENGTH)
+                    rim += 1
                 mis[key] = make_mi(prm["instance"], base[prm["base"]], prm)
-    log("material instances:", len(mis))
+    log("material instances:", len(mis), "(hero edge light RimStrength %.2f on %d)" % (HERO_RIM_STRENGTH, rim))
     if "-materialsonly" in sys.argv:
         eal.save_directory("/Game/Art", only_if_is_dirty=True, recursive=True)
         log("materials only: done in %.1fs" % (time.time() - t0))
@@ -622,9 +706,18 @@ def main():
     import_meshes(todo)
     for e in todo:
         finish_mesh(e, mis)
+    if only is not None:
+        # just these meshes: sounds, portraits and icons are left alone, and only the packages touched above are
+        # saved, so the other meshes keep their bytes (game/Content is in git)
+        eal.save_directory("/Game/Art", only_if_is_dirty=True, recursive=True)
+        log("only %s: %d meshes, done in %.1fs" % (",".join(only), len(todo), time.time() - t0))
+        with open(LOG_PATH, "w", encoding="utf-8") as f:
+            f.write("\n".join(_log) + "\n")
+        return
     if "-nosounds" not in sys.argv:
         import_sounds()
     import_portraits()
+    import_icons()
     eal.save_directory("/Game/Art", only_if_is_dirty=False, recursive=True)
     eal.save_directory("/Game/Audio", only_if_is_dirty=False, recursive=True)
     log("done in %.1fs" % (time.time() - t0))

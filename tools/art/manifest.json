@@ -1,5 +1,5 @@
 {
- "generated": "2026-11-08 17:20:43",
+ "generated": "2026-11-09 01:30:29",
  "engine": "5.8.4-58902052+++UE5+Release-5.8",
  "units": "cm; UE axes: +X forward, +Y right (left = -Y), +Z up",
  "notes": [
@@ -9,12 +9,14 @@
   "Head eyes socket = point between the eyes (first-person camera).",
   "Runtime-overridden slots: Team (Color), TaG (Emissive/EmissiveStrength), Glow (Emissive/EmissiveStrength), Window (EmissiveStrength; default 0 = lights off), Outline (Color: team tint of the inverted-hull outline).",
   "All materials are unlit toon materials lit from MPC_TaG (SunDir, SunColor, ShadeColor, RimColor, Ambient, BandSharpness, BandOffset, RimStrength, RimPower; sky: SkyZenith, SkyHorizon, SkyGround). Use manual exposure (EV100 0 / exposure compensation so an unlit 1.0 shows as 1.0); dynamic shadows are not received.",
-  "M_TaGBase emissive = Color*(lerp(ShadeColor, SunColor, band)+Ambient) + rim + Emissive * EmissiveStrength * VertexColor.R. Only window quads carry vertex colours (R 0.15..1.0, per-window variation); every other mesh reads 1.0.",
+  "M_TaGBase emissive = Color*(lerp(ShadeColor, SunColor, band)+Ambient) + rim + edge + Emissive * EmissiveStrength * VertexColor.R. Only window quads carry vertex colours (R 0.15..1.0, per-window variation); every other mesh reads 1.0.",
+  "M_TaGBase edge light (per instance) = RimColor * RimStrength * Fresnel(exponent 3, base reflect 0.04) * band (lit side only). RimStrength defaults to 0; the hero instances set 0.35 (not Outline/TaG/Glow/Jelly).",
   "Every hero part has an Outline slot (inverted hull, M_TaGOutline, faces point inward): keep it in the same mesh component; it renders back faces only via its reversed winding.",
   "M_TaGParticle (additive) / M_TaGParticleAlpha (translucent) read PerInstanceCustomData 0..2 = RGB, 3 = alpha: set NumCustomDataFloats = 4 on the instanced static mesh component.",
   "SM_SkyDome (radius 160000 cm, centre (550, 0, 0)) and SM_Clouds are authored in court coordinates: spawn at identity, no collision, cast shadows off.",
   "Rim: torus with tube centre-line radius RimRadius (22.5) and tube radius RimTube (1.0), exactly the torus TaGBallSim collides against; inner edge radius is therefore 21.5.",
-  "Court/city meshes are authored in court coordinates: spawn them at the identity transform.",
+  "Court/city meshes are authored in court coordinates: spawn them at the identity transform, except SM_Net.",
+  "SM_Net (the net, slot Net, MI_Net_Net) has its pivot at the rim centre: spawn it at (RimX, 0, RimZ) = (157.5, 0, 305) and scale / wobble it around that point; socket net_bottom is 40 cm below the pivot.",
   "Collision: SM_Rooftop has one simple box (x -600..1700, y -1300..1300, z -100..0); SM_Hoop has simple boxes for the pole and padding only; all other meshes have no simple collision."
  ],
  "materials": {
@@ -25,6 +27,7 @@
    "scalar_parameters": {
     "EmissiveStrength": 0.0,
     "Metallic": 0.0,
+    "RimStrength": 0.0,
     "Roughness": 0.6
    },
    "vector_parameters": {
@@ -37,6 +40,11 @@
      1.0,
      1.0,
      1.0
+    ],
+    "RimColor": [
+     1.0,
+     0.92,
+     0.85
     ]
    }
   },
@@ -185,7 +193,8 @@
    ],
    "Roughness": 0.72,
    "Metallic": 0.0,
-   "EmissiveStrength": 0.0
+   "EmissiveStrength": 0.0,
+   "RimStrength": 0.0
   },
   "/Game/Art/Ball/MI_Ball_Dark": {
    "parent": "/Game/Art/Materials/M_TaGBase",
@@ -201,7 +210,8 @@
    ],
    "Roughness": 0.8,
    "Metallic": 0.0,
-   "EmissiveStrength": 0.0
+   "EmissiveStrength": 0.0,
+   "RimStrength": 0.0
   },
   "/Game/Art/Ball/MI_Ball_Glow": {
    "parent": "/Game/Art/Materials/M_TaGBase",
@@ -217,7 +227,8 @@
    ],
    "Roughness": 0.4,
    "Metallic": 0.0,
-   "EmissiveStrength": 1.0
+   "EmissiveStrength": 1.0,
+   "RimStrength": 0.0
   },
   "/Game/Art/City/MI_CityA_Accent": {
    "parent": "/Game/Art/Materials/M_TaGBase",
@@ -233,7 +244,8 @@
    ],
    "Roughness": 0.85,
    "Metallic": 0.0,
-   "EmissiveStrength": 0.0
+   "EmissiveStrength": 0.0,
+   "RimStrength": 0.0
   },
   "/Game/Art/City/MI_CityA_Body": {
    "parent": "/Game/Art/Materials/M_TaGBase",
@@ -249,7 +261,8 @@
    ],
    "Roughness": 0.9,
    "Metallic": 0.0,
-   "EmissiveStrength": 0.0
+   "EmissiveStrength": 0.0,
+   "RimStrength": 0.0
   },
   "/Game/Art/City/MI_CityA_Dark": {
    "parent": "/Game/Art/Materials/M_TaGBase",
@@ -265,7 +278,8 @@
    ],
    "Roughness": 0.8,
    "Metallic": 0.0,
-   "EmissiveStrength": 0.0
+   "EmissiveStrength": 0.0,
+   "RimStrength": 0.0
   },
   "/Game/Art/City/MI_CityA_Glow": {
    "parent": "/Game/Art/Materials/M_TaGBase",
@@ -281,7 +295,8 @@
    ],
    "Roughness": 0.3,
    "Metallic": 0.0,
-   "EmissiveStrength": 5.0
+   "EmissiveStrength": 5.0,
+   "RimStrength": 0.0
   },
   "/Game/Art/City/MI_CityA_Metal": {
    "parent": "/Game/Art/Materials/M_TaGBase",
@@ -297,7 +312,8 @@
    ],
    "Roughness": 0.5,
    "Metallic": 0.6,
-   "EmissiveStrength": 0.0
+   "EmissiveStrength": 0.0,
+   "RimStrength": 0.0
   },
   "/Game/Art/City/MI_CityA_Window": {
    "parent": "/Game/Art/Materials/M_TaGBase",
@@ -313,7 +329,8 @@
    ],
    "Roughness": 0.2,
    "Metallic": 0.0,
-   "EmissiveStrength": 0.0
+   "EmissiveStrength": 0.0,
+   "RimStrength": 0.0
   },
   "/Game/Art/City/MI_CityB_Accent": {
    "parent": "/Game/Art/Materials/M_TaGBase",
@@ -329,7 +346,8 @@
    ],
    "Roughness": 0.4,
    "Metallic": 0.0,
-   "EmissiveStrength": 0.0
+   "EmissiveStrength": 0.0,
+   "RimStrength": 0.0
   },
   "/Game/Art/City/MI_CityB_Body": {
    "parent": "/Game/Art/Materials/M_TaGBase",
@@ -345,7 +363,8 @@
    ],
    "Roughness": 0.5,
    "Metallic": 0.2,
-   "EmissiveStrength": 0.0
+   "EmissiveStrength": 0.0,
+   "RimStrength": 0.0
   },
   "/Game/Art/City/MI_CityB_Dark": {
    "parent": "/Game/Art/Materials/M_TaGBase",
@@ -361,7 +380,8 @@
    ],
    "Roughness": 0.7,
    "Metallic": 0.0,
-   "EmissiveStrength": 0.0
+   "EmissiveStrength": 0.0,
+   "RimStrength": 0.0
   },
   "/Game/Art/City/MI_CityB_Glow": {
    "parent": "/Game/Art/Materials/M_TaGBase",
@@ -377,7 +397,8 @@
    ],
    "Roughness": 0.3,
    "Metallic": 0.0,
-   "EmissiveStrength": 5.0
+   "EmissiveStrength": 5.0,
+   "RimStrength": 0.0
   },
   "/Game/Art/City/MI_CityB_Metal": {
    "parent": "/Game/Art/Materials/M_TaGBase",
@@ -393,7 +414,8 @@
    ],
    "Roughness": 0.35,
    "Metallic": 0.8,
-   "EmissiveStrength": 0.0
+   "EmissiveStrength": 0.0,
+   "RimStrength": 0.0
   },
   "/Game/Art/City/MI_CityB_Window": {
    "parent": "/Game/Art/Materials/M_TaGBase",
@@ -409,7 +431,8 @@
    ],
    "Roughness": 0.15,
    "Metallic": 0.0,
-   "EmissiveStrength": 0.0
+   "EmissiveStrength": 0.0,
+   "RimStrength": 0.0
   },
   "/Game/Art/City/MI_Clouds_Accent": {
    "parent": "/Game/Art/Materials/M_TaGBase",
@@ -425,7 +448,8 @@
    ],
    "Roughness": 1.0,
    "Metallic": 0.0,
-   "EmissiveStrength": 0.0
+   "EmissiveStrength": 0.0,
+   "RimStrength": 0.0
   },
   "/Game/Art/City/MI_Clouds_Body": {
    "parent": "/Game/Art/Materials/M_TaGBase",
@@ -441,7 +465,8 @@
    ],
    "Roughness": 1.0,
    "Metallic": 0.0,
-   "EmissiveStrength": 0.0
+   "EmissiveStrength": 0.0,
+   "RimStrength": 0.0
   },
   "/Game/Art/City/MI_Clouds_Extra": {
    "parent": "/Game/Art/Materials/M_TaGBase",
@@ -457,7 +482,8 @@
    ],
    "Roughness": 0.6,
    "Metallic": 0.0,
-   "EmissiveStrength": 0.0
+   "EmissiveStrength": 0.0,
+   "RimStrength": 0.0
   },
   "/Game/Art/City/MI_Clouds_Glow": {
    "parent": "/Game/Art/Materials/M_TaGBase",
@@ -473,7 +499,8 @@
    ],
    "Roughness": 0.3,
    "Metallic": 0.0,
-   "EmissiveStrength": 4.0
+   "EmissiveStrength": 4.0,
+   "RimStrength": 0.0
   },
   "/Game/Art/City/MI_Clouds_Hair": {
    "parent": "/Game/Art/Materials/M_TaGBase",
@@ -489,7 +516,8 @@
    ],
    "Roughness": 1.0,
    "Metallic": 0.0,
-   "EmissiveStrength": 0.0
+   "EmissiveStrength": 0.0,
+   "RimStrength": 0.0
   },
   "/Game/Art/City/MI_Clouds_White": {
    "parent": "/Game/Art/Materials/M_TaGBase",
@@ -505,7 +533,8 @@
    ],
    "Roughness": 0.3,
    "Metallic": 0.0,
-   "EmissiveStrength": 1.6
+   "EmissiveStrength": 1.6,
+   "RimStrength": 0.0
   },
   "/Game/Art/City/MI_Sea_Body": {
    "parent": "/Game/Art/Materials/M_TaGBase",
@@ -521,7 +550,8 @@
    ],
    "Roughness": 0.8,
    "Metallic": 0.0,
-   "EmissiveStrength": 0.0
+   "EmissiveStrength": 0.0,
+   "RimStrength": 0.0
   },
   "/Game/Art/City/MI_Sea_Dark": {
    "parent": "/Game/Art/Materials/M_TaGBase",
@@ -537,7 +567,8 @@
    ],
    "Roughness": 0.8,
    "Metallic": 0.0,
-   "EmissiveStrength": 0.0
+   "EmissiveStrength": 0.0,
+   "RimStrength": 0.0
   },
   "/Game/Art/City/MI_Sea_Glow": {
    "parent": "/Game/Art/Materials/M_TaGBase",
@@ -553,7 +584,8 @@
    ],
    "Roughness": 0.3,
    "Metallic": 0.0,
-   "EmissiveStrength": 6.0
+   "EmissiveStrength": 6.0,
+   "RimStrength": 0.0
   },
   "/Game/Art/City/MI_Sea_Water": {
    "parent": "/Game/Art/Materials/M_TaGWater",
@@ -581,7 +613,8 @@
    ],
    "Roughness": 0.6,
    "Metallic": 0.0,
-   "EmissiveStrength": 0.0
+   "EmissiveStrength": 0.0,
+   "RimStrength": 0.0
   },
   "/Game/Art/Court/MI_Hoop_Board": {
    "parent": "/Game/Art/Materials/M_TaGBase",
@@ -597,7 +630,8 @@
    ],
    "Roughness": 0.2,
    "Metallic": 0.0,
-   "EmissiveStrength": 0.0
+   "EmissiveStrength": 0.0,
+   "RimStrength": 0.0
   },
   "/Game/Art/Court/MI_Hoop_Dark": {
    "parent": "/Game/Art/Materials/M_TaGBase",
@@ -613,7 +647,8 @@
    ],
    "Roughness": 0.6,
    "Metallic": 0.0,
-   "EmissiveStrength": 0.0
+   "EmissiveStrength": 0.0,
+   "RimStrength": 0.0
   },
   "/Game/Art/Court/MI_Hoop_Glow": {
    "parent": "/Game/Art/Materials/M_TaGBase",
@@ -629,7 +664,8 @@
    ],
    "Roughness": 0.3,
    "Metallic": 0.0,
-   "EmissiveStrength": 2.0
+   "EmissiveStrength": 2.0,
+   "RimStrength": 0.0
   },
   "/Game/Art/Court/MI_Hoop_Metal": {
    "parent": "/Game/Art/Materials/M_TaGBase",
@@ -645,23 +681,8 @@
    ],
    "Roughness": 0.4,
    "Metallic": 0.8,
-   "EmissiveStrength": 0.0
-  },
-  "/Game/Art/Court/MI_Hoop_Net": {
-   "parent": "/Game/Art/Materials/M_TaGBase",
-   "Color": [
-    1.0,
-    0.9216,
-    0.8388
-   ],
-   "Emissive": [
-    0.0,
-    0.0,
-    0.0
-   ],
-   "Roughness": 0.7,
-   "Metallic": 0.0,
-   "EmissiveStrength": 0.0
+   "EmissiveStrength": 0.0,
+   "RimStrength": 0.0
   },
   "/Game/Art/Court/MI_Hoop_TaG": {
    "parent": "/Game/Art/Materials/M_TaGBase",
@@ -677,7 +698,25 @@
    ],
    "Roughness": 0.3,
    "Metallic": 0.0,
-   "EmissiveStrength": 4.0
+   "EmissiveStrength": 4.0,
+   "RimStrength": 0.0
+  },
+  "/Game/Art/Court/MI_Net_Net": {
+   "parent": "/Game/Art/Materials/M_TaGBase",
+   "Color": [
+    1.0,
+    0.9216,
+    0.8388
+   ],
+   "Emissive": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "Roughness": 0.7,
+   "Metallic": 0.0,
+   "EmissiveStrength": 0.0,
+   "RimStrength": 0.0
   },
   "/Game/Art/Court/MI_RooftopProps_Accent": {
    "parent": "/Game/Art/Materials/M_TaGBase",
@@ -693,7 +732,8 @@
    ],
    "Roughness": 0.6,
    "Metallic": 0.0,
-   "EmissiveStrength": 0.0
+   "EmissiveStrength": 0.0,
+   "RimStrength": 0.0
   },
   "/Game/Art/Court/MI_RooftopProps_Body": {
    "parent": "/Game/Art/Materials/M_TaGBase",
@@ -709,7 +749,8 @@
    ],
    "Roughness": 0.8,
    "Metallic": 0.0,
-   "EmissiveStrength": 0.0
+   "EmissiveStrength": 0.0,
+   "RimStrength": 0.0
   },
   "/Game/Art/Court/MI_RooftopProps_Dark": {
    "parent": "/Game/Art/Materials/M_TaGBase",
@@ -725,7 +766,8 @@
    ],
    "Roughness": 0.8,
    "Metallic": 0.0,
-   "EmissiveStrength": 0.0
+   "EmissiveStrength": 0.0,
+   "RimStrength": 0.0
   },
   "/Game/Art/Court/MI_RooftopProps_Extra": {
    "parent": "/Game/Art/Materials/M_TaGBase",
@@ -741,7 +783,8 @@
    ],
    "Roughness": 0.6,
    "Metallic": 0.0,
-   "EmissiveStrength": 0.0
+   "EmissiveStrength": 0.0,
+   "RimStrength": 0.0
   },
   "/Game/Art/Court/MI_RooftopProps_Furnace_Body": {
    "parent": "/Game/Art/Materials/M_TaGBase",
@@ -757,7 +800,8 @@
    ],
    "Roughness": 0.9,
    "Metallic": 0.0,
-   "EmissiveStrength": 0.0
+   "EmissiveStrength": 0.0,
+   "RimStrength": 0.0
   },
   "/Game/Art/Court/MI_RooftopProps_Furnace_Dark": {
    "parent": "/Game/Art/Materials/M_TaGBase",
@@ -773,7 +817,8 @@
    ],
    "Roughness": 0.85,
    "Metallic": 0.0,
-   "EmissiveStrength": 0.0
+   "EmissiveStrength": 0.0,
+   "RimStrength": 0.0
   },
   "/Game/Art/Court/MI_RooftopProps_Furnace_Glow": {
    "parent": "/Game/Art/Materials/M_TaGBase",
@@ -789,7 +834,8 @@
    ],
    "Roughness": 0.4,
    "Metallic": 0.0,
-   "EmissiveStrength": 8.0
+   "EmissiveStrength": 8.0,
+   "RimStrength": 0.0
   },
   "/Game/Art/Court/MI_RooftopProps_Furnace_Metal": {
    "parent": "/Game/Art/Materials/M_TaGBase",
@@ -805,7 +851,8 @@
    ],
    "Roughness": 0.6,
    "Metallic": 0.5,
-   "EmissiveStrength": 0.0
+   "EmissiveStrength": 0.0,
+   "RimStrength": 0.0
   },
   "/Game/Art/Court/MI_RooftopProps_Glow": {
    "parent": "/Game/Art/Materials/M_TaGBase",
@@ -821,7 +868,8 @@
    ],
    "Roughness": 0.2,
    "Metallic": 0.0,
-   "EmissiveStrength": 10.0
+   "EmissiveStrength": 10.0,
+   "RimStrength": 0.0
   },
   "/Game/Art/Court/MI_RooftopProps_Metal": {
    "parent": "/Game/Art/Materials/M_TaGBase",
@@ -837,7 +885,8 @@
    ],
    "Roughness": 0.45,
    "Metallic": 0.7,
-   "EmissiveStrength": 0.0
+   "EmissiveStrength": 0.0,
+   "RimStrength": 0.0
   },
   "/Game/Art/Court/MI_RooftopProps_White": {
    "parent": "/Game/Art/Materials/M_TaGBase",
@@ -853,7 +902,8 @@
    ],
    "Roughness": 0.5,
    "Metallic": 0.0,
-   "EmissiveStrength": 5.0
+   "EmissiveStrength": 5.0,
+   "RimStrength": 0.0
   },
   "/Game/Art/Court/MI_RooftopProps_Window": {
    "parent": "/Game/Art/Materials/M_TaGBase",
@@ -869,7 +919,8 @@
    ],
    "Roughness": 0.2,
    "Metallic": 0.0,
-   "EmissiveStrength": 0.0
+   "EmissiveStrength": 0.0,
+   "RimStrength": 0.0
   },
   "/Game/Art/Court/MI_Rooftop_Apron": {
    "parent": "/Game/Art/Materials/M_TaGBase",
@@ -885,7 +936,8 @@
    ],
    "Roughness": 0.85,
    "Metallic": 0.0,
-   "EmissiveStrength": 0.0
+   "EmissiveStrength": 0.0,
+   "RimStrength": 0.0
   },
   "/Game/Art/Court/MI_Rooftop_Court": {
    "parent": "/Game/Art/Materials/M_TaGBase",
@@ -901,7 +953,8 @@
    ],
    "Roughness": 0.7,
    "Metallic": 0.0,
-   "EmissiveStrength": 0.0
+   "EmissiveStrength": 0.0,
+   "RimStrength": 0.0
   },
   "/Game/Art/Court/MI_Rooftop_Dark": {
    "parent": "/Game/Art/Materials/M_TaGBase",
@@ -917,7 +970,8 @@
    ],
    "Roughness": 0.85,
    "Metallic": 0.0,
-   "EmissiveStrength": 0.0
+   "EmissiveStrength": 0.0,
+   "RimStrength": 0.0
   },
   "/Game/Art/Court/MI_Rooftop_Paint": {
    "parent": "/Game/Art/Materials/M_TaGBase",
@@ -933,7 +987,8 @@
    ],
    "Roughness": 0.6,
    "Metallic": 0.0,
-   "EmissiveStrength": 0.0
+   "EmissiveStrength": 0.0,
+   "RimStrength": 0.0
   },
   "/Game/Art/Heroes/Amagi/MI_Amagi_Accent": {
    "parent": "/Game/Art/Materials/M_TaGBase",
@@ -949,7 +1004,8 @@
    ],
    "Roughness": 0.55,
    "Metallic": 0.0,
-   "EmissiveStrength": 0.0
+   "EmissiveStrength": 0.0,
+   "RimStrength": 0.35
   },
   "/Game/Art/Heroes/Amagi/MI_Amagi_Body": {
    "parent": "/Game/Art/Materials/M_TaGBase",
@@ -965,7 +1021,8 @@
    ],
    "Roughness": 0.6,
    "Metallic": 0.0,
-   "EmissiveStrength": 0.0
+   "EmissiveStrength": 0.0,
+   "RimStrength": 0.35
   },
   "/Game/Art/Heroes/Amagi/MI_Amagi_Glow": {
    "parent": "/Game/Art/Materials/M_TaGBase",
@@ -981,7 +1038,8 @@
    ],
    "Roughness": 0.3,
    "Metallic": 0.0,
-   "EmissiveStrength": 5.0
+   "EmissiveStrength": 5.0,
+   "RimStrength": 0.0
   },
   "/Game/Art/Heroes/Amagi/MI_Amagi_Outline": {
    "parent": "/Game/Art/Materials/M_TaGOutline",
@@ -1005,7 +1063,8 @@
    ],
    "Roughness": 0.35,
    "Metallic": 0.0,
-   "EmissiveStrength": 3.0
+   "EmissiveStrength": 3.0,
+   "RimStrength": 0.0
   },
   "/Game/Art/Heroes/Ankou/MI_Ankou_Accent": {
    "parent": "/Game/Art/Materials/M_TaGBase",
@@ -1021,7 +1080,8 @@
    ],
    "Roughness": 0.55,
    "Metallic": 0.0,
-   "EmissiveStrength": 0.0
+   "EmissiveStrength": 0.0,
+   "RimStrength": 0.35
   },
   "/Game/Art/Heroes/Ankou/MI_Ankou_Body": {
    "parent": "/Game/Art/Materials/M_TaGBase",
@@ -1037,7 +1097,8 @@
    ],
    "Roughness": 0.6,
    "Metallic": 0.0,
-   "EmissiveStrength": 0.0
+   "EmissiveStrength": 0.0,
+   "RimStrength": 0.35
   },
   "/Game/Art/Heroes/Ankou/MI_Ankou_Dark": {
    "parent": "/Game/Art/Materials/M_TaGBase",
@@ -1053,7 +1114,8 @@
    ],
    "Roughness": 0.6,
    "Metallic": 0.0,
-   "EmissiveStrength": 0.0
+   "EmissiveStrength": 0.0,
+   "RimStrength": 0.35
   },
   "/Game/Art/Heroes/Ankou/MI_Ankou_Extra": {
    "parent": "/Game/Art/Materials/M_TaGBase",
@@ -1069,7 +1131,8 @@
    ],
    "Roughness": 0.6,
    "Metallic": 0.0,
-   "EmissiveStrength": 0.0
+   "EmissiveStrength": 0.0,
+   "RimStrength": 0.35
   },
   "/Game/Art/Heroes/Ankou/MI_Ankou_Glow": {
    "parent": "/Game/Art/Materials/M_TaGBase",
@@ -1085,7 +1148,8 @@
    ],
    "Roughness": 0.3,
    "Metallic": 0.0,
-   "EmissiveStrength": 6.0
+   "EmissiveStrength": 6.0,
+   "RimStrength": 0.0
   },
   "/Game/Art/Heroes/Ankou/MI_Ankou_Outline": {
    "parent": "/Game/Art/Materials/M_TaGOutline",
@@ -1109,7 +1173,8 @@
    ],
    "Roughness": 0.35,
    "Metallic": 0.0,
-   "EmissiveStrength": 3.0
+   "EmissiveStrength": 3.0,
+   "RimStrength": 0.0
   },
   "/Game/Art/Heroes/Ankou/MI_Ankou_White": {
    "parent": "/Game/Art/Materials/M_TaGBase",
@@ -1125,7 +1190,8 @@
    ],
    "Roughness": 0.4,
    "Metallic": 0.0,
-   "EmissiveStrength": 0.0
+   "EmissiveStrength": 0.0,
+   "RimStrength": 0.35
   },
   "/Game/Art/Heroes/Aoji/MI_Aoji_Accent": {
    "parent": "/Game/Art/Materials/M_TaGBase",
@@ -1141,7 +1207,8 @@
    ],
    "Roughness": 0.55,
    "Metallic": 0.0,
-   "EmissiveStrength": 0.0
+   "EmissiveStrength": 0.0,
+   "RimStrength": 0.35
   },
   "/Game/Art/Heroes/Aoji/MI_Aoji_Body": {
    "parent": "/Game/Art/Materials/M_TaGBase",
@@ -1157,7 +1224,8 @@
    ],
    "Roughness": 0.6,
    "Metallic": 0.0,
-   "EmissiveStrength": 0.0
+   "EmissiveStrength": 0.0,
+   "RimStrength": 0.35
   },
   "/Game/Art/Heroes/Aoji/MI_Aoji_Dark": {
    "parent": "/Game/Art/Materials/M_TaGBase",
@@ -1173,7 +1241,8 @@
    ],
    "Roughness": 0.6,
    "Metallic": 0.0,
-   "EmissiveStrength": 0.0
+   "EmissiveStrength": 0.0,
+   "RimStrength": 0.35
   },
   "/Game/Art/Heroes/Aoji/MI_Aoji_Extra": {
    "parent": "/Game/Art/Materials/M_TaGBase",
@@ -1189,7 +1258,8 @@
    ],
    "Roughness": 0.6,
    "Metallic": 0.0,
-   "EmissiveStrength": 0.0
+   "EmissiveStrength": 0.0,
+   "RimStrength": 0.35
   },
   "/Game/Art/Heroes/Aoji/MI_Aoji_Glow": {
    "parent": "/Game/Art/Materials/M_TaGBase",
@@ -1205,7 +1275,8 @@
    ],
    "Roughness": 0.3,
    "Metallic": 0.0,
-   "EmissiveStrength": 3.5
+   "EmissiveStrength": 3.5,
+   "RimStrength": 0.0
   },
   "/Game/Art/Heroes/Aoji/MI_Aoji_Hair": {
    "parent": "/Game/Art/Materials/M_TaGBase",
@@ -1221,7 +1292,8 @@
    ],
    "Roughness": 0.5,
    "Metallic": 0.0,
-   "EmissiveStrength": 0.0
+   "EmissiveStrength": 0.0,
+   "RimStrength": 0.35
   },
   "/Game/Art/Heroes/Aoji/MI_Aoji_Outline": {
    "parent": "/Game/Art/Materials/M_TaGOutline",
@@ -1245,7 +1317,8 @@
    ],
    "Roughness": 0.35,
    "Metallic": 0.0,
-   "EmissiveStrength": 3.0
+   "EmissiveStrength": 3.0,
+   "RimStrength": 0.0
   },
   "/Game/Art/Heroes/Gantetsu/MI_Gantetsu_Accent": {
    "parent": "/Game/Art/Materials/M_TaGBase",
@@ -1261,7 +1334,8 @@
    ],
    "Roughness": 0.55,
    "Metallic": 0.0,
-   "EmissiveStrength": 0.0
+   "EmissiveStrength": 0.0,
+   "RimStrength": 0.35
   },
   "/Game/Art/Heroes/Gantetsu/MI_Gantetsu_Body": {
    "parent": "/Game/Art/Materials/M_TaGBase",
@@ -1277,7 +1351,8 @@
    ],
    "Roughness": 0.6,
    "Metallic": 0.0,
-   "EmissiveStrength": 0.0
+   "EmissiveStrength": 0.0,
+   "RimStrength": 0.35
   },
   "/Game/Art/Heroes/Gantetsu/MI_Gantetsu_Dark": {
    "parent": "/Game/Art/Materials/M_TaGBase",
@@ -1293,7 +1368,8 @@
    ],
    "Roughness": 0.6,
    "Metallic": 0.0,
-   "EmissiveStrength": 0.0
+   "EmissiveStrength": 0.0,
+   "RimStrength": 0.35
   },
   "/Game/Art/Heroes/Gantetsu/MI_Gantetsu_Glow": {
    "parent": "/Game/Art/Materials/M_TaGBase",
@@ -1309,7 +1385,8 @@
    ],
    "Roughness": 0.3,
    "Metallic": 0.0,
-   "EmissiveStrength": 4.0
+   "EmissiveStrength": 4.0,
+   "RimStrength": 0.0
   },
   "/Game/Art/Heroes/Gantetsu/MI_Gantetsu_Metal": {
    "parent": "/Game/Art/Materials/M_TaGBase",
@@ -1325,7 +1402,8 @@
    ],
    "Roughness": 0.3,
    "Metallic": 0.8,
-   "EmissiveStrength": 0.0
+   "EmissiveStrength": 0.0,
+   "RimStrength": 0.35
   },
   "/Game/Art/Heroes/Gantetsu/MI_Gantetsu_Outline": {
    "parent": "/Game/Art/Materials/M_TaGOutline",
@@ -1349,7 +1427,8 @@
    ],
    "Roughness": 0.35,
    "Metallic": 0.0,
-   "EmissiveStrength": 3.0
+   "EmissiveStrength": 3.0,
+   "RimStrength": 0.0
   },
   "/Game/Art/Heroes/Hari/MI_Hari_Accent": {
    "parent": "/Game/Art/Materials/M_TaGBase",
@@ -1365,7 +1444,8 @@
    ],
    "Roughness": 0.55,
    "Metallic": 0.0,
-   "EmissiveStrength": 0.0
+   "EmissiveStrength": 0.0,
+   "RimStrength": 0.35
   },
   "/Game/Art/Heroes/Hari/MI_Hari_Body": {
    "parent": "/Game/Art/Materials/M_TaGBase",
@@ -1381,7 +1461,8 @@
    ],
    "Roughness": 0.6,
    "Metallic": 0.0,
-   "EmissiveStrength": 0.0
+   "EmissiveStrength": 0.0,
+   "RimStrength": 0.35
   },
   "/Game/Art/Heroes/Hari/MI_Hari_Dark": {
    "parent": "/Game/Art/Materials/M_TaGBase",
@@ -1397,7 +1478,8 @@
    ],
    "Roughness": 0.6,
    "Metallic": 0.0,
-   "EmissiveStrength": 0.0
+   "EmissiveStrength": 0.0,
+   "RimStrength": 0.35
   },
   "/Game/Art/Heroes/Hari/MI_Hari_Extra": {
    "parent": "/Game/Art/Materials/M_TaGBase",
@@ -1413,7 +1495,8 @@
    ],
    "Roughness": 0.6,
    "Metallic": 0.0,
-   "EmissiveStrength": 0.0
+   "EmissiveStrength": 0.0,
+   "RimStrength": 0.35
   },
   "/Game/Art/Heroes/Hari/MI_Hari_Glow": {
    "parent": "/Game/Art/Materials/M_TaGBase",
@@ -1429,7 +1512,8 @@
    ],
    "Roughness": 0.3,
    "Metallic": 0.0,
-   "EmissiveStrength": 3.0
+   "EmissiveStrength": 3.0,
+   "RimStrength": 0.0
   },
   "/Game/Art/Heroes/Hari/MI_Hari_Hair": {
    "parent": "/Game/Art/Materials/M_TaGBase",
@@ -1445,7 +1529,8 @@
    ],
    "Roughness": 0.5,
    "Metallic": 0.0,
-   "EmissiveStrength": 0.0
+   "EmissiveStrength": 0.0,
+   "RimStrength": 0.35
   },
   "/Game/Art/Heroes/Hari/MI_Hari_Metal": {
    "parent": "/Game/Art/Materials/M_TaGBase",
@@ -1461,7 +1546,8 @@
    ],
    "Roughness": 0.3,
    "Metallic": 0.8,
-   "EmissiveStrength": 0.0
+   "EmissiveStrength": 0.0,
+   "RimStrength": 0.35
   },
   "/Game/Art/Heroes/Hari/MI_Hari_Outline": {
    "parent": "/Game/Art/Materials/M_TaGOutline",
@@ -1485,7 +1571,8 @@
    ],
    "Roughness": 0.6,
    "Metallic": 0.0,
-   "EmissiveStrength": 0.0
+   "EmissiveStrength": 0.0,
+   "RimStrength": 0.35
   },
   "/Game/Art/Heroes/Hari/MI_Hari_TaG": {
    "parent": "/Game/Art/Materials/M_TaGBase",
@@ -1501,7 +1588,8 @@
    ],
    "Roughness": 0.35,
    "Metallic": 0.0,
-   "EmissiveStrength": 3.0
+   "EmissiveStrength": 3.0,
+   "RimStrength": 0.0
   },
   "/Game/Art/Heroes/Hari/MI_Hari_White": {
    "parent": "/Game/Art/Materials/M_TaGBase",
@@ -1517,7 +1605,8 @@
    ],
    "Roughness": 0.4,
    "Metallic": 0.0,
-   "EmissiveStrength": 0.0
+   "EmissiveStrength": 0.0,
+   "RimStrength": 0.35
   },
   "/Game/Art/Heroes/Hayate/MI_Hayate_Accent": {
    "parent": "/Game/Art/Materials/M_TaGBase",
@@ -1533,7 +1622,8 @@
    ],
    "Roughness": 0.55,
    "Metallic": 0.0,
-   "EmissiveStrength": 0.0
+   "EmissiveStrength": 0.0,
+   "RimStrength": 0.35
   },
   "/Game/Art/Heroes/Hayate/MI_Hayate_Body": {
    "parent": "/Game/Art/Materials/M_TaGBase",
@@ -1549,7 +1639,8 @@
    ],
    "Roughness": 0.6,
    "Metallic": 0.0,
-   "EmissiveStrength": 0.0
+   "EmissiveStrength": 0.0,
+   "RimStrength": 0.35
   },
   "/Game/Art/Heroes/Hayate/MI_Hayate_Dark": {
    "parent": "/Game/Art/Materials/M_TaGBase",
@@ -1565,7 +1656,8 @@
    ],
    "Roughness": 0.6,
    "Metallic": 0.0,
-   "EmissiveStrength": 0.0
+   "EmissiveStrength": 0.0,
+   "RimStrength": 0.35
   },
   "/Game/Art/Heroes/Hayate/MI_Hayate_Extra": {
    "parent": "/Game/Art/Materials/M_TaGBase",
@@ -1581,7 +1673,8 @@
    ],
    "Roughness": 0.6,
    "Metallic": 0.0,
-   "EmissiveStrength": 0.0
+   "EmissiveStrength": 0.0,
+   "RimStrength": 0.35
   },
   "/Game/Art/Heroes/Hayate/MI_Hayate_Glow": {
    "parent": "/Game/Art/Materials/M_TaGBase",
@@ -1597,7 +1690,8 @@
    ],
    "Roughness": 0.3,
    "Metallic": 0.0,
-   "EmissiveStrength": 4.0
+   "EmissiveStrength": 4.0,
+   "RimStrength": 0.0
   },
   "/Game/Art/Heroes/Hayate/MI_Hayate_Hair": {
    "parent": "/Game/Art/Materials/M_TaGBase",
@@ -1613,7 +1707,8 @@
    ],
    "Roughness": 0.5,
    "Metallic": 0.0,
-   "EmissiveStrength": 0.0
+   "EmissiveStrength": 0.0,
+   "RimStrength": 0.35
   },
   "/Game/Art/Heroes/Hayate/MI_Hayate_Outline": {
    "parent": "/Game/Art/Materials/M_TaGOutline",
@@ -1637,7 +1732,8 @@
    ],
    "Roughness": 0.6,
    "Metallic": 0.0,
-   "EmissiveStrength": 0.0
+   "EmissiveStrength": 0.0,
+   "RimStrength": 0.35
   },
   "/Game/Art/Heroes/Hayate/MI_Hayate_TaG": {
    "parent": "/Game/Art/Materials/M_TaGBase",
@@ -1653,7 +1749,8 @@
    ],
    "Roughness": 0.35,
    "Metallic": 0.0,
-   "EmissiveStrength": 3.0
+   "EmissiveStrength": 3.0,
+   "RimStrength": 0.0
   },
   "/Game/Art/Heroes/Hayate/MI_Hayate_White": {
    "parent": "/Game/Art/Materials/M_TaGBase",
@@ -1669,7 +1766,8 @@
    ],
    "Roughness": 0.4,
    "Metallic": 0.0,
-   "EmissiveStrength": 0.0
+   "EmissiveStrength": 0.0,
+   "RimStrength": 0.35
   },
   "/Game/Art/Heroes/Hibana/MI_Hibana_Accent": {
    "parent": "/Game/Art/Materials/M_TaGBase",
@@ -1685,7 +1783,8 @@
    ],
    "Roughness": 0.55,
    "Metallic": 0.0,
-   "EmissiveStrength": 0.0
+   "EmissiveStrength": 0.0,
+   "RimStrength": 0.35
   },
   "/Game/Art/Heroes/Hibana/MI_Hibana_Body": {
    "parent": "/Game/Art/Materials/M_TaGBase",
@@ -1701,7 +1800,8 @@
    ],
    "Roughness": 0.6,
    "Metallic": 0.0,
-   "EmissiveStrength": 0.0
+   "EmissiveStrength": 0.0,
+   "RimStrength": 0.35
   },
   "/Game/Art/Heroes/Hibana/MI_Hibana_Dark": {
    "parent": "/Game/Art/Materials/M_TaGBase",
@@ -1717,7 +1817,8 @@
    ],
    "Roughness": 0.6,
    "Metallic": 0.0,
-   "EmissiveStrength": 0.0
+   "EmissiveStrength": 0.0,
+   "RimStrength": 0.35
   },
   "/Game/Art/Heroes/Hibana/MI_Hibana_Extra": {
    "parent": "/Game/Art/Materials/M_TaGBase",
@@ -1733,7 +1834,8 @@
    ],
    "Roughness": 0.6,
    "Metallic": 0.0,
-   "EmissiveStrength": 0.0
+   "EmissiveStrength": 0.0,
+   "RimStrength": 0.35
   },
   "/Game/Art/Heroes/Hibana/MI_Hibana_Glow": {
    "parent": "/Game/Art/Materials/M_TaGBase",
@@ -1749,7 +1851,8 @@
    ],
    "Roughness": 0.3,
    "Metallic": 0.0,
-   "EmissiveStrength": 6.0
+   "EmissiveStrength": 6.0,
+   "RimStrength": 0.0
   },
   "/Game/Art/Heroes/Hibana/MI_Hibana_Hair": {
    "parent": "/Game/Art/Materials/M_TaGBase",
@@ -1765,7 +1868,8 @@
    ],
    "Roughness": 0.5,
    "Metallic": 0.0,
-   "EmissiveStrength": 0.0
+   "EmissiveStrength": 0.0,
+   "RimStrength": 0.35
   },
   "/Game/Art/Heroes/Hibana/MI_Hibana_Metal": {
    "parent": "/Game/Art/Materials/M_TaGBase",
@@ -1781,7 +1885,8 @@
    ],
    "Roughness": 0.3,
    "Metallic": 0.8,
-   "EmissiveStrength": 0.0
+   "EmissiveStrength": 0.0,
+   "RimStrength": 0.35
   },
   "/Game/Art/Heroes/Hibana/MI_Hibana_Outline": {
    "parent": "/Game/Art/Materials/M_TaGOutline",
@@ -1805,7 +1910,8 @@
    ],
    "Roughness": 0.6,
    "Metallic": 0.0,
-   "EmissiveStrength": 0.0
+   "EmissiveStrength": 0.0,
+   "RimStrength": 0.35
   },
   "/Game/Art/Heroes/Hibana/MI_Hibana_TaG": {
    "parent": "/Game/Art/Materials/M_TaGBase",
@@ -1821,7 +1927,8 @@
    ],
    "Roughness": 0.35,
    "Metallic": 0.0,
-   "EmissiveStrength": 3.0
+   "EmissiveStrength": 3.0,
+   "RimStrength": 0.0
   },
   "/Game/Art/Heroes/Hibana/MI_Hibana_White": {
    "parent": "/Game/Art/Materials/M_TaGBase",
@@ -1837,7 +1944,8 @@
    ],
    "Roughness": 0.4,
    "Metallic": 0.0,
-   "EmissiveStrength": 0.0
+   "EmissiveStrength": 0.0,
+   "RimStrength": 0.35
   },
   "/Game/Art/Heroes/Hibiki/MI_Hibiki_Accent": {
    "parent": "/Game/Art/Materials/M_TaGBase",
@@ -1853,7 +1961,8 @@
    ],
    "Roughness": 0.55,
    "Metallic": 0.0,
-   "EmissiveStrength": 0.0
+   "EmissiveStrength": 0.0,
+   "RimStrength": 0.35
   },
   "/Game/Art/Heroes/Hibiki/MI_Hibiki_Body": {
    "parent": "/Game/Art/Materials/M_TaGBase",
@@ -1869,7 +1978,8 @@
    ],
    "Roughness": 0.6,
    "Metallic": 0.0,
-   "EmissiveStrength": 0.0
+   "EmissiveStrength": 0.0,
+   "RimStrength": 0.35
   },
   "/Game/Art/Heroes/Hibiki/MI_Hibiki_Extra": {
    "parent": "/Game/Art/Materials/M_TaGBase",
@@ -1885,7 +1995,8 @@
    ],
    "Roughness": 0.6,
    "Metallic": 0.0,
-   "EmissiveStrength": 0.0
+   "EmissiveStrength": 0.0,
+   "RimStrength": 0.35
   },
   "/Game/Art/Heroes/Hibiki/MI_Hibiki_Glow": {
    "parent": "/Game/Art/Materials/M_TaGBase",
@@ -1901,7 +2012,8 @@
    ],
    "Roughness": 0.3,
    "Metallic": 0.0,
-   "EmissiveStrength": 4.0
+   "EmissiveStrength": 4.0,
+   "RimStrength": 0.0
   },
   "/Game/Art/Heroes/Hibiki/MI_Hibiki_Jelly": {
    "parent": "/Game/Art/Materials/M_TaGTranslucent",
@@ -1942,7 +2054,8 @@
    ],
    "Roughness": 0.35,
    "Metallic": 0.0,
-   "EmissiveStrength": 3.0
+   "EmissiveStrength": 3.0,
+   "RimStrength": 0.0
   },
   "/Game/Art/Heroes/Hibiki/MI_Hibiki_White": {
    "parent": "/Game/Art/Materials/M_TaGBase",
@@ -1958,7 +2071,8 @@
    ],
    "Roughness": 0.4,
    "Metallic": 0.0,
-   "EmissiveStrength": 0.0
+   "EmissiveStrength": 0.0,
+   "RimStrength": 0.35
   },
   "/Game/Art/Heroes/Hotaru/MI_Hotaru_Accent": {
    "parent": "/Game/Art/Materials/M_TaGBase",
@@ -1974,7 +2088,8 @@
    ],
    "Roughness": 0.55,
    "Metallic": 0.0,
-   "EmissiveStrength": 0.0
+   "EmissiveStrength": 0.0,
+   "RimStrength": 0.35
   },
   "/Game/Art/Heroes/Hotaru/MI_Hotaru_Body": {
    "parent": "/Game/Art/Materials/M_TaGBase",
@@ -1990,7 +2105,8 @@
    ],
    "Roughness": 0.6,
    "Metallic": 0.0,
-   "EmissiveStrength": 0.0
+   "EmissiveStrength": 0.0,
+   "RimStrength": 0.35
   },
   "/Game/Art/Heroes/Hotaru/MI_Hotaru_Dark": {
    "parent": "/Game/Art/Materials/M_TaGBase",
@@ -2006,7 +2122,8 @@
    ],
    "Roughness": 0.6,
    "Metallic": 0.0,
-   "EmissiveStrength": 0.0
+   "EmissiveStrength": 0.0,
+   "RimStrength": 0.35
   },
   "/Game/Art/Heroes/Hotaru/MI_Hotaru_Extra": {
    "parent": "/Game/Art/Materials/M_TaGBase",
@@ -2022,7 +2139,8 @@
    ],
    "Roughness": 0.6,
    "Metallic": 0.0,
-   "EmissiveStrength": 0.0
+   "EmissiveStrength": 0.0,
+   "RimStrength": 0.35
   },
   "/Game/Art/Heroes/Hotaru/MI_Hotaru_Glow": {
    "parent": "/Game/Art/Materials/M_TaGBase",
@@ -2038,7 +2156,8 @@
    ],
    "Roughness": 0.3,
    "Metallic": 0.0,
-   "EmissiveStrength": 6.0
+   "EmissiveStrength": 6.0,
+   "RimStrength": 0.0
   },
   "/Game/Art/Heroes/Hotaru/MI_Hotaru_Jelly": {
    "parent": "/Game/Art/Materials/M_TaGTranslucent",
@@ -2079,7 +2198,8 @@
    ],
    "Roughness": 0.35,
    "Metallic": 0.0,
-   "EmissiveStrength": 3.0
+   "EmissiveStrength": 3.0,
+   "RimStrength": 0.0
   },
   "/Game/Art/Heroes/Hotaru/MI_Hotaru_White": {
    "parent": "/Game/Art/Materials/M_TaGBase",
@@ -2095,7 +2215,8 @@
    ],
    "Roughness": 0.4,
    "Metallic": 0.0,
-   "EmissiveStrength": 0.0
+   "EmissiveStrength": 0.0,
+   "RimStrength": 0.35
   },
   "/Game/Art/Heroes/Iwakura/MI_Iwakura_Accent": {
    "parent": "/Game/Art/Materials/M_TaGBase",
@@ -2111,7 +2232,8 @@
    ],
    "Roughness": 0.55,
    "Metallic": 0.0,
-   "EmissiveStrength": 0.0
+   "EmissiveStrength": 0.0,
+   "RimStrength": 0.35
   },
   "/Game/Art/Heroes/Iwakura/MI_Iwakura_Body": {
    "parent": "/Game/Art/Materials/M_TaGBase",
@@ -2127,7 +2249,8 @@
    ],
    "Roughness": 0.6,
    "Metallic": 0.0,
-   "EmissiveStrength": 0.0
+   "EmissiveStrength": 0.0,
+   "RimStrength": 0.35
   },
   "/Game/Art/Heroes/Iwakura/MI_Iwakura_Dark": {
    "parent": "/Game/Art/Materials/M_TaGBase",
@@ -2143,7 +2266,8 @@
    ],
    "Roughness": 0.6,
    "Metallic": 0.0,
-   "EmissiveStrength": 0.0
+   "EmissiveStrength": 0.0,
+   "RimStrength": 0.35
   },
   "/Game/Art/Heroes/Iwakura/MI_Iwakura_Extra": {
    "parent": "/Game/Art/Materials/M_TaGBase",
@@ -2159,7 +2283,8 @@
    ],
    "Roughness": 0.6,
    "Metallic": 0.0,
-   "EmissiveStrength": 0.0
+   "EmissiveStrength": 0.0,
+   "RimStrength": 0.35
   },
   "/Game/Art/Heroes/Iwakura/MI_Iwakura_Glow": {
    "parent": "/Game/Art/Materials/M_TaGBase",
@@ -2175,7 +2300,8 @@
    ],
    "Roughness": 0.3,
    "Metallic": 0.0,
-   "EmissiveStrength": 4.0
+   "EmissiveStrength": 4.0,
+   "RimStrength": 0.0
   },
   "/Game/Art/Heroes/Iwakura/MI_Iwakura_Metal": {
    "parent": "/Game/Art/Materials/M_TaGBase",
@@ -2191,7 +2317,8 @@
    ],
    "Roughness": 0.3,
    "Metallic": 0.8,
-   "EmissiveStrength": 0.0
+   "EmissiveStrength": 0.0,
+   "RimStrength": 0.35
   },
   "/Game/Art/Heroes/Iwakura/MI_Iwakura_Outline": {
    "parent": "/Game/Art/Materials/M_TaGOutline",
@@ -2215,7 +2342,8 @@
    ],
    "Roughness": 0.6,
    "Metallic": 0.0,
-   "EmissiveStrength": 0.0
+   "EmissiveStrength": 0.0,
+   "RimStrength": 0.35
   },
   "/Game/Art/Heroes/Iwakura/MI_Iwakura_TaG": {
    "parent": "/Game/Art/Materials/M_TaGBase",
@@ -2231,7 +2359,8 @@
    ],
    "Roughness": 0.35,
    "Metallic": 0.0,
-   "EmissiveStrength": 3.0
+   "EmissiveStrength": 3.0,
+   "RimStrength": 0.0
   },
   "/Game/Art/Heroes/Iwakura/MI_Iwakura_White": {
    "parent": "/Game/Art/Materials/M_TaGBase",
@@ -2247,7 +2376,8 @@
    ],
    "Roughness": 0.4,
    "Metallic": 0.0,
-   "EmissiveStrength": 0.0
+   "EmissiveStrength": 0.0,
+   "RimStrength": 0.35
   },
   "/Game/Art/Heroes/Kawara/MI_Kawara_Accent": {
    "parent": "/Game/Art/Materials/M_TaGBase",
@@ -2263,7 +2393,8 @@
    ],
    "Roughness": 0.55,
    "Metallic": 0.0,
-   "EmissiveStrength": 0.0
+   "EmissiveStrength": 0.0,
+   "RimStrength": 0.35
   },
   "/Game/Art/Heroes/Kawara/MI_Kawara_Body": {
    "parent": "/Game/Art/Materials/M_TaGBase",
@@ -2279,7 +2410,8 @@
    ],
    "Roughness": 0.6,
    "Metallic": 0.0,
-   "EmissiveStrength": 0.0
+   "EmissiveStrength": 0.0,
+   "RimStrength": 0.35
   },
   "/Game/Art/Heroes/Kawara/MI_Kawara_Dark": {
    "parent": "/Game/Art/Materials/M_TaGBase",
@@ -2295,7 +2427,8 @@
    ],
    "Roughness": 0.6,
    "Metallic": 0.0,
-   "EmissiveStrength": 0.0
+   "EmissiveStrength": 0.0,
+   "RimStrength": 0.35
   },
   "/Game/Art/Heroes/Kawara/MI_Kawara_Extra": {
    "parent": "/Game/Art/Materials/M_TaGBase",
@@ -2311,7 +2444,8 @@
    ],
    "Roughness": 0.6,
    "Metallic": 0.0,
-   "EmissiveStrength": 0.0
+   "EmissiveStrength": 0.0,
+   "RimStrength": 0.35
   },
   "/Game/Art/Heroes/Kawara/MI_Kawara_Glow": {
    "parent": "/Game/Art/Materials/M_TaGBase",
@@ -2327,7 +2461,8 @@
    ],
    "Roughness": 0.3,
    "Metallic": 0.0,
-   "EmissiveStrength": 4.5
+   "EmissiveStrength": 4.5,
+   "RimStrength": 0.0
   },
   "/Game/Art/Heroes/Kawara/MI_Kawara_Outline": {
    "parent": "/Game/Art/Materials/M_TaGOutline",
@@ -2351,7 +2486,8 @@
    ],
    "Roughness": 0.35,
    "Metallic": 0.0,
-   "EmissiveStrength": 3.0
+   "EmissiveStrength": 3.0,
+   "RimStrength": 0.0
   },
   "/Game/Art/Heroes/Kazami/MI_Kazami_Accent": {
    "parent": "/Game/Art/Materials/M_TaGBase",
@@ -2367,7 +2503,8 @@
    ],
    "Roughness": 0.55,
    "Metallic": 0.0,
-   "EmissiveStrength": 0.0
+   "EmissiveStrength": 0.0,
+   "RimStrength": 0.35
   },
   "/Game/Art/Heroes/Kazami/MI_Kazami_Body": {
    "parent": "/Game/Art/Materials/M_TaGBase",
@@ -2383,7 +2520,8 @@
    ],
    "Roughness": 0.6,
    "Metallic": 0.0,
-   "EmissiveStrength": 0.0
+   "EmissiveStrength": 0.0,
+   "RimStrength": 0.35
   },
   "/Game/Art/Heroes/Kazami/MI_Kazami_Extra": {
    "parent": "/Game/Art/Materials/M_TaGBase",
@@ -2399,7 +2537,8 @@
    ],
    "Roughness": 0.6,
    "Metallic": 0.0,
-   "EmissiveStrength": 0.0
+   "EmissiveStrength": 0.0,
+   "RimStrength": 0.35
   },
   "/Game/Art/Heroes/Kazami/MI_Kazami_Glow": {
    "parent": "/Game/Art/Materials/M_TaGBase",
@@ -2415,7 +2554,8 @@
    ],
    "Roughness": 0.3,
    "Metallic": 0.0,
-   "EmissiveStrength": 4.5
+   "EmissiveStrength": 4.5,
+   "RimStrength": 0.0
   },
   "/Game/Art/Heroes/Kazami/MI_Kazami_Outline": {
    "parent": "/Game/Art/Materials/M_TaGOutline",
@@ -2439,7 +2579,8 @@
    ],
    "Roughness": 0.35,
    "Metallic": 0.0,
-   "EmissiveStrength": 3.0
+   "EmissiveStrength": 3.0,
+   "RimStrength": 0.0
   },
   "/Game/Art/Heroes/Keibi/MI_Keibi_Accent": {
    "parent": "/Game/Art/Materials/M_TaGBase",
@@ -2455,7 +2596,8 @@
    ],
    "Roughness": 0.55,
    "Metallic": 0.0,
-   "EmissiveStrength": 0.0
+   "EmissiveStrength": 0.0,
+   "RimStrength": 0.35
   },
   "/Game/Art/Heroes/Keibi/MI_Keibi_Body": {
    "parent": "/Game/Art/Materials/M_TaGBase",
@@ -2471,7 +2613,8 @@
    ],
    "Roughness": 0.6,
    "Metallic": 0.0,
-   "EmissiveStrength": 0.0
+   "EmissiveStrength": 0.0,
+   "RimStrength": 0.35
   },
   "/Game/Art/Heroes/Keibi/MI_Keibi_Dark": {
    "parent": "/Game/Art/Materials/M_TaGBase",
@@ -2487,7 +2630,8 @@
    ],
    "Roughness": 0.6,
    "Metallic": 0.0,
-   "EmissiveStrength": 0.0
+   "EmissiveStrength": 0.0,
+   "RimStrength": 0.35
   },
   "/Game/Art/Heroes/Keibi/MI_Keibi_Extra": {
    "parent": "/Game/Art/Materials/M_TaGBase",
@@ -2503,7 +2647,8 @@
    ],
    "Roughness": 0.6,
    "Metallic": 0.0,
-   "EmissiveStrength": 0.0
+   "EmissiveStrength": 0.0,
+   "RimStrength": 0.35
   },
   "/Game/Art/Heroes/Keibi/MI_Keibi_Glow": {
    "parent": "/Game/Art/Materials/M_TaGBase",
@@ -2519,7 +2664,8 @@
    ],
    "Roughness": 0.3,
    "Metallic": 0.0,
-   "EmissiveStrength": 5.0
+   "EmissiveStrength": 5.0,
+   "RimStrength": 0.0
   },
   "/Game/Art/Heroes/Keibi/MI_Keibi_Metal": {
    "parent": "/Game/Art/Materials/M_TaGBase",
@@ -2535,7 +2681,8 @@
    ],
    "Roughness": 0.3,
    "Metallic": 0.8,
-   "EmissiveStrength": 0.0
+   "EmissiveStrength": 0.0,
+   "RimStrength": 0.35
   },
   "/Game/Art/Heroes/Keibi/MI_Keibi_Outline": {
    "parent": "/Game/Art/Materials/M_TaGOutline",
@@ -2559,7 +2706,8 @@
    ],
    "Roughness": 0.35,
    "Metallic": 0.0,
-   "EmissiveStrength": 3.0
+   "EmissiveStrength": 3.0,
+   "RimStrength": 0.0
   },
   "/Game/Art/Heroes/Keibi/MI_Keibi_White": {
    "parent": "/Game/Art/Materials/M_TaGBase",
@@ -2575,7 +2723,8 @@
    ],
    "Roughness": 0.4,
    "Metallic": 0.0,
-   "EmissiveStrength": 0.0
+   "EmissiveStrength": 0.0,
+   "RimStrength": 0.35
   },
   "/Game/Art/Heroes/Kokemaru/MI_Kokemaru_Accent": {
    "parent": "/Game/Art/Materials/M_TaGBase",
@@ -2591,7 +2740,8 @@
    ],
    "Roughness": 0.55,
    "Metallic": 0.0,
-   "EmissiveStrength": 0.0
+   "EmissiveStrength": 0.0,
+   "RimStrength": 0.35
   },
   "/Game/Art/Heroes/Kokemaru/MI_Kokemaru_Body": {
    "parent": "/Game/Art/Materials/M_TaGBase",
@@ -2607,7 +2757,8 @@
    ],
    "Roughness": 0.6,
    "Metallic": 0.0,
-   "EmissiveStrength": 0.0
+   "EmissiveStrength": 0.0,
+   "RimStrength": 0.35
   },
   "/Game/Art/Heroes/Kokemaru/MI_Kokemaru_Dark": {
    "parent": "/Game/Art/Materials/M_TaGBase",
@@ -2623,7 +2774,8 @@
    ],
    "Roughness": 0.6,
    "Metallic": 0.0,
-   "EmissiveStrength": 0.0
+   "EmissiveStrength": 0.0,
+   "RimStrength": 0.35
   },
   "/Game/Art/Heroes/Kokemaru/MI_Kokemaru_Extra": {
    "parent": "/Game/Art/Materials/M_TaGBase",
@@ -2639,7 +2791,8 @@
    ],
    "Roughness": 0.6,
    "Metallic": 0.0,
-   "EmissiveStrength": 0.0
+   "EmissiveStrength": 0.0,
+   "RimStrength": 0.35
   },
   "/Game/Art/Heroes/Kokemaru/MI_Kokemaru_Glow": {
    "parent": "/Game/Art/Materials/M_TaGBase",
@@ -2655,7 +2808,8 @@
    ],
    "Roughness": 0.3,
    "Metallic": 0.0,
-   "EmissiveStrength": 4.0
+   "EmissiveStrength": 4.0,
+   "RimStrength": 0.0
   },
   "/Game/Art/Heroes/Kokemaru/MI_Kokemaru_Outline": {
    "parent": "/Game/Art/Materials/M_TaGOutline",
@@ -2679,7 +2833,8 @@
    ],
    "Roughness": 0.35,
    "Metallic": 0.0,
-   "EmissiveStrength": 3.0
+   "EmissiveStrength": 3.0,
+   "RimStrength": 0.0
   },
   "/Game/Art/Heroes/Kokemaru/MI_Kokemaru_White": {
    "parent": "/Game/Art/Materials/M_TaGBase",
@@ -2695,7 +2850,8 @@
    ],
    "Roughness": 0.4,
    "Metallic": 0.0,
-   "EmissiveStrength": 0.0
+   "EmissiveStrength": 0.0,
+   "RimStrength": 0.35
   },
   "/Game/Art/Heroes/Kotetsu/MI_Kotetsu_Accent": {
    "parent": "/Game/Art/Materials/M_TaGBase",
@@ -2711,7 +2867,8 @@
    ],
    "Roughness": 0.55,
    "Metallic": 0.0,
-   "EmissiveStrength": 0.0
+   "EmissiveStrength": 0.0,
+   "RimStrength": 0.35
   },
   "/Game/Art/Heroes/Kotetsu/MI_Kotetsu_Body": {
    "parent": "/Game/Art/Materials/M_TaGBase",
@@ -2727,7 +2884,8 @@
    ],
    "Roughness": 0.6,
    "Metallic": 0.0,
-   "EmissiveStrength": 0.0
+   "EmissiveStrength": 0.0,
+   "RimStrength": 0.35
   },
   "/Game/Art/Heroes/Kotetsu/MI_Kotetsu_Dark": {
    "parent": "/Game/Art/Materials/M_TaGBase",
@@ -2743,7 +2901,8 @@
    ],
    "Roughness": 0.6,
    "Metallic": 0.0,
-   "EmissiveStrength": 0.0
+   "EmissiveStrength": 0.0,
+   "RimStrength": 0.35
   },
   "/Game/Art/Heroes/Kotetsu/MI_Kotetsu_Extra": {
    "parent": "/Game/Art/Materials/M_TaGBase",
@@ -2759,7 +2918,8 @@
    ],
    "Roughness": 0.6,
    "Metallic": 0.0,
-   "EmissiveStrength": 0.0
+   "EmissiveStrength": 0.0,
+   "RimStrength": 0.35
   },
   "/Game/Art/Heroes/Kotetsu/MI_Kotetsu_Glow": {
    "parent": "/Game/Art/Materials/M_TaGBase",
@@ -2775,7 +2935,8 @@
    ],
    "Roughness": 0.3,
    "Metallic": 0.0,
-   "EmissiveStrength": 6.0
+   "EmissiveStrength": 6.0,
+   "RimStrength": 0.0
   },
   "/Game/Art/Heroes/Kotetsu/MI_Kotetsu_Outline": {
    "parent": "/Game/Art/Materials/M_TaGOutline",
@@ -2799,7 +2960,8 @@
    ],
    "Roughness": 0.35,
    "Metallic": 0.0,
-   "EmissiveStrength": 3.0
+   "EmissiveStrength": 3.0,
+   "RimStrength": 0.0
   },
   "/Game/Art/Heroes/Kotetsu/MI_Kotetsu_White": {
    "parent": "/Game/Art/Materials/M_TaGBase",
@@ -2815,7 +2977,8 @@
    ],
    "Roughness": 0.4,
    "Metallic": 0.0,
-   "EmissiveStrength": 0.0
+   "EmissiveStrength": 0.0,
+   "RimStrength": 0.35
   },
   "/Game/Art/Heroes/Koyomi/MI_Koyomi_Accent": {
    "parent": "/Game/Art/Materials/M_TaGBase",
@@ -2831,7 +2994,8 @@
    ],
    "Roughness": 0.55,
    "Metallic": 0.0,
-   "EmissiveStrength": 0.0
+   "EmissiveStrength": 0.0,
+   "RimStrength": 0.35
   },
   "/Game/Art/Heroes/Koyomi/MI_Koyomi_Body": {
    "parent": "/Game/Art/Materials/M_TaGBase",
@@ -2847,7 +3011,8 @@
    ],
    "Roughness": 0.6,
    "Metallic": 0.0,
-   "EmissiveStrength": 0.0
+   "EmissiveStrength": 0.0,
+   "RimStrength": 0.35
   },
   "/Game/Art/Heroes/Koyomi/MI_Koyomi_Dark": {
    "parent": "/Game/Art/Materials/M_TaGBase",
@@ -2863,7 +3028,8 @@
    ],
    "Roughness": 0.6,
    "Metallic": 0.0,
-   "EmissiveStrength": 0.0
+   "EmissiveStrength": 0.0,
+   "RimStrength": 0.35
   },
   "/Game/Art/Heroes/Koyomi/MI_Koyomi_Extra": {
    "parent": "/Game/Art/Materials/M_TaGBase",
@@ -2879,7 +3045,8 @@
    ],
    "Roughness": 0.6,
    "Metallic": 0.0,
-   "EmissiveStrength": 0.0
+   "EmissiveStrength": 0.0,
+   "RimStrength": 0.35
   },
   "/Game/Art/Heroes/Koyomi/MI_Koyomi_Glow": {
    "parent": "/Game/Art/Materials/M_TaGBase",
@@ -2895,7 +3062,8 @@
    ],
    "Roughness": 0.3,
    "Metallic": 0.0,
-   "EmissiveStrength": 4.0
+   "EmissiveStrength": 4.0,
+   "RimStrength": 0.0
   },
   "/Game/Art/Heroes/Koyomi/MI_Koyomi_Hair": {
    "parent": "/Game/Art/Materials/M_TaGBase",
@@ -2911,7 +3079,8 @@
    ],
    "Roughness": 0.5,
    "Metallic": 0.0,
-   "EmissiveStrength": 0.0
+   "EmissiveStrength": 0.0,
+   "RimStrength": 0.35
   },
   "/Game/Art/Heroes/Koyomi/MI_Koyomi_Metal": {
    "parent": "/Game/Art/Materials/M_TaGBase",
@@ -2927,7 +3096,8 @@
    ],
    "Roughness": 0.3,
    "Metallic": 0.8,
-   "EmissiveStrength": 0.0
+   "EmissiveStrength": 0.0,
+   "RimStrength": 0.35
   },
   "/Game/Art/Heroes/Koyomi/MI_Koyomi_Outline": {
    "parent": "/Game/Art/Materials/M_TaGOutline",
@@ -2951,7 +3121,8 @@
    ],
    "Roughness": 0.6,
    "Metallic": 0.0,
-   "EmissiveStrength": 0.0
+   "EmissiveStrength": 0.0,
+   "RimStrength": 0.35
   },
   "/Game/Art/Heroes/Koyomi/MI_Koyomi_TaG": {
    "parent": "/Game/Art/Materials/M_TaGBase",
@@ -2967,7 +3138,8 @@
    ],
    "Roughness": 0.35,
    "Metallic": 0.0,
-   "EmissiveStrength": 3.0
+   "EmissiveStrength": 3.0,
+   "RimStrength": 0.0
   },
   "/Game/Art/Heroes/Koyomi/MI_Koyomi_White": {
    "parent": "/Game/Art/Materials/M_TaGBase",
@@ -2983,7 +3155,8 @@
    ],
    "Roughness": 0.4,
    "Metallic": 0.0,
-   "EmissiveStrength": 0.0
+   "EmissiveStrength": 0.0,
+   "RimStrength": 0.35
   },
   "/Game/Art/Heroes/Minamo/MI_Minamo_Accent": {
    "parent": "/Game/Art/Materials/M_TaGBase",
@@ -2999,7 +3172,8 @@
    ],
    "Roughness": 0.55,
    "Metallic": 0.0,
-   "EmissiveStrength": 0.0
+   "EmissiveStrength": 0.0,
+   "RimStrength": 0.35
   },
   "/Game/Art/Heroes/Minamo/MI_Minamo_Body": {
    "parent": "/Game/Art/Materials/M_TaGBase",
@@ -3015,7 +3189,8 @@
    ],
    "Roughness": 0.6,
    "Metallic": 0.0,
-   "EmissiveStrength": 0.0
+   "EmissiveStrength": 0.0,
+   "RimStrength": 0.35
   },
   "/Game/Art/Heroes/Minamo/MI_Minamo_Dark": {
    "parent": "/Game/Art/Materials/M_TaGBase",
@@ -3031,7 +3206,8 @@
    ],
    "Roughness": 0.6,
    "Metallic": 0.0,
-   "EmissiveStrength": 0.0
+   "EmissiveStrength": 0.0,
+   "RimStrength": 0.35
   },
   "/Game/Art/Heroes/Minamo/MI_Minamo_Extra": {
    "parent": "/Game/Art/Materials/M_TaGBase",
@@ -3047,7 +3223,8 @@
    ],
    "Roughness": 0.6,
    "Metallic": 0.0,
-   "EmissiveStrength": 0.0
+   "EmissiveStrength": 0.0,
+   "RimStrength": 0.35
   },
   "/Game/Art/Heroes/Minamo/MI_Minamo_Glow": {
    "parent": "/Game/Art/Materials/M_TaGBase",
@@ -3063,7 +3240,8 @@
    ],
    "Roughness": 0.3,
    "Metallic": 0.0,
-   "EmissiveStrength": 5.0
+   "EmissiveStrength": 5.0,
+   "RimStrength": 0.0
   },
   "/Game/Art/Heroes/Minamo/MI_Minamo_Hair": {
    "parent": "/Game/Art/Materials/M_TaGBase",
@@ -3079,7 +3257,8 @@
    ],
    "Roughness": 0.5,
    "Metallic": 0.0,
-   "EmissiveStrength": 0.0
+   "EmissiveStrength": 0.0,
+   "RimStrength": 0.35
   },
   "/Game/Art/Heroes/Minamo/MI_Minamo_Metal": {
    "parent": "/Game/Art/Materials/M_TaGBase",
@@ -3095,7 +3274,8 @@
    ],
    "Roughness": 0.3,
    "Metallic": 0.8,
-   "EmissiveStrength": 0.0
+   "EmissiveStrength": 0.0,
+   "RimStrength": 0.35
   },
   "/Game/Art/Heroes/Minamo/MI_Minamo_Outline": {
    "parent": "/Game/Art/Materials/M_TaGOutline",
@@ -3119,7 +3299,8 @@
    ],
    "Roughness": 0.6,
    "Metallic": 0.0,
-   "EmissiveStrength": 0.0
+   "EmissiveStrength": 0.0,
+   "RimStrength": 0.35
   },
   "/Game/Art/Heroes/Minamo/MI_Minamo_TaG": {
    "parent": "/Game/Art/Materials/M_TaGBase",
@@ -3135,7 +3316,8 @@
    ],
    "Roughness": 0.35,
    "Metallic": 0.0,
-   "EmissiveStrength": 3.0
+   "EmissiveStrength": 3.0,
+   "RimStrength": 0.0
   },
   "/Game/Art/Heroes/Minamo/MI_Minamo_White": {
    "parent": "/Game/Art/Materials/M_TaGBase",
@@ -3151,7 +3333,8 @@
    ],
    "Roughness": 0.4,
    "Metallic": 0.0,
-   "EmissiveStrength": 0.0
+   "EmissiveStrength": 0.0,
+   "RimStrength": 0.35
   },
   "/Game/Art/Heroes/Mugura/MI_Mugura_Accent": {
    "parent": "/Game/Art/Materials/M_TaGBase",
@@ -3167,7 +3350,8 @@
    ],
    "Roughness": 0.55,
    "Metallic": 0.0,
-   "EmissiveStrength": 0.0
+   "EmissiveStrength": 0.0,
+   "RimStrength": 0.35
   },
   "/Game/Art/Heroes/Mugura/MI_Mugura_Body": {
    "parent": "/Game/Art/Materials/M_TaGBase",
@@ -3183,7 +3367,8 @@
    ],
    "Roughness": 0.6,
    "Metallic": 0.0,
-   "EmissiveStrength": 0.0
+   "EmissiveStrength": 0.0,
+   "RimStrength": 0.35
   },
   "/Game/Art/Heroes/Mugura/MI_Mugura_Dark": {
    "parent": "/Game/Art/Materials/M_TaGBase",
@@ -3199,7 +3384,8 @@
    ],
    "Roughness": 0.6,
    "Metallic": 0.0,
-   "EmissiveStrength": 0.0
+   "EmissiveStrength": 0.0,
+   "RimStrength": 0.35
   },
   "/Game/Art/Heroes/Mugura/MI_Mugura_Extra": {
    "parent": "/Game/Art/Materials/M_TaGBase",
@@ -3215,7 +3401,8 @@
    ],
    "Roughness": 0.6,
    "Metallic": 0.0,
-   "EmissiveStrength": 0.0
+   "EmissiveStrength": 0.0,
+   "RimStrength": 0.35
   },
   "/Game/Art/Heroes/Mugura/MI_Mugura_Glow": {
    "parent": "/Game/Art/Materials/M_TaGBase",
@@ -3231,7 +3418,8 @@
    ],
    "Roughness": 0.3,
    "Metallic": 0.0,
-   "EmissiveStrength": 5.0
+   "EmissiveStrength": 5.0,
+   "RimStrength": 0.0
   },
   "/Game/Art/Heroes/Mugura/MI_Mugura_Outline": {
    "parent": "/Game/Art/Materials/M_TaGOutline",
@@ -3255,7 +3443,8 @@
    ],
    "Roughness": 0.35,
    "Metallic": 0.0,
-   "EmissiveStrength": 3.0
+   "EmissiveStrength": 3.0,
+   "RimStrength": 0.0
   },
   "/Game/Art/Heroes/Mugura/MI_Mugura_White": {
    "parent": "/Game/Art/Materials/M_TaGBase",
@@ -3271,7 +3460,8 @@
    ],
    "Roughness": 0.4,
    "Metallic": 0.0,
-   "EmissiveStrength": 0.0
+   "EmissiveStrength": 0.0,
+   "RimStrength": 0.35
   },
   "/Game/Art/Heroes/Nikoichi/MI_Nikoichi_Accent": {
    "parent": "/Game/Art/Materials/M_TaGBase",
@@ -3287,7 +3477,8 @@
    ],
    "Roughness": 0.55,
    "Metallic": 0.0,
-   "EmissiveStrength": 0.0
+   "EmissiveStrength": 0.0,
+   "RimStrength": 0.35
   },
   "/Game/Art/Heroes/Nikoichi/MI_Nikoichi_Body": {
    "parent": "/Game/Art/Materials/M_TaGBase",
@@ -3303,7 +3494,8 @@
    ],
    "Roughness": 0.6,
    "Metallic": 0.0,
-   "EmissiveStrength": 0.0
+   "EmissiveStrength": 0.0,
+   "RimStrength": 0.35
   },
   "/Game/Art/Heroes/Nikoichi/MI_Nikoichi_Dark": {
    "parent": "/Game/Art/Materials/M_TaGBase",
@@ -3319,7 +3511,8 @@
    ],
    "Roughness": 0.6,
    "Metallic": 0.0,
-   "EmissiveStrength": 0.0
+   "EmissiveStrength": 0.0,
+   "RimStrength": 0.35
   },
   "/Game/Art/Heroes/Nikoichi/MI_Nikoichi_Extra": {
    "parent": "/Game/Art/Materials/M_TaGBase",
@@ -3335,7 +3528,8 @@
    ],
    "Roughness": 0.6,
    "Metallic": 0.0,
-   "EmissiveStrength": 0.0
+   "EmissiveStrength": 0.0,
+   "RimStrength": 0.35
   },
   "/Game/Art/Heroes/Nikoichi/MI_Nikoichi_Glow": {
    "parent": "/Game/Art/Materials/M_TaGBase",
@@ -3351,7 +3545,8 @@
    ],
    "Roughness": 0.3,
    "Metallic": 0.0,
-   "EmissiveStrength": 4.0
+   "EmissiveStrength": 4.0,
+   "RimStrength": 0.0
   },
   "/Game/Art/Heroes/Nikoichi/MI_Nikoichi_Hair": {
    "parent": "/Game/Art/Materials/M_TaGBase",
@@ -3367,7 +3562,8 @@
    ],
    "Roughness": 0.5,
    "Metallic": 0.0,
-   "EmissiveStrength": 0.0
+   "EmissiveStrength": 0.0,
+   "RimStrength": 0.35
   },
   "/Game/Art/Heroes/Nikoichi/MI_Nikoichi_Outline": {
    "parent": "/Game/Art/Materials/M_TaGOutline",
@@ -3391,7 +3587,8 @@
    ],
    "Roughness": 0.6,
    "Metallic": 0.0,
-   "EmissiveStrength": 0.0
+   "EmissiveStrength": 0.0,
+   "RimStrength": 0.35
   },
   "/Game/Art/Heroes/Nikoichi/MI_Nikoichi_TaG": {
    "parent": "/Game/Art/Materials/M_TaGBase",
@@ -3407,7 +3604,8 @@
    ],
    "Roughness": 0.35,
    "Metallic": 0.0,
-   "EmissiveStrength": 3.0
+   "EmissiveStrength": 3.0,
+   "RimStrength": 0.0
   },
   "/Game/Art/Heroes/Nikoichi/MI_Nikoichi_White": {
    "parent": "/Game/Art/Materials/M_TaGBase",
@@ -3423,7 +3621,8 @@
    ],
    "Roughness": 0.4,
    "Metallic": 0.0,
-   "EmissiveStrength": 0.0
+   "EmissiveStrength": 0.0,
+   "RimStrength": 0.35
   },
   "/Game/Art/Heroes/Oboro/MI_Oboro_Body": {
    "parent": "/Game/Art/Materials/M_TaGBase",
@@ -3439,7 +3638,8 @@
    ],
    "Roughness": 0.6,
    "Metallic": 0.0,
-   "EmissiveStrength": 0.0
+   "EmissiveStrength": 0.0,
+   "RimStrength": 0.35
   },
   "/Game/Art/Heroes/Oboro/MI_Oboro_Dark": {
    "parent": "/Game/Art/Materials/M_TaGBase",
@@ -3455,7 +3655,8 @@
    ],
    "Roughness": 0.6,
    "Metallic": 0.0,
-   "EmissiveStrength": 0.0
+   "EmissiveStrength": 0.0,
+   "RimStrength": 0.35
   },
   "/Game/Art/Heroes/Oboro/MI_Oboro_Extra": {
    "parent": "/Game/Art/Materials/M_TaGBase",
@@ -3471,7 +3672,8 @@
    ],
    "Roughness": 0.6,
    "Metallic": 0.0,
-   "EmissiveStrength": 0.0
+   "EmissiveStrength": 0.0,
+   "RimStrength": 0.35
   },
   "/Game/Art/Heroes/Oboro/MI_Oboro_Glow": {
    "parent": "/Game/Art/Materials/M_TaGBase",
@@ -3487,7 +3689,8 @@
    ],
    "Roughness": 0.3,
    "Metallic": 0.0,
-   "EmissiveStrength": 4.0
+   "EmissiveStrength": 4.0,
+   "RimStrength": 0.0
   },
   "/Game/Art/Heroes/Oboro/MI_Oboro_Hair": {
    "parent": "/Game/Art/Materials/M_TaGBase",
@@ -3503,7 +3706,8 @@
    ],
    "Roughness": 0.5,
    "Metallic": 0.0,
-   "EmissiveStrength": 0.0
+   "EmissiveStrength": 0.0,
+   "RimStrength": 0.35
   },
   "/Game/Art/Heroes/Oboro/MI_Oboro_Jelly": {
    "parent": "/Game/Art/Materials/M_TaGTranslucent",
@@ -3544,7 +3748,8 @@
    ],
    "Roughness": 0.35,
    "Metallic": 0.0,
-   "EmissiveStrength": 3.0
+   "EmissiveStrength": 3.0,
+   "RimStrength": 0.0
   },
   "/Game/Art/Heroes/Oboro/MI_Oboro_White": {
    "parent": "/Game/Art/Materials/M_TaGBase",
@@ -3560,7 +3765,8 @@
    ],
    "Roughness": 0.4,
    "Metallic": 0.0,
-   "EmissiveStrength": 0.0
+   "EmissiveStrength": 0.0,
+   "RimStrength": 0.35
   },
   "/Game/Art/Heroes/Rei/MI_Rei_Body": {
    "parent": "/Game/Art/Materials/M_TaGBase",
@@ -3576,7 +3782,8 @@
    ],
    "Roughness": 0.6,
    "Metallic": 0.0,
-   "EmissiveStrength": 0.0
+   "EmissiveStrength": 0.0,
+   "RimStrength": 0.35
   },
   "/Game/Art/Heroes/Rei/MI_Rei_Dark": {
    "parent": "/Game/Art/Materials/M_TaGBase",
@@ -3592,7 +3799,8 @@
    ],
    "Roughness": 0.6,
    "Metallic": 0.0,
-   "EmissiveStrength": 0.0
+   "EmissiveStrength": 0.0,
+   "RimStrength": 0.35
   },
   "/Game/Art/Heroes/Rei/MI_Rei_Extra": {
    "parent": "/Game/Art/Materials/M_TaGBase",
@@ -3608,7 +3816,8 @@
    ],
    "Roughness": 0.6,
    "Metallic": 0.0,
-   "EmissiveStrength": 0.0
+   "EmissiveStrength": 0.0,
+   "RimStrength": 0.35
   },
   "/Game/Art/Heroes/Rei/MI_Rei_Glow": {
    "parent": "/Game/Art/Materials/M_TaGBase",
@@ -3624,7 +3833,8 @@
    ],
    "Roughness": 0.3,
    "Metallic": 0.0,
-   "EmissiveStrength": 5.0
+   "EmissiveStrength": 5.0,
+   "RimStrength": 0.0
   },
   "/Game/Art/Heroes/Rei/MI_Rei_Hair": {
    "parent": "/Game/Art/Materials/M_TaGBase",
@@ -3640,7 +3850,8 @@
    ],
    "Roughness": 0.5,
    "Metallic": 0.0,
-   "EmissiveStrength": 0.0
+   "EmissiveStrength": 0.0,
+   "RimStrength": 0.35
   },
   "/Game/Art/Heroes/Rei/MI_Rei_Outline": {
    "parent": "/Game/Art/Materials/M_TaGOutline",
@@ -3664,7 +3875,8 @@
    ],
    "Roughness": 0.6,
    "Metallic": 0.0,
-   "EmissiveStrength": 0.0
+   "EmissiveStrength": 0.0,
+   "RimStrength": 0.35
   },
   "/Game/Art/Heroes/Rei/MI_Rei_TaG": {
    "parent": "/Game/Art/Materials/M_TaGBase",
@@ -3680,7 +3892,8 @@
    ],
    "Roughness": 0.35,
    "Metallic": 0.0,
-   "EmissiveStrength": 3.0
+   "EmissiveStrength": 3.0,
+   "RimStrength": 0.0
   },
   "/Game/Art/Heroes/Rei/MI_Rei_White": {
    "parent": "/Game/Art/Materials/M_TaGBase",
@@ -3696,7 +3909,8 @@
    ],
    "Roughness": 0.4,
    "Metallic": 0.0,
-   "EmissiveStrength": 0.0
+   "EmissiveStrength": 0.0,
+   "RimStrength": 0.35
   },
   "/Game/Art/Heroes/Suzu/MI_Suzu_Accent": {
    "parent": "/Game/Art/Materials/M_TaGBase",
@@ -3712,7 +3926,8 @@
    ],
    "Roughness": 0.55,
    "Metallic": 0.0,
-   "EmissiveStrength": 0.0
+   "EmissiveStrength": 0.0,
+   "RimStrength": 0.35
   },
   "/Game/Art/Heroes/Suzu/MI_Suzu_Body": {
    "parent": "/Game/Art/Materials/M_TaGBase",
@@ -3728,7 +3943,8 @@
    ],
    "Roughness": 0.6,
    "Metallic": 0.0,
-   "EmissiveStrength": 0.0
+   "EmissiveStrength": 0.0,
+   "RimStrength": 0.35
   },
   "/Game/Art/Heroes/Suzu/MI_Suzu_Dark": {
    "parent": "/Game/Art/Materials/M_TaGBase",
@@ -3744,7 +3960,8 @@
    ],
    "Roughness": 0.6,
    "Metallic": 0.0,
-   "EmissiveStrength": 0.0
+   "EmissiveStrength": 0.0,
+   "RimStrength": 0.35
   },
   "/Game/Art/Heroes/Suzu/MI_Suzu_Extra": {
    "parent": "/Game/Art/Materials/M_TaGBase",
@@ -3760,7 +3977,8 @@
    ],
    "Roughness": 0.6,
    "Metallic": 0.0,
-   "EmissiveStrength": 0.0
+   "EmissiveStrength": 0.0,
+   "RimStrength": 0.35
   },
   "/Game/Art/Heroes/Suzu/MI_Suzu_Glow": {
    "parent": "/Game/Art/Materials/M_TaGBase",
@@ -3776,7 +3994,8 @@
    ],
    "Roughness": 0.3,
    "Metallic": 0.0,
-   "EmissiveStrength": 4.0
+   "EmissiveStrength": 4.0,
+   "RimStrength": 0.0
   },
   "/Game/Art/Heroes/Suzu/MI_Suzu_Hair": {
    "parent": "/Game/Art/Materials/M_TaGBase",
@@ -3792,7 +4011,8 @@
    ],
    "Roughness": 0.5,
    "Metallic": 0.0,
-   "EmissiveStrength": 0.0
+   "EmissiveStrength": 0.0,
+   "RimStrength": 0.35
   },
   "/Game/Art/Heroes/Suzu/MI_Suzu_Outline": {
    "parent": "/Game/Art/Materials/M_TaGOutline",
@@ -3816,7 +4036,8 @@
    ],
    "Roughness": 0.6,
    "Metallic": 0.0,
-   "EmissiveStrength": 0.0
+   "EmissiveStrength": 0.0,
+   "RimStrength": 0.35
   },
   "/Game/Art/Heroes/Suzu/MI_Suzu_TaG": {
    "parent": "/Game/Art/Materials/M_TaGBase",
@@ -3832,7 +4053,8 @@
    ],
    "Roughness": 0.35,
    "Metallic": 0.0,
-   "EmissiveStrength": 3.0
+   "EmissiveStrength": 3.0,
+   "RimStrength": 0.0
   },
   "/Game/Art/Heroes/Suzu/MI_Suzu_White": {
    "parent": "/Game/Art/Materials/M_TaGBase",
@@ -3848,7 +4070,8 @@
    ],
    "Roughness": 0.4,
    "Metallic": 0.0,
-   "EmissiveStrength": 0.0
+   "EmissiveStrength": 0.0,
+   "RimStrength": 0.35
   },
   "/Game/Art/Heroes/Tomoshibi/MI_Tomoshibi_Accent": {
    "parent": "/Game/Art/Materials/M_TaGBase",
@@ -3864,7 +4087,8 @@
    ],
    "Roughness": 0.55,
    "Metallic": 0.0,
-   "EmissiveStrength": 0.0
+   "EmissiveStrength": 0.0,
+   "RimStrength": 0.35
   },
   "/Game/Art/Heroes/Tomoshibi/MI_Tomoshibi_Body": {
    "parent": "/Game/Art/Materials/M_TaGBase",
@@ -3880,7 +4104,8 @@
    ],
    "Roughness": 0.6,
    "Metallic": 0.0,
-   "EmissiveStrength": 0.0
+   "EmissiveStrength": 0.0,
+   "RimStrength": 0.35
   },
   "/Game/Art/Heroes/Tomoshibi/MI_Tomoshibi_Extra": {
    "parent": "/Game/Art/Materials/M_TaGBase",
@@ -3896,7 +4121,8 @@
    ],
    "Roughness": 0.6,
    "Metallic": 0.0,
-   "EmissiveStrength": 0.0
+   "EmissiveStrength": 0.0,
+   "RimStrength": 0.35
   },
   "/Game/Art/Heroes/Tomoshibi/MI_Tomoshibi_Glow": {
    "parent": "/Game/Art/Materials/M_TaGBase",
@@ -3912,7 +4138,8 @@
    ],
    "Roughness": 0.3,
    "Metallic": 0.0,
-   "EmissiveStrength": 5.0
+   "EmissiveStrength": 5.0,
+   "RimStrength": 0.0
   },
   "/Game/Art/Heroes/Tomoshibi/MI_Tomoshibi_Outline": {
    "parent": "/Game/Art/Materials/M_TaGOutline",
@@ -3936,7 +4163,8 @@
    ],
    "Roughness": 0.35,
    "Metallic": 0.0,
-   "EmissiveStrength": 3.0
+   "EmissiveStrength": 3.0,
+   "RimStrength": 0.0
   },
   "/Game/Art/Heroes/Tsubame/MI_Tsubame_Accent": {
    "parent": "/Game/Art/Materials/M_TaGBase",
@@ -3952,7 +4180,8 @@
    ],
    "Roughness": 0.55,
    "Metallic": 0.0,
-   "EmissiveStrength": 0.0
+   "EmissiveStrength": 0.0,
+   "RimStrength": 0.35
   },
   "/Game/Art/Heroes/Tsubame/MI_Tsubame_Body": {
    "parent": "/Game/Art/Materials/M_TaGBase",
@@ -3968,7 +4197,8 @@
    ],
    "Roughness": 0.6,
    "Metallic": 0.0,
-   "EmissiveStrength": 0.0
+   "EmissiveStrength": 0.0,
+   "RimStrength": 0.35
   },
   "/Game/Art/Heroes/Tsubame/MI_Tsubame_Dark": {
    "parent": "/Game/Art/Materials/M_TaGBase",
@@ -3984,7 +4214,8 @@
    ],
    "Roughness": 0.6,
    "Metallic": 0.0,
-   "EmissiveStrength": 0.0
+   "EmissiveStrength": 0.0,
+   "RimStrength": 0.35
   },
   "/Game/Art/Heroes/Tsubame/MI_Tsubame_Extra": {
    "parent": "/Game/Art/Materials/M_TaGBase",
@@ -4000,7 +4231,8 @@
    ],
    "Roughness": 0.6,
    "Metallic": 0.0,
-   "EmissiveStrength": 0.0
+   "EmissiveStrength": 0.0,
+   "RimStrength": 0.35
   },
   "/Game/Art/Heroes/Tsubame/MI_Tsubame_Glow": {
    "parent": "/Game/Art/Materials/M_TaGBase",
@@ -4016,7 +4248,8 @@
    ],
    "Roughness": 0.3,
    "Metallic": 0.0,
-   "EmissiveStrength": 4.0
+   "EmissiveStrength": 4.0,
+   "RimStrength": 0.0
   },
   "/Game/Art/Heroes/Tsubame/MI_Tsubame_Outline": {
    "parent": "/Game/Art/Materials/M_TaGOutline",
@@ -4040,7 +4273,8 @@
    ],
    "Roughness": 0.35,
    "Metallic": 0.0,
-   "EmissiveStrength": 3.0
+   "EmissiveStrength": 3.0,
+   "RimStrength": 0.0
   },
   "/Game/Art/Heroes/Tsubame/MI_Tsubame_White": {
    "parent": "/Game/Art/Materials/M_TaGBase",
@@ -4056,7 +4290,8 @@
    ],
    "Roughness": 0.4,
    "Metallic": 0.0,
-   "EmissiveStrength": 0.0
+   "EmissiveStrength": 0.0,
+   "RimStrength": 0.35
   },
   "/Game/Art/Heroes/Tsumugi/MI_Tsumugi_Accent": {
    "parent": "/Game/Art/Materials/M_TaGBase",
@@ -4072,7 +4307,8 @@
    ],
    "Roughness": 0.55,
    "Metallic": 0.0,
-   "EmissiveStrength": 0.0
+   "EmissiveStrength": 0.0,
+   "RimStrength": 0.35
   },
   "/Game/Art/Heroes/Tsumugi/MI_Tsumugi_Body": {
    "parent": "/Game/Art/Materials/M_TaGBase",
@@ -4088,7 +4324,8 @@
    ],
    "Roughness": 0.6,
    "Metallic": 0.0,
-   "EmissiveStrength": 0.0
+   "EmissiveStrength": 0.0,
+   "RimStrength": 0.35
   },
   "/Game/Art/Heroes/Tsumugi/MI_Tsumugi_Dark": {
    "parent": "/Game/Art/Materials/M_TaGBase",
@@ -4104,7 +4341,8 @@
    ],
    "Roughness": 0.6,
    "Metallic": 0.0,
-   "EmissiveStrength": 0.0
+   "EmissiveStrength": 0.0,
+   "RimStrength": 0.35
   },
   "/Game/Art/Heroes/Tsumugi/MI_Tsumugi_Extra": {
    "parent": "/Game/Art/Materials/M_TaGBase",
@@ -4120,7 +4358,8 @@
    ],
    "Roughness": 0.6,
    "Metallic": 0.0,
-   "EmissiveStrength": 0.0
+   "EmissiveStrength": 0.0,
+   "RimStrength": 0.35
   },
   "/Game/Art/Heroes/Tsumugi/MI_Tsumugi_Glow": {
    "parent": "/Game/Art/Materials/M_TaGBase",
@@ -4136,7 +4375,8 @@
    ],
    "Roughness": 0.3,
    "Metallic": 0.0,
-   "EmissiveStrength": 5.0
+   "EmissiveStrength": 5.0,
+   "RimStrength": 0.0
   },
   "/Game/Art/Heroes/Tsumugi/MI_Tsumugi_Hair": {
    "parent": "/Game/Art/Materials/M_TaGBase",
@@ -4152,7 +4392,8 @@
    ],
    "Roughness": 0.5,
    "Metallic": 0.0,
-   "EmissiveStrength": 0.0
+   "EmissiveStrength": 0.0,
+   "RimStrength": 0.35
   },
   "/Game/Art/Heroes/Tsumugi/MI_Tsumugi_Outline": {
    "parent": "/Game/Art/Materials/M_TaGOutline",
@@ -4176,7 +4417,8 @@
    ],
    "Roughness": 0.6,
    "Metallic": 0.0,
-   "EmissiveStrength": 0.0
+   "EmissiveStrength": 0.0,
+   "RimStrength": 0.35
   },
   "/Game/Art/Heroes/Tsumugi/MI_Tsumugi_TaG": {
    "parent": "/Game/Art/Materials/M_TaGBase",
@@ -4192,7 +4434,8 @@
    ],
    "Roughness": 0.35,
    "Metallic": 0.0,
-   "EmissiveStrength": 3.0
+   "EmissiveStrength": 3.0,
+   "RimStrength": 0.0
   },
   "/Game/Art/Heroes/Tsumugi/MI_Tsumugi_White": {
    "parent": "/Game/Art/Materials/M_TaGBase",
@@ -4208,7 +4451,8 @@
    ],
    "Roughness": 0.4,
    "Metallic": 0.0,
-   "EmissiveStrength": 0.0
+   "EmissiveStrength": 0.0,
+   "RimStrength": 0.35
   },
   "/Game/Art/Heroes/Tsurara/MI_Tsurara_Accent": {
    "parent": "/Game/Art/Materials/M_TaGBase",
@@ -4224,7 +4468,8 @@
    ],
    "Roughness": 0.55,
    "Metallic": 0.0,
-   "EmissiveStrength": 0.0
+   "EmissiveStrength": 0.0,
+   "RimStrength": 0.35
   },
   "/Game/Art/Heroes/Tsurara/MI_Tsurara_Body": {
    "parent": "/Game/Art/Materials/M_TaGBase",
@@ -4240,7 +4485,8 @@
    ],
    "Roughness": 0.6,
    "Metallic": 0.0,
-   "EmissiveStrength": 0.0
+   "EmissiveStrength": 0.0,
+   "RimStrength": 0.35
   },
   "/Game/Art/Heroes/Tsurara/MI_Tsurara_Dark": {
    "parent": "/Game/Art/Materials/M_TaGBase",
@@ -4256,7 +4502,8 @@
    ],
    "Roughness": 0.6,
    "Metallic": 0.0,
-   "EmissiveStrength": 0.0
+   "EmissiveStrength": 0.0,
+   "RimStrength": 0.35
   },
   "/Game/Art/Heroes/Tsurara/MI_Tsurara_Extra": {
    "parent": "/Game/Art/Materials/M_TaGBase",
@@ -4272,7 +4519,8 @@
    ],
    "Roughness": 0.6,
    "Metallic": 0.0,
-   "EmissiveStrength": 0.0
+   "EmissiveStrength": 0.0,
+   "RimStrength": 0.35
   },
   "/Game/Art/Heroes/Tsurara/MI_Tsurara_Glow": {
    "parent": "/Game/Art/Materials/M_TaGBase",
@@ -4288,7 +4536,8 @@
    ],
    "Roughness": 0.3,
    "Metallic": 0.0,
-   "EmissiveStrength": 2.5
+   "EmissiveStrength": 2.5,
+   "RimStrength": 0.0
   },
   "/Game/Art/Heroes/Tsurara/MI_Tsurara_Hair": {
    "parent": "/Game/Art/Materials/M_TaGBase",
@@ -4304,7 +4553,8 @@
    ],
    "Roughness": 0.5,
    "Metallic": 0.0,
-   "EmissiveStrength": 0.0
+   "EmissiveStrength": 0.0,
+   "RimStrength": 0.35
   },
   "/Game/Art/Heroes/Tsurara/MI_Tsurara_Jelly": {
    "parent": "/Game/Art/Materials/M_TaGTranslucent",
@@ -4337,7 +4587,8 @@
    ],
    "Roughness": 0.3,
    "Metallic": 0.8,
-   "EmissiveStrength": 0.0
+   "EmissiveStrength": 0.0,
+   "RimStrength": 0.35
   },
   "/Game/Art/Heroes/Tsurara/MI_Tsurara_Outline": {
    "parent": "/Game/Art/Materials/M_TaGOutline",
@@ -4361,7 +4612,8 @@
    ],
    "Roughness": 0.6,
    "Metallic": 0.0,
-   "EmissiveStrength": 0.0
+   "EmissiveStrength": 0.0,
+   "RimStrength": 0.35
   },
   "/Game/Art/Heroes/Tsurara/MI_Tsurara_TaG": {
    "parent": "/Game/Art/Materials/M_TaGBase",
@@ -4377,7 +4629,8 @@
    ],
    "Roughness": 0.35,
    "Metallic": 0.0,
-   "EmissiveStrength": 3.0
+   "EmissiveStrength": 3.0,
+   "RimStrength": 0.0
   },
   "/Game/Art/Heroes/Tsurara/MI_Tsurara_White": {
    "parent": "/Game/Art/Materials/M_TaGBase",
@@ -4393,7 +4646,8 @@
    ],
    "Roughness": 0.4,
    "Metallic": 0.0,
-   "EmissiveStrength": 0.0
+   "EmissiveStrength": 0.0,
+   "RimStrength": 0.35
   },
   "/Game/Art/Heroes/Tsurube/MI_Tsurube_Accent": {
    "parent": "/Game/Art/Materials/M_TaGBase",
@@ -4409,7 +4663,8 @@
    ],
    "Roughness": 0.55,
    "Metallic": 0.0,
-   "EmissiveStrength": 0.0
+   "EmissiveStrength": 0.0,
+   "RimStrength": 0.35
   },
   "/Game/Art/Heroes/Tsurube/MI_Tsurube_Body": {
    "parent": "/Game/Art/Materials/M_TaGBase",
@@ -4425,7 +4680,8 @@
    ],
    "Roughness": 0.6,
    "Metallic": 0.0,
-   "EmissiveStrength": 0.0
+   "EmissiveStrength": 0.0,
+   "RimStrength": 0.35
   },
   "/Game/Art/Heroes/Tsurube/MI_Tsurube_Dark": {
    "parent": "/Game/Art/Materials/M_TaGBase",
@@ -4441,7 +4697,8 @@
    ],
    "Roughness": 0.6,
    "Metallic": 0.0,
-   "EmissiveStrength": 0.0
+   "EmissiveStrength": 0.0,
+   "RimStrength": 0.35
   },
   "/Game/Art/Heroes/Tsurube/MI_Tsurube_Extra": {
    "parent": "/Game/Art/Materials/M_TaGBase",
@@ -4457,7 +4714,8 @@
    ],
    "Roughness": 0.6,
    "Metallic": 0.0,
-   "EmissiveStrength": 0.0
+   "EmissiveStrength": 0.0,
+   "RimStrength": 0.35
   },
   "/Game/Art/Heroes/Tsurube/MI_Tsurube_Glow": {
    "parent": "/Game/Art/Materials/M_TaGBase",
@@ -4473,7 +4731,8 @@
    ],
    "Roughness": 0.3,
    "Metallic": 0.0,
-   "EmissiveStrength": 5.0
+   "EmissiveStrength": 5.0,
+   "RimStrength": 0.0
   },
   "/Game/Art/Heroes/Tsurube/MI_Tsurube_Outline": {
    "parent": "/Game/Art/Materials/M_TaGOutline",
@@ -4497,7 +4756,8 @@
    ],
    "Roughness": 0.35,
    "Metallic": 0.0,
-   "EmissiveStrength": 3.0
+   "EmissiveStrength": 3.0,
+   "RimStrength": 0.0
   },
   "/Game/Art/Heroes/Tsurube/MI_Tsurube_White": {
    "parent": "/Game/Art/Materials/M_TaGBase",
@@ -4513,7 +4773,8 @@
    ],
    "Roughness": 0.4,
    "Metallic": 0.0,
-   "EmissiveStrength": 0.0
+   "EmissiveStrength": 0.0,
+   "RimStrength": 0.35
   },
   "/Game/Art/Heroes/Ushio/MI_Ushio_Accent": {
    "parent": "/Game/Art/Materials/M_TaGBase",
@@ -4529,7 +4790,8 @@
    ],
    "Roughness": 0.55,
    "Metallic": 0.0,
-   "EmissiveStrength": 0.0
+   "EmissiveStrength": 0.0,
+   "RimStrength": 0.35
   },
   "/Game/Art/Heroes/Ushio/MI_Ushio_Body": {
    "parent": "/Game/Art/Materials/M_TaGBase",
@@ -4545,7 +4807,8 @@
    ],
    "Roughness": 0.6,
    "Metallic": 0.0,
-   "EmissiveStrength": 0.0
+   "EmissiveStrength": 0.0,
+   "RimStrength": 0.35
   },
   "/Game/Art/Heroes/Ushio/MI_Ushio_Dark": {
    "parent": "/Game/Art/Materials/M_TaGBase",
@@ -4561,7 +4824,8 @@
    ],
    "Roughness": 0.6,
    "Metallic": 0.0,
-   "EmissiveStrength": 0.0
+   "EmissiveStrength": 0.0,
+   "RimStrength": 0.35
   },
   "/Game/Art/Heroes/Ushio/MI_Ushio_Extra": {
    "parent": "/Game/Art/Materials/M_TaGBase",
@@ -4577,7 +4841,8 @@
    ],
    "Roughness": 0.6,
    "Metallic": 0.0,
-   "EmissiveStrength": 0.0
+   "EmissiveStrength": 0.0,
+   "RimStrength": 0.35
   },
   "/Game/Art/Heroes/Ushio/MI_Ushio_Glow": {
    "parent": "/Game/Art/Materials/M_TaGBase",
@@ -4593,7 +4858,8 @@
    ],
    "Roughness": 0.3,
    "Metallic": 0.0,
-   "EmissiveStrength": 1.2
+   "EmissiveStrength": 1.2,
+   "RimStrength": 0.0
   },
   "/Game/Art/Heroes/Ushio/MI_Ushio_Hair": {
    "parent": "/Game/Art/Materials/M_TaGBase",
@@ -4609,7 +4875,8 @@
    ],
    "Roughness": 0.5,
    "Metallic": 0.0,
-   "EmissiveStrength": 0.0
+   "EmissiveStrength": 0.0,
+   "RimStrength": 0.35
   },
   "/Game/Art/Heroes/Ushio/MI_Ushio_Outline": {
    "parent": "/Game/Art/Materials/M_TaGOutline",
@@ -4633,7 +4900,8 @@
    ],
    "Roughness": 0.6,
    "Metallic": 0.0,
-   "EmissiveStrength": 0.0
+   "EmissiveStrength": 0.0,
+   "RimStrength": 0.35
   },
   "/Game/Art/Heroes/Ushio/MI_Ushio_TaG": {
    "parent": "/Game/Art/Materials/M_TaGBase",
@@ -4649,7 +4917,8 @@
    ],
    "Roughness": 0.35,
    "Metallic": 0.0,
-   "EmissiveStrength": 3.0
+   "EmissiveStrength": 3.0,
+   "RimStrength": 0.0
   },
   "/Game/Art/Heroes/Ushio/MI_Ushio_White": {
    "parent": "/Game/Art/Materials/M_TaGBase",
@@ -4665,7 +4934,8 @@
    ],
    "Roughness": 0.4,
    "Metallic": 0.0,
-   "EmissiveStrength": 0.0
+   "EmissiveStrength": 0.0,
+   "RimStrength": 0.35
   },
   "/Game/Art/Heroes/Yadori/MI_Yadori_Accent": {
    "parent": "/Game/Art/Materials/M_TaGBase",
@@ -4681,7 +4951,8 @@
    ],
    "Roughness": 0.55,
    "Metallic": 0.0,
-   "EmissiveStrength": 0.0
+   "EmissiveStrength": 0.0,
+   "RimStrength": 0.35
   },
   "/Game/Art/Heroes/Yadori/MI_Yadori_Body": {
    "parent": "/Game/Art/Materials/M_TaGBase",
@@ -4697,7 +4968,8 @@
    ],
    "Roughness": 0.6,
    "Metallic": 0.0,
-   "EmissiveStrength": 0.0
+   "EmissiveStrength": 0.0,
+   "RimStrength": 0.35
   },
   "/Game/Art/Heroes/Yadori/MI_Yadori_Dark": {
    "parent": "/Game/Art/Materials/M_TaGBase",
@@ -4713,7 +4985,8 @@
    ],
    "Roughness": 0.6,
    "Metallic": 0.0,
-   "EmissiveStrength": 0.0
+   "EmissiveStrength": 0.0,
+   "RimStrength": 0.35
   },
   "/Game/Art/Heroes/Yadori/MI_Yadori_Extra": {
    "parent": "/Game/Art/Materials/M_TaGBase",
@@ -4729,7 +5002,8 @@
    ],
    "Roughness": 0.6,
    "Metallic": 0.0,
-   "EmissiveStrength": 0.0
+   "EmissiveStrength": 0.0,
+   "RimStrength": 0.35
   },
   "/Game/Art/Heroes/Yadori/MI_Yadori_Glow": {
    "parent": "/Game/Art/Materials/M_TaGBase",
@@ -4745,7 +5019,8 @@
    ],
    "Roughness": 0.3,
    "Metallic": 0.0,
-   "EmissiveStrength": 4.0
+   "EmissiveStrength": 4.0,
+   "RimStrength": 0.0
   },
   "/Game/Art/Heroes/Yadori/MI_Yadori_Outline": {
    "parent": "/Game/Art/Materials/M_TaGOutline",
@@ -4769,7 +5044,8 @@
    ],
    "Roughness": 0.35,
    "Metallic": 0.0,
-   "EmissiveStrength": 3.0
+   "EmissiveStrength": 3.0,
+   "RimStrength": 0.0
   },
   "/Game/Art/Heroes/Yadori/MI_Yadori_White": {
    "parent": "/Game/Art/Materials/M_TaGBase",
@@ -4785,7 +5061,8 @@
    ],
    "Roughness": 0.4,
    "Metallic": 0.0,
-   "EmissiveStrength": 0.0
+   "EmissiveStrength": 0.0,
+   "RimStrength": 0.35
   },
   "/Game/Art/Heroes/Yatai/MI_Yatai_Accent": {
    "parent": "/Game/Art/Materials/M_TaGBase",
@@ -4801,7 +5078,8 @@
    ],
    "Roughness": 0.55,
    "Metallic": 0.0,
-   "EmissiveStrength": 0.0
+   "EmissiveStrength": 0.0,
+   "RimStrength": 0.35
   },
   "/Game/Art/Heroes/Yatai/MI_Yatai_Body": {
    "parent": "/Game/Art/Materials/M_TaGBase",
@@ -4817,7 +5095,8 @@
    ],
    "Roughness": 0.6,
    "Metallic": 0.0,
-   "EmissiveStrength": 0.0
+   "EmissiveStrength": 0.0,
+   "RimStrength": 0.35
   },
   "/Game/Art/Heroes/Yatai/MI_Yatai_Dark": {
    "parent": "/Game/Art/Materials/M_TaGBase",
@@ -4833,7 +5112,8 @@
    ],
    "Roughness": 0.6,
    "Metallic": 0.0,
-   "EmissiveStrength": 0.0
+   "EmissiveStrength": 0.0,
+   "RimStrength": 0.35
   },
   "/Game/Art/Heroes/Yatai/MI_Yatai_Extra": {
    "parent": "/Game/Art/Materials/M_TaGBase",
@@ -4849,7 +5129,8 @@
    ],
    "Roughness": 0.6,
    "Metallic": 0.0,
-   "EmissiveStrength": 0.0
+   "EmissiveStrength": 0.0,
+   "RimStrength": 0.35
   },
   "/Game/Art/Heroes/Yatai/MI_Yatai_Glow": {
    "parent": "/Game/Art/Materials/M_TaGBase",
@@ -4865,7 +5146,8 @@
    ],
    "Roughness": 0.3,
    "Metallic": 0.0,
-   "EmissiveStrength": 2.6
+   "EmissiveStrength": 2.6,
+   "RimStrength": 0.0
   },
   "/Game/Art/Heroes/Yatai/MI_Yatai_Outline": {
    "parent": "/Game/Art/Materials/M_TaGOutline",
@@ -4889,7 +5171,8 @@
    ],
    "Roughness": 0.35,
    "Metallic": 0.0,
-   "EmissiveStrength": 3.0
+   "EmissiveStrength": 3.0,
+   "RimStrength": 0.0
   },
   "/Game/Art/Heroes/Yatai/MI_Yatai_White": {
    "parent": "/Game/Art/Materials/M_TaGBase",
@@ -4905,7 +5188,8 @@
    ],
    "Roughness": 0.4,
    "Metallic": 0.0,
-   "EmissiveStrength": 0.0
+   "EmissiveStrength": 0.0,
+   "RimStrength": 0.35
   }
  },
  "heroes": {
@@ -21507,15 +21791,14 @@
  "court": {
   "SM_Hoop": {
    "path": "/Game/Art/Court/SM_Hoop",
-   "triangles": 1848,
-   "vertices": 2766,
+   "triangles": 984,
+   "vertices": 1038,
    "slots": [
     "Accent",
     "Dark",
     "Metal",
     "TaG",
     "Glow",
-    "Net",
     "Board"
    ],
    "material_instances": [
@@ -21524,7 +21807,6 @@
     "/Game/Art/Court/MI_Hoop_Metal",
     "/Game/Art/Court/MI_Hoop_TaG",
     "/Game/Art/Court/MI_Hoop_Glow",
-    "/Game/Art/Court/MI_Hoop_Net",
     "/Game/Art/Court/MI_Hoop_Board"
    ],
    "bounds_min": [
@@ -21568,8 +21850,46 @@
     "rim_tube_centerline_radius": 22.5,
     "rim_tube_radius": 1.0,
     "rim_inner_edge_radius": 21.5,
-    "net_length": 39.73,
     "simple_collision_boxes": 2
+   }
+  },
+  "SM_Net": {
+   "path": "/Game/Art/Court/SM_Net",
+   "triangles": 864,
+   "vertices": 1728,
+   "slots": [
+    "Net"
+   ],
+   "material_instances": [
+    "/Game/Art/Court/MI_Net_Net"
+   ],
+   "bounds_min": [
+    -22.199,
+    -22.199,
+    -40.35
+   ],
+   "bounds_max": [
+    22.199,
+    22.199,
+    -0.625
+   ],
+   "pivot_world": [
+    157.5,
+    0.0,
+    305.0
+   ],
+   "spawn_at": "(RimX, 0, RimZ) from TaGTypes.h",
+   "sockets": {
+    "net_bottom": [
+     0.0,
+     0.0,
+     -40.0
+    ]
+   },
+   "measured": {
+    "net_length": 39.73,
+    "top_ring_radius": 22.2,
+    "top_z_relative": -0.625
    }
   },
   "SM_Rooftop": {
@@ -22800,8 +23120,8 @@
   "/Game/Art/Court/MI_Hoop_Dark",
   "/Game/Art/Court/MI_Hoop_Glow",
   "/Game/Art/Court/MI_Hoop_Metal",
-  "/Game/Art/Court/MI_Hoop_Net",
   "/Game/Art/Court/MI_Hoop_TaG",
+  "/Game/Art/Court/MI_Net_Net",
   "/Game/Art/Court/MI_RooftopProps_Accent",
   "/Game/Art/Court/MI_RooftopProps_Body",
   "/Game/Art/Court/MI_RooftopProps_Dark",
@@ -22819,6 +23139,7 @@
   "/Game/Art/Court/MI_Rooftop_Dark",
   "/Game/Art/Court/MI_Rooftop_Paint",
   "/Game/Art/Court/SM_Hoop",
+  "/Game/Art/Court/SM_Net",
   "/Game/Art/Court/SM_Rooftop",
   "/Game/Art/Court/SM_RooftopProps",
   "/Game/Art/Court/SM_RooftopProps_Furnace",
@@ -23483,6 +23804,59 @@
   "/Game/Art/Materials/M_TaGSky",
   "/Game/Art/Materials/M_TaGTranslucent",
   "/Game/Art/Materials/M_TaGWater",
+  "/Game/Art/UI/Icons/T_Icon_Ally",
+  "/Game/Art/UI/Icons/T_Icon_ArtKind_Aura",
+  "/Game/Art/UI/Icons/T_Icon_ArtKind_Bolt",
+  "/Game/Art/UI/Icons/T_Icon_ArtKind_Cone",
+  "/Game/Art/UI/Icons/T_Icon_ArtKind_ContestAt",
+  "/Game/Art/UI/Icons/T_Icon_ArtKind_ContestStance",
+  "/Game/Art/UI/Icons/T_Icon_ArtKind_Counter",
+  "/Game/Art/UI/Icons/T_Icon_ArtKind_Dash",
+  "/Game/Art/UI/Icons/T_Icon_ArtKind_Decoy",
+  "/Game/Art/UI/Icons/T_Icon_ArtKind_Field",
+  "/Game/Art/UI/Icons/T_Icon_ArtKind_Leap",
+  "/Game/Art/UI/Icons/T_Icon_ArtKind_Pass",
+  "/Game/Art/UI/Icons/T_Icon_ArtKind_Phase",
+  "/Game/Art/UI/Icons/T_Icon_ArtKind_Root",
+  "/Game/Art/UI/Icons/T_Icon_ArtKind_Shell",
+  "/Game/Art/UI/Icons/T_Icon_ArtKind_ShieldFollow",
+  "/Game/Art/UI/Icons/T_Icon_ArtKind_ShotBuff",
+  "/Game/Art/UI/Icons/T_Icon_ArtKind_Tackle",
+  "/Game/Art/UI/Icons/T_Icon_ArtKind_TeamAura",
+  "/Game/Art/UI/Icons/T_Icon_ArtKind_TeamOne",
+  "/Game/Art/UI/Icons/T_Icon_ArtKind_Wall",
+  "/Game/Art/UI/Icons/T_Icon_Art_Afterimage",
+  "/Game/Art/UI/Icons/T_Icon_Art_Blink",
+  "/Game/Art/UI/Icons/T_Icon_Art_IronWall",
+  "/Game/Art/UI/Icons/T_Icon_Art_Pull",
+  "/Game/Art/UI/Icons/T_Icon_Art_Resync",
+  "/Game/Art/UI/Icons/T_Icon_Art_Scope",
+  "/Game/Art/UI/Icons/T_Icon_Art_ShoulderCharge",
+  "/Game/Art/UI/Icons/T_Icon_Art_SlowField",
+  "/Game/Art/UI/Icons/T_Icon_Art_SonicWave",
+  "/Game/Art/UI/Icons/T_Icon_Art_SpotUp",
+  "/Game/Art/UI/Icons/T_Icon_Art_Tether",
+  "/Game/Art/UI/Icons/T_Icon_Art_ThreadPass",
+  "/Game/Art/UI/Icons/T_Icon_Ball",
+  "/Game/Art/UI/Icons/T_Icon_Clock",
+  "/Game/Art/UI/Icons/T_Icon_Contest",
+  "/Game/Art/UI/Icons/T_Icon_Cut",
+  "/Game/Art/UI/Icons/T_Icon_Dodge",
+  "/Game/Art/UI/Icons/T_Icon_Down",
+  "/Game/Art/UI/Icons/T_Icon_Drive",
+  "/Game/Art/UI/Icons/T_Icon_Enemy",
+  "/Game/Art/UI/Icons/T_Icon_Guard",
+  "/Game/Art/UI/Icons/T_Icon_Jump",
+  "/Game/Art/UI/Icons/T_Icon_Leap",
+  "/Game/Art/UI/Icons/T_Icon_Pass",
+  "/Game/Art/UI/Icons/T_Icon_Role_Playmaker",
+  "/Game/Art/UI/Icons/T_Icon_Role_Scorer",
+  "/Game/Art/UI/Icons/T_Icon_Role_Wall",
+  "/Game/Art/UI/Icons/T_Icon_Shoot",
+  "/Game/Art/UI/Icons/T_Icon_Steal",
+  "/Game/Art/UI/Icons/T_Icon_Step",
+  "/Game/Art/UI/Icons/T_Icon_Tackle",
+  "/Game/Art/UI/Icons/T_Icon_Zone",
   "/Game/Art/UI/T_Portrait_Amagi",
   "/Game/Art/UI/T_Portrait_Ankou",
   "/Game/Art/UI/T_Portrait_Aoji",
@@ -23541,6 +23915,65 @@
   "/Game/Audio/SFX/UIMove",
   "/Game/Audio/SFX/Whistle"
  ],
+ "ui": {
+  "icons": {
+   "Drive": "/Game/Art/UI/Icons/T_Icon_Drive",
+   "Dodge": "/Game/Art/UI/Icons/T_Icon_Dodge",
+   "Tackle": "/Game/Art/UI/Icons/T_Icon_Tackle",
+   "Contest": "/Game/Art/UI/Icons/T_Icon_Contest",
+   "Step": "/Game/Art/UI/Icons/T_Icon_Step",
+   "Pass": "/Game/Art/UI/Icons/T_Icon_Pass",
+   "Steal": "/Game/Art/UI/Icons/T_Icon_Steal",
+   "Shoot": "/Game/Art/UI/Icons/T_Icon_Shoot",
+   "Jump": "/Game/Art/UI/Icons/T_Icon_Jump",
+   "Cut": "/Game/Art/UI/Icons/T_Icon_Cut",
+   "Leap": "/Game/Art/UI/Icons/T_Icon_Leap",
+   "Role_Wall": "/Game/Art/UI/Icons/T_Icon_Role_Wall",
+   "Role_Scorer": "/Game/Art/UI/Icons/T_Icon_Role_Scorer",
+   "Role_Playmaker": "/Game/Art/UI/Icons/T_Icon_Role_Playmaker",
+   "Guard": "/Game/Art/UI/Icons/T_Icon_Guard",
+   "Zone": "/Game/Art/UI/Icons/T_Icon_Zone",
+   "Ball": "/Game/Art/UI/Icons/T_Icon_Ball",
+   "Down": "/Game/Art/UI/Icons/T_Icon_Down",
+   "Clock": "/Game/Art/UI/Icons/T_Icon_Clock",
+   "Ally": "/Game/Art/UI/Icons/T_Icon_Ally",
+   "Enemy": "/Game/Art/UI/Icons/T_Icon_Enemy",
+   "ArtKind_Dash": "/Game/Art/UI/Icons/T_Icon_ArtKind_Dash",
+   "ArtKind_Leap": "/Game/Art/UI/Icons/T_Icon_ArtKind_Leap",
+   "ArtKind_Shell": "/Game/Art/UI/Icons/T_Icon_ArtKind_Shell",
+   "ArtKind_Phase": "/Game/Art/UI/Icons/T_Icon_ArtKind_Phase",
+   "ArtKind_Counter": "/Game/Art/UI/Icons/T_Icon_ArtKind_Counter",
+   "ArtKind_Decoy": "/Game/Art/UI/Icons/T_Icon_ArtKind_Decoy",
+   "ArtKind_ShotBuff": "/Game/Art/UI/Icons/T_Icon_ArtKind_ShotBuff",
+   "ArtKind_Wall": "/Game/Art/UI/Icons/T_Icon_ArtKind_Wall",
+   "ArtKind_ShieldFollow": "/Game/Art/UI/Icons/T_Icon_ArtKind_ShieldFollow",
+   "ArtKind_Root": "/Game/Art/UI/Icons/T_Icon_ArtKind_Root",
+   "ArtKind_Tackle": "/Game/Art/UI/Icons/T_Icon_ArtKind_Tackle",
+   "ArtKind_Cone": "/Game/Art/UI/Icons/T_Icon_ArtKind_Cone",
+   "ArtKind_Aura": "/Game/Art/UI/Icons/T_Icon_ArtKind_Aura",
+   "ArtKind_Bolt": "/Game/Art/UI/Icons/T_Icon_ArtKind_Bolt",
+   "ArtKind_Field": "/Game/Art/UI/Icons/T_Icon_ArtKind_Field",
+   "ArtKind_TeamAura": "/Game/Art/UI/Icons/T_Icon_ArtKind_TeamAura",
+   "ArtKind_TeamOne": "/Game/Art/UI/Icons/T_Icon_ArtKind_TeamOne",
+   "ArtKind_Pass": "/Game/Art/UI/Icons/T_Icon_ArtKind_Pass",
+   "ArtKind_ContestStance": "/Game/Art/UI/Icons/T_Icon_ArtKind_ContestStance",
+   "ArtKind_ContestAt": "/Game/Art/UI/Icons/T_Icon_ArtKind_ContestAt",
+   "Art_ShoulderCharge": "/Game/Art/UI/Icons/T_Icon_Art_ShoulderCharge",
+   "Art_IronWall": "/Game/Art/UI/Icons/T_Icon_Art_IronWall",
+   "Art_Pull": "/Game/Art/UI/Icons/T_Icon_Art_Pull",
+   "Art_SlowField": "/Game/Art/UI/Icons/T_Icon_Art_SlowField",
+   "Art_Blink": "/Game/Art/UI/Icons/T_Icon_Art_Blink",
+   "Art_Afterimage": "/Game/Art/UI/Icons/T_Icon_Art_Afterimage",
+   "Art_Scope": "/Game/Art/UI/Icons/T_Icon_Art_Scope",
+   "Art_SpotUp": "/Game/Art/UI/Icons/T_Icon_Art_SpotUp",
+   "Art_ThreadPass": "/Game/Art/UI/Icons/T_Icon_Art_ThreadPass",
+   "Art_Tether": "/Game/Art/UI/Icons/T_Icon_Art_Tether",
+   "Art_SonicWave": "/Game/Art/UI/Icons/T_Icon_Art_SonicWave",
+   "Art_Resync": "/Game/Art/UI/Icons/T_Icon_Art_Resync"
+  },
+  "icon_size": 128,
+  "icon_note": "white glyph on transparent (tint it in Slate); UserInterface2D, UI group, no mips"
+ },
  "sky": {
   "SM_SkyDome": {
    "path": "/Game/Art/City/SM_SkyDome",
@@ -23638,7 +24071,8 @@
   },
   "ball": 3088,
   "court": {
-   "SM_Hoop": 1848,
+   "SM_Hoop": 984,
+   "SM_Net": 864,
    "SM_Rooftop": 94,
    "SM_RooftopProps": 14382,
    "SM_RooftopProps_Furnace": 7492

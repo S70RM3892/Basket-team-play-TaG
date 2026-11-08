@@ -80,6 +80,8 @@ public:
 	int32 GetChain() const { return Chain; }
 	uint8 GetPassStyle() const { return Net.Style; }
 
+	UStaticMeshComponent* GetBallMesh() const { return Mesh; }
+
 	/** Where the ball sits in the holder's hands this frame (cosmetic). */
 	FVector HoldPoint(const ATaGCharacter* Who) const;
 

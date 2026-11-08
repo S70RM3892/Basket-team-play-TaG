@@ -10,6 +10,8 @@
 #include "Core/TaGTypes.h"
 #include "EngineUtils.h"
 #include "Framework/Application/SlateApplication.h"
+#include "Fonts/FontMeasure.h"
+#include "Rendering/SlateRenderer.h"
 #include "IPAddress.h"
 #include "Rendering/DrawElements.h"
 #include "SocketSubsystem.h"
@@ -87,12 +89,6 @@ namespace
 		bool bCanBindAll = false;
 		TSharedRef<FInternetAddr> Addr = Sockets->GetLocalHostAddr(*GLog, bCanBindAll);
 		return Addr->IsValid() ? Addr->ToString(false) : TEXT("?");
-	}
-
-	FString CooldownText(const ATaGCharacter* Me, ETaGSlot Slot)
-	{
-		const float Left = Me->GetCooldownLeft(Slot);
-		return Left > 0.05f ? FString::Printf(TEXT("%.1f"), Left) : TEXT("OK");
 	}
 
 	/** A button whose label follows a value (settings toggles). */
@@ -211,6 +207,9 @@ int32 STaGWorldMarkers::OnPaint(const FPaintArgs& Args, const FGeometry& Allotte
 	const float Scale = FMath::Max(AllottedGeometry.Scale, 0.01f);
 	const FSlateFontInfo NameFont = TaGUI::Font(13.f);
 	const FSlateFontInfo SmallFont = TaGUI::Font(11.f);
+	// Centre the labels on the body by their measured width (Japanese glyphs are about twice as wide as a guess by
+	// character count)
+	const TSharedRef<FSlateFontMeasure> Measure = FSlateApplication::Get().GetRenderer()->GetFontMeasureService();
 
 	for (TActorIterator<ATaGCharacter> It(PC->GetWorld()); It; ++It)
 	{
@@ -239,474 +238,33 @@ int32 STaGWorldMarkers::OnPaint(const FPaintArgs& Args, const FGeometry& Allotte
 		const float Dist = Me ? FVector::Dist(Me->GetActorLocation(), C->GetActorLocation()) : 1000.f;
 		const float Alpha = FMath::Clamp(1.4f - Dist / 2500.f, 0.45f, 1.f);
 		const FVector2f Size(220.f, 20.f);
+		const float NameW = (float)Measure->Measure(Label, NameFont).X;
 		FSlateDrawElement::MakeText(OutDrawElements, LayerId,
-			AllottedGeometry.ToPaintGeometry(Size, FSlateLayoutTransform(Local - FVector2f(Label.Len() * 6.5f, 18.f))),
+			AllottedGeometry.ToPaintGeometry(Size, FSlateLayoutTransform(Local - FVector2f(NameW * 0.5f, 18.f))),
 			Label, NameFont, ESlateDrawEffect::None, Color.CopyWithNewOpacity(Alpha));
+		// Guard under the name: a body low on guard is one tackle from going down
+		{
+			const FSlateBrush* Bar = FCoreStyle::Get().GetBrush("WhiteBrush");
+			const float G = FMath::Clamp(C->GetGuard() / FMath::Max(C->GetMaxGuard(), 1.f), 0.f, 1.f);
+			const FVector2f At = Local + FVector2f(-22.f, 5.f);
+			FSlateDrawElement::MakeBox(OutDrawElements, LayerId, AllottedGeometry.ToPaintGeometry(FVector2f(44.f, 4.f), FSlateLayoutTransform(At)),
+				Bar, ESlateDrawEffect::None, FLinearColor(0.f, 0.f, 0.f, 0.55f * Alpha));
+			FSlateDrawElement::MakeBox(OutDrawElements, LayerId + 1, AllottedGeometry.ToPaintGeometry(FVector2f(44.f * G, 4.f), FSlateLayoutTransform(At)),
+				Bar, ESlateDrawEffect::None, Color.CopyWithNewOpacity(Alpha));
+		}
 		FString Sub;
 		if (C->IsDown()) { Sub = TEXT("ダウン"); }
 		else if (C == PassTarget) { Sub = TEXT("▼ パス先"); }
 		else if (C->IsInZone()) { Sub = TEXT("ゾーン"); }
 		if (!Sub.IsEmpty())
 		{
+			const float SubW = (float)Measure->Measure(Sub, SmallFont).X;
 			FSlateDrawElement::MakeText(OutDrawElements, LayerId + 1,
-				AllottedGeometry.ToPaintGeometry(Size, FSlateLayoutTransform(Local - FVector2f(Sub.Len() * 5.5f, 36.f))),
+				AllottedGeometry.ToPaintGeometry(Size, FSlateLayoutTransform(Local - FVector2f(SubW * 0.5f, 36.f))),
 				Sub, SmallFont, ESlateDrawEffect::None, C == PassTarget ? TaG::GoldColor() : FLinearColor::White);
 		}
 	}
 	return LayerId + 2;
-}
-
-// ================================================================ Match HUD
-
-TSharedRef<SWidget> TaGUI::MakeMatchHUD(FPCPtr PC)
-{
-	auto Playing = [PC]()
-	{
-		const ATaGGameState* S = GetGS(PC);
-		return S && (S->Phase == ETaGPhase::Playing || S->Phase == ETaGPhase::Results);
-	};
-
-	// Popups
-	TSharedRef<SVerticalBox> PopupBox = SNew(SVerticalBox);
-	for (int32 i = 0; i < 4; ++i)
-	{
-		PopupBox->AddSlot().AutoHeight().HAlign(HAlign_Center).Padding(0.f, 2.f)
-		[
-			SNew(STextBlock).Font(Font(i == 0 ? 28.f : 20.f))
-			.Text_Lambda([PC, i]()
-			{
-				const ATaGGameState* S = GetGS(PC);
-				return S && S->GetPopups().IsValidIndex(i) ? S->GetPopups()[i].Text : FText::GetEmpty();
-			})
-			.ColorAndOpacity_Lambda([PC, i]()
-			{
-				const ATaGGameState* S = GetGS(PC);
-				if (S && S->GetPopups().IsValidIndex(i))
-				{
-					FLinearColor C = S->TeamColorFor(S->GetPopups()[i].Team);
-					C.A = FMath::Clamp(S->GetPopups()[i].TimeLeft / 0.4f, 0.f, 1.f);
-					return FSlateColor(C);
-				}
-				return FSlateColor(FLinearColor::Transparent);
-			})
-		];
-	}
-
-	// Hands and arts with cooldowns (bottom right)
-	struct FRow { const TCHAR* Key; int32 Kind; };
-	const FRow Rows[] = { { TEXT("LB / Q"), 0 }, { TEXT("RB / E"), 1 }, { TEXT("B / Shift"), 2 }, { TEXT("X / F"), 3 }, { TEXT("LT / C"), 4 }, { TEXT("Y / V"), 5 } };
-	TSharedRef<SVerticalBox> HandBox = SNew(SVerticalBox);
-	for (const FRow& R : Rows)
-	{
-		const int32 Kind = R.Kind;
-		HandBox->AddSlot().AutoHeight().Padding(0.f, 1.f)
-		[
-			SNew(SHorizontalBox)
-			+ SHorizontalBox::Slot().AutoWidth().VAlign(VAlign_Center)
-			[
-				SNew(SBox).WidthOverride(92.f)
-				[
-					SNew(STextBlock).Font(Font(12.f, false)).ColorAndOpacity(FLinearColor(0.75f, 0.78f, 0.82f)).Text(T(R.Key))
-				]
-			]
-			+ SHorizontalBox::Slot().AutoWidth().VAlign(VAlign_Center)
-			[
-				SNew(SBox).WidthOverride(270.f)
-				[
-					SNew(STextBlock).Font(Font(14.f))
-					.Text_Lambda([PC, Kind]()
-					{
-						const ATaGCharacter* Me = GetMe(PC);
-						if (!Me) { return FText::GetEmpty(); }
-						const int32 Role = Me->GetRole();
-						const FTaGHeroDef& H = Me->GetHeroDef();
-						switch (Kind)
-						{
-						case 0: return T(FString::Printf(TEXT("%s  %s"), Role == 2 ? TEXT("タックル") : TEXT("突破"), *CooldownText(Me, Role == 2 ? ETaGSlot::Tackle : ETaGSlot::Drive)));
-						case 1: return T(FString::Printf(TEXT("%s  %s"), Role == 2 ? TEXT("シュート妨害") : TEXT("かわし"), *CooldownText(Me, Role == 2 ? ETaGSlot::Contest : ETaGSlot::Dodge)));
-						case 2: return T(FString::Printf(TEXT("間合い（ステップ）  %s"), *CooldownText(Me, ETaGSlot::Step)));
-						case 3: return T(Role == 1 ? TEXT("パス") : FString::Printf(TEXT("スティール  %s"), *CooldownText(Me, ETaGSlot::Steal)));
-						case 4: return T(FString::Printf(TEXT("%s〔%s〕 %s"), TaGHeroes::GetArt(H.Art1).Name, TaGHeroes::HandName(TaGHeroes::GetArt(H.Art1).Hand), *CooldownText(Me, ETaGSlot::Art1)));
-						default: return T(FString::Printf(TEXT("%s〔%s〕 %s"), TaGHeroes::GetArt(H.Art2).Name, TaGHeroes::HandName(TaGHeroes::GetArt(H.Art2).Hand), *CooldownText(Me, ETaGSlot::Art2)));
-						}
-					})
-					.ColorAndOpacity_Lambda([PC, Kind]()
-					{
-						const ATaGCharacter* Me = GetMe(PC);
-						if (!Me) { return FSlateColor(FLinearColor::White); }
-						const int32 Role = Me->GetRole();
-						ETaGSlot Slot = ETaGSlot::Step;
-						switch (Kind)
-						{
-						case 0: Slot = Role == 2 ? ETaGSlot::Tackle : ETaGSlot::Drive; break;
-						case 1: Slot = Role == 2 ? ETaGSlot::Contest : ETaGSlot::Dodge; break;
-						case 3: Slot = Role == 1 ? ETaGSlot::Pass : ETaGSlot::Steal; break;
-						case 4: Slot = ETaGSlot::Art1; break;
-						case 5: Slot = ETaGSlot::Art2; break;
-						default: break;
-						}
-						const bool bReady = Me->GetCooldownLeft(Slot) <= 0.05f;
-						return FSlateColor(bReady ? (Kind >= 4 ? FLinearColor(0.85f, 0.65f, 1.f) : FLinearColor::White) : FLinearColor(0.45f, 0.45f, 0.5f));
-					})
-				]
-			]
-		];
-	}
-
-	auto InTutorial = [PC]()
-	{
-		const ATaGGameState* S = GetGS(PC);
-		return S && S->bTutorial && S->Phase == ETaGPhase::Playing;
-	};
-
-	return SNew(SOverlay)
-		.Visibility_Lambda([Playing]() { return Playing() ? EVisibility::HitTestInvisible : EVisibility::Collapsed; })
-		// Player markers
-		+ SOverlay::Slot()
-		[
-			SNew(STaGWorldMarkers).PC(PC)
-		]
-		// Flash
-		+ SOverlay::Slot()
-		[
-			SNew(SImage).Image(White())
-			.ColorAndOpacity_Lambda([PC]()
-			{
-				const ATaGGameState* S = GetGS(PC);
-				if (!S || S->GetFlash() <= 0.f) { return FSlateColor(FLinearColor::Transparent); }
-				FLinearColor C = S->GetFlashColor();
-				C.A *= S->GetFlash() / 0.25f;
-				return FSlateColor(C);
-			})
-		]
-		// Tutorial lesson (instead of the score)
-		+ SOverlay::Slot().HAlign(HAlign_Center).VAlign(VAlign_Top).Padding(0.f, 14.f)
-		[
-			SNew(SBorder).BorderImage(White()).BorderBackgroundColor(Panel).Padding(FMargin(24.f, 10.f))
-			.Visibility_Lambda([PC, InTutorial]()
-			{
-				const ATaGGameState* S = GetGS(PC);
-				return InTutorial() && S && !S->IsTutorialFinished() ? EVisibility::HitTestInvisible : EVisibility::Collapsed;
-			})
-			[
-				SNew(SBox).WidthOverride(860.f)
-				[
-					SNew(SVerticalBox)
-					+ SVerticalBox::Slot().AutoHeight()
-					[
-						SNew(SHorizontalBox)
-						+ SHorizontalBox::Slot().FillWidth(1.f).VAlign(VAlign_Center)
-						[
-							SNew(STextBlock).Font(Font(24.f)).ColorAndOpacity(Teal)
-							.Text_Lambda([PC]()
-							{
-								const ATaGGameState* S = GetGS(PC);
-								if (!S) { return FText::GetEmpty(); }
-								return T(FString::Printf(TEXT("レッスン %d / %d   %s"), S->TutorialStep + 1, TaGTutorial::NumLessons(), TaGTutorial::Get(S->TutorialStep).Title));
-							})
-						]
-						+ SHorizontalBox::Slot().AutoWidth().VAlign(VAlign_Center)
-						[
-							SNew(STextBlock).Font(Font(22.f)).ColorAndOpacity(TaG::GoldColor())
-							.Text_Lambda([PC]()
-							{
-								const ATaGGameState* S = GetGS(PC);
-								if (!S) { return FText::GetEmpty(); }
-								return T(FString::Printf(TEXT("%d / %d %s"), S->TutorialProgress, S->TutorialGoal, TaGTutorial::Get(S->TutorialStep).Unit));
-							})
-						]
-					]
-					+ SVerticalBox::Slot().AutoHeight().Padding(0.f, 6.f, 0.f, 0.f)
-					[
-						SNew(STextBlock).Font(Font(17.f)).AutoWrapText(true)
-						.Text_Lambda([PC]()
-						{
-							const ATaGGameState* S = GetGS(PC);
-							return S ? T(TaGTutorial::Get(S->TutorialStep).Text) : FText::GetEmpty();
-						})
-					]
-					+ SVerticalBox::Slot().AutoHeight().Padding(0.f, 4.f, 0.f, 0.f)
-					[
-						SNew(STextBlock).Font(Font(13.f, false)).ColorAndOpacity(FLinearColor(0.75f, 0.78f, 0.82f))
-						.Text(T(TEXT("ポーズ（Start / Esc）から、このレッスンをとばせる")))
-					]
-				]
-			]
-		]
-		// Score and clock
-		+ SOverlay::Slot().HAlign(HAlign_Center).VAlign(VAlign_Top).Padding(0.f, 14.f)
-		[
-			SNew(SBorder).BorderImage(White()).BorderBackgroundColor(Panel).Padding(FMargin(22.f, 6.f))
-			.Visibility_Lambda([InTutorial]() { return InTutorial() ? EVisibility::Collapsed : EVisibility::HitTestInvisible; })
-			[
-				SNew(SVerticalBox)
-				+ SVerticalBox::Slot().AutoHeight().HAlign(HAlign_Center)
-				[
-					SNew(SHorizontalBox)
-					+ SHorizontalBox::Slot().AutoWidth().Padding(8.f, 0.f)
-					[
-						SNew(STextBlock).Font(Font(30.f)).ColorAndOpacity(Teal)
-						.Text_Lambda([PC]()
-						{
-							const ATaGGameState* S = GetGS(PC);
-							return S ? T(FString::Printf(TEXT("味方  %d"), S->GetScore(S->GetLocalTeam()))) : FText::GetEmpty();
-						})
-					]
-					+ SHorizontalBox::Slot().AutoWidth().Padding(8.f, 0.f)
-					[
-						SNew(STextBlock).Font(Font(30.f)).Text(T(TEXT("-")))
-					]
-					+ SHorizontalBox::Slot().AutoWidth().Padding(8.f, 0.f)
-					[
-						SNew(STextBlock).Font(Font(30.f)).ColorAndOpacity(Orange)
-						.Text_Lambda([PC]()
-						{
-							const ATaGGameState* S = GetGS(PC);
-							return S ? T(FString::Printf(TEXT("%d  相手"), S->GetScore(1 - S->GetLocalTeam()))) : FText::GetEmpty();
-						})
-					]
-				]
-				+ SVerticalBox::Slot().AutoHeight().HAlign(HAlign_Center)
-				[
-					SNew(STextBlock).Font(Font(17.f))
-					.Text_Lambda([PC]()
-					{
-						const ATaGGameState* S = GetGS(PC);
-						if (!S) { return FText::GetEmpty(); }
-						const bool bOff = S->PossessionTeam == S->GetLocalTeam();
-						return T(FString::Printf(TEXT("%s   ショットクロック %.1f   %don%d・11点先取"), bOff ? TEXT("攻撃") : TEXT("守備"), FMath::Max(0.f, S->ShotClock), S->TeamSize, S->TeamSize));
-					})
-					.ColorAndOpacity_Lambda([PC]()
-					{
-						const ATaGGameState* S = GetGS(PC);
-						return FSlateColor(S && S->ShotClock < 4.f ? FLinearColor(1.f, 0.4f, 0.3f) : FLinearColor::White);
-					})
-				]
-				+ SVerticalBox::Slot().AutoHeight().HAlign(HAlign_Center)
-				[
-					SNew(STextBlock).Font(Font(17.f)).ColorAndOpacity(TaG::GoldColor())
-					.Text_Lambda([PC]()
-					{
-						const ATaGGameState* S = GetGS(PC);
-						if (S && S->NeedsClear(S->GetLocalTeam()) && S->PossessionTeam == S->GetLocalTeam())
-						{
-							return T(TEXT("アークの外へクリアしてから攻める"));
-						}
-						return FText::GetEmpty();
-					})
-				]
-			]
-		]
-		// Read-win banner
-		+ SOverlay::Slot().HAlign(HAlign_Center).VAlign(VAlign_Center).Padding(0.f, 0.f, 0.f, 260.f)
-		[
-			SNew(SVerticalBox)
-			.Visibility_Lambda([PC]() { const ATaGGameState* S = GetGS(PC); return S && S->GetBanner().TimeLeft > 0.f ? EVisibility::HitTestInvisible : EVisibility::Collapsed; })
-			+ SVerticalBox::Slot().AutoHeight().HAlign(HAlign_Center)
-			[
-				SNew(STextBlock).Font(Font(54.f))
-				.Text_Lambda([PC]() { const ATaGGameState* S = GetGS(PC); return S ? S->GetBanner().Title : FText::GetEmpty(); })
-				.ColorAndOpacity_Lambda([PC]() { const ATaGGameState* S = GetGS(PC); return FSlateColor(S && S->GetBanner().bGood ? FLinearColor(0.35f, 1.f, 0.95f) : FLinearColor(1.f, 0.45f, 0.4f)); })
-			]
-			+ SVerticalBox::Slot().AutoHeight().HAlign(HAlign_Center)
-			[
-				SNew(STextBlock).Font(Font(24.f))
-				.Text_Lambda([PC]() { const ATaGGameState* S = GetGS(PC); return S ? S->GetBanner().Rule : FText::GetEmpty(); })
-			]
-		]
-		// Popups (below the lesson panel in the tutorial)
-		+ SOverlay::Slot().HAlign(HAlign_Center).VAlign(VAlign_Top)
-		[
-			SNew(SVerticalBox)
-			+ SVerticalBox::Slot().AutoHeight()
-			[
-				SNew(SBox).HeightOverride_Lambda([InTutorial]() { return FOptionalSize(InTutorial() ? 200.f : 150.f); })
-			]
-			+ SVerticalBox::Slot().AutoHeight()
-			[
-				PopupBox
-			]
-		]
-		// Alley-oop: a lob on its way to you -> jump so the top of the leap meets it
-		+ SOverlay::Slot().HAlign(HAlign_Center).VAlign(VAlign_Center).Padding(0.f, 230.f, 0.f, 0.f)
-		[
-			SNew(SVerticalBox)
-			.Visibility_Lambda([PC]()
-			{
-				const ATaGCharacter* Me = GetMe(PC);
-				const bool bShow = Me && Me->HasAlleyOop() && Me->GetAction() != ETaGAction::Leap && Me->GetAction() != ETaGAction::Shoot;
-				return bShow ? EVisibility::HitTestInvisible : EVisibility::Collapsed;
-			})
-			+ SVerticalBox::Slot().AutoHeight().HAlign(HAlign_Center)
-			[
-				SNew(STextBlock).Font(Font(30.f))
-				.Text_Lambda([PC]()
-				{
-					const ATaGCharacter* Me = GetMe(PC);
-					const float In = Me ? Me->GetAlleyOopJumpIn() : 9.f;
-					return T(In < 0.1f ? TEXT("今！ ジャンプ（A / Space）") : TEXT("アリウープ！ ジャンプで受ける（A / Space）"));
-				})
-				.ColorAndOpacity_Lambda([PC]()
-				{
-					const ATaGCharacter* Me = GetMe(PC);
-					const float In = Me ? Me->GetAlleyOopJumpIn() : 9.f;
-					return FSlateColor(In < 0.1f ? FLinearColor(1.f, 1.f, 1.f) : TaG::GoldColor());
-				})
-			]
-			+ SVerticalBox::Slot().AutoHeight().HAlign(HAlign_Center).Padding(0.f, 6.f)
-			[
-				SNew(SBox).WidthOverride(320.f).HeightOverride(12.f)
-				[
-					SNew(SCanvas)
-					+ SCanvas::Slot().Position(FVector2D(0.f, 0.f)).Size(FVector2D(320.f, 12.f))
-					[
-						SNew(SImage).Image(White()).ColorAndOpacity(FLinearColor(0.f, 0.f, 0.f, 0.55f))
-					]
-					+ SCanvas::Slot().Position(FVector2D(0.f, 0.f))
-					.Size_Lambda([PC]()
-					{
-						// Fills up to the moment to leave the floor
-						const ATaGCharacter* Me = GetMe(PC);
-						const float In = Me ? Me->GetAlleyOopJumpIn() : 9.f;
-						return FVector2D(320.f * FMath::Clamp(1.f - In / 0.9f, 0.f, 1.f), 12.f);
-					})
-					[
-						SNew(SImage).Image(White()).ColorAndOpacity(TaG::GoldColor())
-					]
-				]
-			]
-		]
-		// Crosshair
-		+ SOverlay::Slot().HAlign(HAlign_Center).VAlign(VAlign_Center)
-		[
-			SNew(SBox).WidthOverride(6.f).HeightOverride(6.f)
-			[
-				SNew(SImage).Image(White()).ColorAndOpacity(FLinearColor(1.f, 1.f, 1.f, 0.8f))
-			]
-		]
-		// Shot meter
-		+ SOverlay::Slot().HAlign(HAlign_Center).VAlign(VAlign_Bottom).Padding(0.f, 0.f, 0.f, 120.f)
-		[
-			SNew(SVerticalBox)
-			.Visibility_Lambda([PC]() { const ATaGCharacter* Me = GetMe(PC); return Me && Me->IsChargingShot() ? EVisibility::HitTestInvisible : EVisibility::Collapsed; })
-			+ SVerticalBox::Slot().AutoHeight().HAlign(HAlign_Center).Padding(0.f, 0.f, 0.f, 6.f)
-			[
-				SNew(STextBlock).Font(Font(22.f))
-				.Text_Lambda([PC]()
-				{
-					const ATaGCharacter* Me = GetMe(PC);
-					if (!Me) { return FText::GetEmpty(); }
-					const FTaGShotEval E = FTaGRules::EvaluateShot(Me, Me->GetShotCharge(), false);
-					return T(FString::Printf(TEXT("%s・%d点  成功率 %d%%%s"), FTaGRules::ShotType(E.Type).Name, E.Points, FMath::RoundToInt(E.Chance * 100.f),
-						E.bContested ? TEXT("  妨害されている") : (E.bOpen ? TEXT("  ノーマーク") : TEXT(""))));
-				})
-				.ColorAndOpacity_Lambda([PC]()
-				{
-					const ATaGCharacter* Me = GetMe(PC);
-					const bool bContested = Me && FTaGRules::EvaluateShot(Me, Me->GetShotCharge(), false).bContested;
-					return FSlateColor(bContested ? FLinearColor(1.f, 0.35f, 0.3f) : FLinearColor::White);
-				})
-			]
-			+ SVerticalBox::Slot().AutoHeight().HAlign(HAlign_Center)
-			[
-				SNew(SBox).WidthOverride(420.f).HeightOverride(16.f)
-				[
-					SNew(SCanvas)
-					+ SCanvas::Slot().Position(FVector2D(0.f, 0.f)).Size(FVector2D(420.f, 16.f))
-					[
-						SNew(SImage).Image(White()).ColorAndOpacity(FLinearColor(0.f, 0.f, 0.f, 0.55f))
-					]
-					+ SCanvas::Slot().Position(FVector2D(420.f * TaG::ShotGoodLo / TaG::ShotAutoRelease, 0.f)).Size(FVector2D(420.f * (TaG::ShotGoodHi - TaG::ShotGoodLo) / TaG::ShotAutoRelease, 16.f))
-					[
-						SNew(SImage).Image(White()).ColorAndOpacity(FLinearColor(0.15f, 0.75f, 0.3f, 0.85f))
-					]
-					+ SCanvas::Slot().Position(FVector2D(420.f * TaG::ShotPerfectLo / TaG::ShotAutoRelease, 0.f)).Size(FVector2D(420.f * (TaG::ShotPerfectHi - TaG::ShotPerfectLo) / TaG::ShotAutoRelease, 16.f))
-					[
-						SNew(SImage).Image(White()).ColorAndOpacity(FLinearColor(1.f, 0.9f, 0.3f, 0.95f))
-					]
-					+ SCanvas::Slot()
-					.Position_Lambda([PC]()
-					{
-						const ATaGCharacter* Me = GetMe(PC);
-						const float C = Me ? FMath::Clamp(Me->GetShotCharge() / TaG::ShotAutoRelease, 0.f, 1.f) : 0.f;
-						return FVector2D(420.f * C - 2.f, -6.f);
-					})
-					.Size(FVector2D(4.f, 28.f))
-					[
-						SNew(SImage).Image(White()).ColorAndOpacity(FLinearColor::White)
-					]
-				]
-			]
-		]
-		// Status (bottom left): hero, guard, state
-		+ SOverlay::Slot().HAlign(HAlign_Left).VAlign(VAlign_Bottom).Padding(22.f)
-		[
-			SNew(SBorder).BorderImage(White()).BorderBackgroundColor(Panel).Padding(FMargin(14.f, 8.f))
-			.Visibility_Lambda([PC]() { return GetMe(PC) ? EVisibility::HitTestInvisible : EVisibility::Collapsed; })
-			[
-				SNew(SVerticalBox)
-				+ SVerticalBox::Slot().AutoHeight()
-				[
-					SNew(STextBlock).Font(Font(20.f)).ColorAndOpacity(Teal)
-					.Text_Lambda([PC]()
-					{
-						const ATaGCharacter* Me = GetMe(PC);
-						return Me ? T(FString::Printf(TEXT("%s  %s・%s"), Me->GetHeroDef().Name, TaGHeroes::RoleName(Me->GetHeroDef().Role), TaGHeroes::SizeName(Me->GetHeroDef().Size))) : FText::GetEmpty();
-					})
-				]
-				+ SVerticalBox::Slot().AutoHeight().Padding(0.f, 4.f)
-				[
-					SNew(SBox).WidthOverride(260.f).HeightOverride(10.f)
-					[
-						SNew(SCanvas)
-						+ SCanvas::Slot().Position(FVector2D(0.f, 0.f)).Size(FVector2D(260.f, 10.f))
-						[
-							SNew(SImage).Image(White()).ColorAndOpacity(FLinearColor(0.1f, 0.1f, 0.12f, 0.9f))
-						]
-						+ SCanvas::Slot().Position(FVector2D(0.f, 0.f))
-						.Size_Lambda([PC]()
-						{
-							const ATaGCharacter* Me = GetMe(PC);
-							const float F = Me ? FMath::Clamp(Me->GetGuard() / FMath::Max(Me->GetMaxGuard(), 1.f), 0.f, 1.f) : 0.f;
-							return FVector2D(260.f * F, 10.f);
-						})
-						[
-							SNew(SImage).Image(White()).ColorAndOpacity(Teal)
-						]
-					]
-				]
-				+ SVerticalBox::Slot().AutoHeight()
-				[
-					SNew(STextBlock).Font(Font(16.f)).ColorAndOpacity(TaG::GoldColor())
-					.Text_Lambda([PC]()
-					{
-						const ATaGCharacter* Me = GetMe(PC);
-						if (!Me) { return FText::GetEmpty(); }
-						switch (Me->GetAction())
-						{
-						case ETaGAction::Down: return T(TEXT("ダウン：味方が触れると復帰"));
-						case ETaGAction::Gathered: return T(TEXT("ギャザー：パスかシュート"));
-						case ETaGAction::Leap: return T(TEXT("アリウープ：空中で受けてそのまま決める"));
-						case ETaGAction::Stagger: return T(TEXT("よろけ"));
-						default: break;
-						}
-						if (Me->IsInZone()) { return T(TEXT("ゾーン！ 速くなり、次のシュートが入りやすい")); }
-						if (Me->IsScoped()) { return T(TEXT("スコープ中")); }
-						if (Me->IsCatchAndShoot()) { return T(TEXT("キャッチ＆シュート")); }
-						return T(TEXT("ガード"));
-					})
-				]
-			]
-		]
-		// Hands and arts (bottom right)
-		+ SOverlay::Slot().HAlign(HAlign_Right).VAlign(VAlign_Bottom).Padding(22.f)
-		[
-			SNew(SBorder).BorderImage(White()).BorderBackgroundColor(Panel).Padding(FMargin(12.f, 8.f))
-			.Visibility_Lambda([PC]() { return GetMe(PC) ? EVisibility::HitTestInvisible : EVisibility::Collapsed; })
-			[
-				HandBox
-			]
-		];
 }
 
 // ================================================================ Title
@@ -785,50 +343,122 @@ TSharedRef<SWidget> TaGUI::MakeTitle(FPCPtr PC, TSharedPtr<SWidget>& OutFocus)
 				+ SVerticalBox::Slot().AutoHeight().Padding(0.f, 22.f, 0.f, 0.f)
 				[
 					SNew(STextBlock).Font(Font(13.f, false)).ColorAndOpacity(FLinearColor(0.8f, 0.82f, 0.86f))
-					.Text(T(TEXT("海に沈みかけた積層都市ナギサ。バスケで電気をつくり、勝った地区に明かりが灯る。\n普通のバスケに、アビリティのじゃんけん：突破・シュート・かわし 対 タックル・シュート妨害・間合い。")))
+					.Text(T(TEXT("海に沈みかけた積層都市ナギサ。バスケで電気をつくり、勝った地区に明かりが灯る。\n技のほかは、背・リーチ・跳躍・速さ・重さの差がそのまま出る普通のバスケ。技だけが、その差を越える。\n読み合いは じゃんけん：突破・シュート・かわし 対 タックル・シュート妨害・間合い。")))
 				]
 			]
 		];
+}
+
+// ================================================================ Shared art (portraits, icons, roles)
+
+const FSlateBrush* TaGUI::PortraitBrush(const FTaGHeroDef& H)
+{
+	static TMap<FString, TSharedPtr<FSlateBrush>> Cache;
+	if (const TSharedPtr<FSlateBrush>* Found = Cache.Find(H.Key))
+	{
+		return Found->Get();
+	}
+	TSharedPtr<FSlateBrush> Brush;
+	const FString Path = FString::Printf(TEXT("/Game/Art/UI/T_Portrait_%s.T_Portrait_%s"), H.Key, H.Key);
+	if (UTexture2D* Tex = Cast<UTexture2D>(StaticLoadObject(UTexture2D::StaticClass(), nullptr, *Path, nullptr, LOAD_NoWarn | LOAD_Quiet)))
+	{
+		Tex->AddToRoot(); // Slate only keeps a weak pointer
+		Brush = MakeShared<FSlateBrush>();
+		Brush->SetResourceObject(Tex);
+		Brush->ImageSize = FVector2D(Tex->GetSizeX(), Tex->GetSizeY());
+	}
+	Cache.Add(H.Key, Brush);
+	return Brush.Get();
+}
+
+const FSlateBrush* TaGUI::IconBrush(const FString& Name)
+{
+	static TMap<FString, TSharedPtr<FSlateBrush>> Cache;
+	if (Name.IsEmpty())
+	{
+		return nullptr;
+	}
+	if (const TSharedPtr<FSlateBrush>* Found = Cache.Find(Name))
+	{
+		return Found->Get();
+	}
+	TSharedPtr<FSlateBrush> Brush;
+	const FString Path = FString::Printf(TEXT("/Game/Art/UI/Icons/T_Icon_%s.T_Icon_%s"), *Name, *Name);
+	if (UTexture2D* Tex = Cast<UTexture2D>(StaticLoadObject(UTexture2D::StaticClass(), nullptr, *Path, nullptr, LOAD_NoWarn | LOAD_Quiet)))
+	{
+		Tex->AddToRoot();
+		Brush = MakeShared<FSlateBrush>();
+		Brush->SetResourceObject(Tex);
+		Brush->ImageSize = FVector2D(Tex->GetSizeX(), Tex->GetSizeY());
+	}
+	Cache.Add(Name, Brush);
+	return Brush.Get();
+}
+
+FString TaGUI::ArtIconName(ETaGArt Art)
+{
+	const FTaGArtDef& A = TaGHeroes::GetArt(Art);
+	if (Art == ETaGArt::None)
+	{
+		return FString();
+	}
+	if (A.Kind == ETaGArtKind::Custom)
+	{
+		return TEXT("Art_") + StaticEnum<ETaGArt>()->GetNameStringByValue(static_cast<int64>(Art));
+	}
+	switch (A.Kind)
+	{
+	case ETaGArtKind::Dash: return TEXT("ArtKind_Dash");
+	case ETaGArtKind::Leap: return TEXT("ArtKind_Leap");
+	case ETaGArtKind::Shell: return TEXT("ArtKind_Shell");
+	case ETaGArtKind::Phase: return TEXT("ArtKind_Phase");
+	case ETaGArtKind::Counter: return TEXT("ArtKind_Counter");
+	case ETaGArtKind::Decoy: return TEXT("ArtKind_Decoy");
+	case ETaGArtKind::ShotBuff: return TEXT("ArtKind_ShotBuff");
+	case ETaGArtKind::Wall: return TEXT("ArtKind_Wall");
+	case ETaGArtKind::ShieldFollow: return TEXT("ArtKind_ShieldFollow");
+	case ETaGArtKind::Root: return TEXT("ArtKind_Root");
+	case ETaGArtKind::Tackle: return TEXT("ArtKind_Tackle");
+	case ETaGArtKind::Cone: return TEXT("ArtKind_Cone");
+	case ETaGArtKind::Aura: return TEXT("ArtKind_Aura");
+	case ETaGArtKind::Bolt: return TEXT("ArtKind_Bolt");
+	case ETaGArtKind::Field: return TEXT("ArtKind_Field");
+	case ETaGArtKind::TeamAura: return TEXT("ArtKind_TeamAura");
+	case ETaGArtKind::TeamOne: return TEXT("ArtKind_TeamOne");
+	case ETaGArtKind::Pass: return TEXT("ArtKind_Pass");
+	case ETaGArtKind::ContestStance: return TEXT("ArtKind_ContestStance");
+	case ETaGArtKind::ContestAt: return TEXT("ArtKind_ContestAt");
+	default: return FString();
+	}
+}
+
+FLinearColor TaGUI::RoleColor(ETaGRole Role)
+{
+	switch (Role)
+	{
+	case ETaGRole::Wall: return FLinearColor(0.95f, 0.62f, 0.25f);
+	case ETaGRole::Scorer: return FLinearColor(1.f, 0.45f, 0.45f);
+	default: return FLinearColor(0.45f, 0.85f, 1.f);
+	}
+}
+
+const TCHAR* TaGUI::RoleIconName(ETaGRole Role)
+{
+	switch (Role)
+	{
+	case ETaGRole::Wall: return TEXT("Role_Wall");
+	case ETaGRole::Scorer: return TEXT("Role_Scorer");
+	default: return TEXT("Role_Playmaker");
+	}
 }
 
 // ================================================================ Lobby / hero select
 
 namespace
 {
-	/** Portrait rendered by tools/blender (T_Portrait_<Key>); nullptr until the art exists. */
-	const FSlateBrush* PortraitBrush(const FTaGHeroDef& H)
-	{
-		static TMap<FString, TSharedPtr<FSlateBrush>> Cache;
-		if (const TSharedPtr<FSlateBrush>* Found = Cache.Find(H.Key))
-		{
-			return Found->Get();
-		}
-		TSharedPtr<FSlateBrush> Brush;
-		const FString Path = FString::Printf(TEXT("/Game/Art/UI/T_Portrait_%s.T_Portrait_%s"), H.Key, H.Key);
-		if (UTexture2D* Tex = Cast<UTexture2D>(StaticLoadObject(UTexture2D::StaticClass(), nullptr, *Path, nullptr, LOAD_NoWarn | LOAD_Quiet)))
-		{
-			Tex->AddToRoot(); // Slate only keeps a weak pointer
-			Brush = MakeShared<FSlateBrush>();
-			Brush->SetResourceObject(Tex);
-			Brush->ImageSize = FVector2D(Tex->GetSizeX(), Tex->GetSizeY());
-		}
-		Cache.Add(H.Key, Brush);
-		return Brush.Get();
-	}
-
-	FLinearColor RoleColor(ETaGRole Role)
-	{
-		switch (Role)
-		{
-		case ETaGRole::Wall: return FLinearColor(0.95f, 0.62f, 0.25f);
-		case ETaGRole::Scorer: return FLinearColor(1.f, 0.45f, 0.45f);
-		default: return FLinearColor(0.45f, 0.85f, 1.f);
-		}
-	}
-
 	TSharedRef<SWidget> Portrait(const FTaGHeroDef& H, float Size)
 	{
-		if (const FSlateBrush* B = PortraitBrush(H))
+		if (const FSlateBrush* B = TaGUI::PortraitBrush(H))
 		{
 			return SNew(SBox).WidthOverride(Size).HeightOverride(Size)[SNew(SImage).Image(B)];
 		}
@@ -844,9 +474,62 @@ namespace
 			];
 	}
 
-	FText ArtLine(const FTaGArtDef& A, const TCHAR* Key)
+	/** An icon tinted by Color on a dark tile; the first letters of Fallback when the icon art is missing. */
+	TSharedRef<SWidget> IconTile(TFunction<FString()> Name, TFunction<FLinearColor()> Color, float Size, float Inner)
 	{
-		return FText::FromString(FString::Printf(TEXT("%s  %s〔%s〕"), Key, A.Name, TaGHeroes::HandName(A.Hand)));
+		return SNew(SBox).WidthOverride(Size).HeightOverride(Size)
+			[
+				SNew(SOverlay)
+				+ SOverlay::Slot()[SNew(SImage).Image(White()).ColorAndOpacity(FLinearColor(0.04f, 0.05f, 0.08f, 0.9f))]
+				+ SOverlay::Slot().HAlign(HAlign_Center).VAlign(VAlign_Center)
+				[
+					SNew(SBox).WidthOverride(Inner).HeightOverride(Inner)
+					[
+						SNew(SImage)
+						.Image_Lambda([Name]() { const FSlateBrush* B = TaGUI::IconBrush(Name()); return B ? B : White(); })
+						.ColorAndOpacity_Lambda([Name, Color]() { return FSlateColor(TaGUI::IconBrush(Name()) ? Color() : Color() * 0.35f); })
+					]
+				]
+			];
+	}
+
+	/**
+	 * The body in real units. Everything outside the arts is plain basketball, where these numbers decide who wins
+	 * the rebound, who gets past whom and whose hand reaches the shot; the arts are what can close the gap.
+	 */
+	struct FBodyStat
+	{
+		const TCHAR* Name;
+		float Value;
+		float Lo;
+		float Hi;
+		FString Text;
+	};
+
+	TArray<FBodyStat> BodyStats(const FTaGHeroDef& H)
+	{
+		const float Height = H.EyeHeight + 11.f;                                                // the crown above the eyes
+		const float Speed = TaG::WalkSpeed * H.SpeedMul / 100.f;                                // top running speed, m/s
+		const float Jump = FMath::Square(TaG::JumpVelocity * H.JumpMul) / (2.f * TaG::Gravity); // standing jump, cm
+		const float Reach = FTaGRules::StandingReach(H) * FMath::Sqrt(H.ReachMul);              // hand overhead, cm
+		const float Mass = H.Weight * 75.f;
+		return {
+			{ TEXT("身長"), Height, 140.f, 270.f, FString::Printf(TEXT("%d cm"), FMath::RoundToInt(Height)) },
+			{ TEXT("速さ"), Speed, 3.6f, 5.6f, FString::Printf(TEXT("%.1f m/s"), Speed) },
+			{ TEXT("跳躍"), Jump, 8.f, 95.f, FString::Printf(TEXT("%d cm"), FMath::RoundToInt(Jump)) },
+			{ TEXT("リーチ"), Reach, 180.f, 420.f, FString::Printf(TEXT("%d cm"), FMath::RoundToInt(Reach)) },
+			{ TEXT("体重"), Mass, 40.f, 260.f, FString::Printf(TEXT("%d kg"), FMath::RoundToInt(Mass)) },
+		};
+	}
+
+	const TCHAR* RoleLabel(ETaGRole Role)
+	{
+		switch (Role)
+		{
+		case ETaGRole::Wall: return TEXT("ウォール（壁役）");
+		case ETaGRole::Scorer: return TEXT("スコアラー（点取り）");
+		default: return TEXT("プレイメーカー（司令塔）");
+		}
 	}
 }
 
@@ -859,63 +542,195 @@ TSharedRef<SWidget> TaGUI::MakeLobby(FPCPtr PC, TSharedPtr<SWidget>& OutFocus)
 		return TaGHeroes::Get(P ? P->Hero : ETaGHero::Rei);
 	};
 
-	// 30 hero cards: portrait, name, role and size (grouped by role, as the roster lists them)
-	TArray<ETaGHero> Order;
+	// ---- Bottom: the thirty heroes as portraits, by role (ten each, two rows of five)
+	TSharedRef<SHorizontalBox> Strip = SNew(SHorizontalBox);
 	for (const ETaGRole Role : { ETaGRole::Wall, ETaGRole::Scorer, ETaGRole::Playmaker })
 	{
+		TSharedRef<SUniformGridPanel> Grid = SNew(SUniformGridPanel).SlotPadding(FMargin(2.f));
+		int32 n = 0;
 		for (int32 i = 0; i < TaGHeroes::Num; ++i)
 		{
-			if (TaGHeroes::Get(static_cast<ETaGHero>(i)).Role == Role)
+			const ETaGHero Id = static_cast<ETaGHero>(i);
+			const FTaGHeroDef& H = TaGHeroes::Get(Id);
+			if (H.Role != Role)
 			{
-				Order.Add(static_cast<ETaGHero>(i));
+				continue;
 			}
-		}
-	}
-	constexpr int32 Cols = 6;
-	TSharedRef<SUniformGridPanel> Grid = SNew(SUniformGridPanel).SlotPadding(FMargin(3.f));
-	for (int32 n = 0; n < Order.Num(); ++n)
-	{
-		const ETaGHero Id = Order[n];
-		const FTaGHeroDef& H = TaGHeroes::Get(Id);
-		TSharedRef<SButton> Card = SNew(SButton)
-			.ButtonColorAndOpacity_Lambda([PC, Id]()
+			TSharedRef<SButton> Card = SNew(SButton)
+				.ButtonColorAndOpacity_Lambda([PC, Id]()
+				{
+					const ATaGPlayerState* P = GetMyPS(PC);
+					return FSlateColor(P && P->Hero == Id ? FLinearColor(0.1f, 0.9f, 0.8f, 1.f) : FLinearColor(0.12f, 0.13f, 0.17f, 1.f));
+				})
+				.ContentPadding(FMargin(2.f))
+				.ToolTipText(T(H.Name))
+				.OnClicked_Lambda([PC, Id]() { if (PC.IsValid()) { PC->ServerSetHero(Id); } return FReply::Handled(); })
+				[
+					Portrait(H, 46.f)
+				];
+			if (!OutFocus.IsValid())
 			{
-				const ATaGPlayerState* P = GetMyPS(PC);
-				const bool bSel = P && P->Hero == Id;
-				return FSlateColor(bSel ? FLinearColor(0.1f, 0.85f, 0.75f, 1.f) : FLinearColor(0.14f, 0.16f, 0.2f, 1.f));
-			})
-			.ContentPadding(FMargin(5.f, 4.f))
-			.OnClicked_Lambda([PC, Id]() { if (PC.IsValid()) { PC->ServerSetHero(Id); } return FReply::Handled(); })
+				OutFocus = Card;
+			}
+			Grid->AddSlot(n % 5, n / 5)[Card];
+			n++;
+		}
+		const FLinearColor RC = RoleColor(Role);
+		const FString RoleIcon = RoleIconName(Role);
+		Strip->AddSlot().AutoWidth().Padding(0.f, 0.f, 14.f, 0.f)
+		[
+			SNew(SVerticalBox)
+			+ SVerticalBox::Slot().AutoHeight().Padding(2.f, 0.f, 0.f, 3.f)
 			[
-				SNew(SBox).WidthOverride(158.f)
+				SNew(SHorizontalBox)
+				+ SHorizontalBox::Slot().AutoWidth().VAlign(VAlign_Center)
+				[
+					IconTile([RoleIcon]() { return RoleIcon; }, [RC]() { return RC; }, 22.f, 18.f)
+				]
+				+ SHorizontalBox::Slot().AutoWidth().VAlign(VAlign_Center).Padding(6.f, 0.f, 0.f, 0.f)
+				[
+					SNew(STextBlock).Font(Font(13.f)).ColorAndOpacity(RC).Text(T(RoleLabel(Role)))
+				]
+			]
+			+ SVerticalBox::Slot().AutoHeight()
+			[
+				Grid
+			]
+		];
+	}
+
+	// ---- Left: the chosen hero
+	TSharedRef<SVerticalBox> Stats = SNew(SVerticalBox);
+	for (int32 i = 0; i < 5; ++i)
+	{
+		Stats->AddSlot().AutoHeight().Padding(0.f, 2.f)
+		[
+			SNew(SHorizontalBox)
+			+ SHorizontalBox::Slot().AutoWidth().VAlign(VAlign_Center)
+			[
+				SNew(SBox).WidthOverride(58.f)
+				[
+					SNew(STextBlock).Font(Font(14.f)).Text_Lambda([Selected, i]() { return T(BodyStats(Selected())[i].Name); })
+				]
+			]
+			+ SHorizontalBox::Slot().AutoWidth().VAlign(VAlign_Center)
+			[
+				SNew(SBox).WidthOverride(200.f).HeightOverride(8.f)
+				[
+					SNew(STaGSegmentBar).Segment(1000.f).Size(FVector2D(200.f, 8.f)).Max(1.f)
+					.Value_Lambda([Selected, i]()
+					{
+						const FBodyStat St = BodyStats(Selected())[i];
+						return FMath::Clamp((St.Value - St.Lo) / (St.Hi - St.Lo), 0.04f, 1.f);
+					})
+					.Color_Lambda([Selected]() { return RoleColor(Selected().Role); })
+				]
+			]
+			+ SHorizontalBox::Slot().AutoWidth().VAlign(VAlign_Center).Padding(10.f, 0.f, 0.f, 0.f)
+			[
+				SNew(STextBlock).Font(Font(15.f)).Text_Lambda([Selected, i]() { return T(BodyStats(Selected())[i].Text); })
+			]
+		];
+	}
+
+	auto ArtCard = [Selected](int32 Which, const TCHAR* Key)
+	{
+		auto Art = [Selected, Which]() { return Which == 1 ? Selected().Art1 : Selected().Art2; };
+		const FString KeyText(Key);
+		return SNew(SHorizontalBox)
+			+ SHorizontalBox::Slot().AutoWidth().VAlign(VAlign_Top)
+			[
+				IconTile([Art]() { return ArtIconName(Art()); }, [Art]() { return TaGHeroes::GetArt(Art()).Color; }, 48.f, 36.f)
+			]
+			+ SHorizontalBox::Slot().FillWidth(1.f).Padding(10.f, 0.f, 0.f, 0.f)
+			[
+				SNew(SVerticalBox)
+				+ SVerticalBox::Slot().AutoHeight()
+				[
+					SNew(SHorizontalBox)
+					+ SHorizontalBox::Slot().AutoWidth().VAlign(VAlign_Bottom)
+					[
+						SNew(STextBlock).Font(Font(18.f)).Text_Lambda([Art]() { return T(TaGHeroes::GetArt(Art()).Name); })
+					]
+					+ SHorizontalBox::Slot().AutoWidth().VAlign(VAlign_Bottom).Padding(8.f, 0.f, 0.f, 2.f)
+					[
+						SNew(STextBlock).Font(Font(12.f)).ColorAndOpacity(TaG::GoldColor())
+						.Text_Lambda([Art]() { return T(FString::Printf(TEXT("〔%s〕"), TaGHeroes::HandName(TaGHeroes::GetArt(Art()).Hand))); })
+					]
+					+ SHorizontalBox::Slot().AutoWidth().VAlign(VAlign_Bottom).Padding(8.f, 0.f, 0.f, 2.f)
+					[
+						SNew(STextBlock).Font(Font(11.f, false)).ColorAndOpacity(FLinearColor(0.7f, 0.73f, 0.78f)).Text(T(KeyText))
+					]
+				]
+				+ SVerticalBox::Slot().AutoHeight()
+				[
+					SNew(STextBlock).Font(Font(13.f, false)).AutoWrapText(true).Text_Lambda([Art]() { return T(TaGHeroes::GetArt(Art()).Desc); })
+				]
+			];
+	};
+
+	TSharedRef<SWidget> Detail = SNew(SBorder).BorderImage(White()).BorderBackgroundColor(FLinearColor(0.015f, 0.02f, 0.04f, 0.78f)).Padding(FMargin(20.f, 16.f))
+		[
+			SNew(SBox).WidthOverride(430.f)
+			[
+				SNew(SVerticalBox)
+				+ SVerticalBox::Slot().AutoHeight()
+				[
+					SNew(STextBlock).Font(Font(46.f)).Text_Lambda([Selected]() { return T(Selected().Name); })
+				]
+				+ SVerticalBox::Slot().AutoHeight().Padding(0.f, 0.f, 0.f, 6.f)
 				[
 					SNew(SHorizontalBox)
 					+ SHorizontalBox::Slot().AutoWidth().VAlign(VAlign_Center)
 					[
-						Portrait(H, 46.f)
+						IconTile([Selected]() { return FString(RoleIconName(Selected().Role)); }, [Selected]() { return RoleColor(Selected().Role); }, 24.f, 20.f)
 					]
-					+ SHorizontalBox::Slot().FillWidth(1.f).VAlign(VAlign_Center).Padding(6.f, 0.f, 0.f, 0.f)
+					+ SHorizontalBox::Slot().FillWidth(1.f).VAlign(VAlign_Center).Padding(8.f, 0.f, 0.f, 0.f)
 					[
-						SNew(SVerticalBox)
-						+ SVerticalBox::Slot().AutoHeight()
-						[
-							SNew(STextBlock).Font(Font(16.f)).Text(T(H.Name))
-						]
-						+ SVerticalBox::Slot().AutoHeight()
-						[
-							SNew(STextBlock).Font(Font(10.f, false)).ColorAndOpacity(RoleColor(H.Role))
-							.Text(T(FString::Printf(TEXT("%s・%s"), H.Role == ETaGRole::Wall ? TEXT("壁役") : (H.Role == ETaGRole::Scorer ? TEXT("点取り") : TEXT("司令塔")), TaGHeroes::SizeName(H.Size))))
-						]
+						SNew(STextBlock).Font(Font(14.f)).AutoWrapText(true)
+						.ColorAndOpacity_Lambda([Selected]() { return FSlateColor(RoleColor(Selected().Role)); })
+						.Text_Lambda([Selected]()
+						{
+							const FTaGHeroDef& H = Selected();
+							return T(FString::Printf(TEXT("%s・体格%s・%s"), TaGHeroes::RoleName(H.Role), TaGHeroes::SizeName(H.Size), H.Kind));
+						})
 					]
 				]
-			];
-		if (!OutFocus.IsValid())
-		{
-			OutFocus = Card;
-		}
-		Grid->AddSlot(n % Cols, n / Cols)[Card];
-	}
+				+ SVerticalBox::Slot().AutoHeight().Padding(0.f, 0.f, 0.f, 10.f)
+				[
+					SNew(STextBlock).Font(Font(14.f, false)).AutoWrapText(true).Text_Lambda([Selected]() { return T(Selected().Blurb); })
+				]
+				+ SVerticalBox::Slot().AutoHeight().Padding(0.f, 0.f, 0.f, 4.f)
+				[
+					SNew(STextBlock).Font(Font(12.f)).ColorAndOpacity(FLinearColor(0.7f, 0.73f, 0.78f))
+					.Text(T(TEXT("からだ（技のほかは、この差がそのまま出る）")))
+				]
+				+ SVerticalBox::Slot().AutoHeight()
+				[
+					Stats
+				]
+				+ SVerticalBox::Slot().AutoHeight().Padding(0.f, 3.f, 0.f, 10.f)
+				[
+					SNew(STextBlock).Font(Font(12.f, false)).ColorAndOpacity(FLinearColor(0.7f, 0.73f, 0.78f))
+					.Text_Lambda([Selected]() { return T(FString::Printf(TEXT("ガード %d（TaGの耐久。タックルで削られる）"), FMath::RoundToInt(Selected().Guard))); })
+				]
+				+ SVerticalBox::Slot().AutoHeight().Padding(0.f, 0.f, 0.f, 4.f)
+				[
+					SNew(STextBlock).Font(Font(12.f)).ColorAndOpacity(FLinearColor(0.7f, 0.73f, 0.78f))
+					.Text(T(TEXT("技（体の差を越えられる、ただ二つの力）")))
+				]
+				+ SVerticalBox::Slot().AutoHeight().Padding(0.f, 2.f)
+				[
+					ArtCard(1, TEXT("LT / C"))
+				]
+				+ SVerticalBox::Slot().AutoHeight().Padding(0.f, 6.f, 0.f, 0.f)
+				[
+					ArtCard(2, TEXT("Y / V"))
+				]
+			]
+		];
 
+	// ---- Right: the teams and the start
 	auto Roster = [PC](int32 Team)
 	{
 		const ATaGGameState* S = GetGS(PC);
@@ -933,210 +748,125 @@ TSharedRef<SWidget> TaGUI::MakeLobby(FPCPtr PC, TSharedPtr<SWidget>& OutFocus)
 		}
 		for (int32 i = Humans; i < S->TeamSize; ++i)
 		{
-			Out += TEXT("BOT（ヒーローはランダム）\n");
+			Out += TEXT("BOT（ランダム）\n");
 		}
-		return T(Out);
+		return T(Out.TrimEnd());
+	};
+	auto TeamBox = [PC, Roster](int32 Team)
+	{
+		const FLinearColor C = Team == 0 ? Teal : Orange;
+		return SNew(SVerticalBox)
+			+ SVerticalBox::Slot().AutoHeight()
+			[
+				SNew(SBox).HeightOverride(3.f)[SNew(SImage).Image(White()).ColorAndOpacity(C)]
+			]
+			+ SVerticalBox::Slot().AutoHeight().Padding(0.f, 4.f, 0.f, 2.f)
+			[
+				SNew(STextBlock).Font(Font(17.f)).ColorAndOpacity(C).Text(T(Team == 0 ? TEXT("チームA") : TEXT("チームB")))
+			]
+			+ SVerticalBox::Slot().AutoHeight()
+			[
+				SNew(STextBlock).Font(Font(13.f, false)).Text_Lambda([Roster, Team]() { return Roster(Team); })
+			]
+			+ SVerticalBox::Slot().AutoHeight().Padding(0.f, 4.f, 0.f, 0.f)
+			[
+				Button(T(Team == 0 ? TEXT("Aに入る") : TEXT("Bに入る")), [PC, Team]() { if (PC.IsValid()) { PC->ServerSetTeam(Team); } }, false, nullptr,
+					[PC, Team]() { const ATaGPlayerState* P = GetMyPS(PC); return P && P->Team == Team; }, 13.f)
+			];
 	};
 
 	auto ModeButton = [PC](int32 Size)
 	{
 		return Button(T(FString::Printf(TEXT("%don%d"), Size, Size)),
 			[PC, Size]() { if (PC.IsValid()) { const ATaGGameState* S = GetGS(PC); PC->ServerSetLobbyOptions(Size, S ? S->BotSkill : 1); } },
-			false, nullptr, [PC, Size]() { const ATaGGameState* S = GetGS(PC); return S && S->TeamSize == Size; }, 17.f);
+			false, nullptr, [PC, Size]() { const ATaGGameState* S = GetGS(PC); return S && S->TeamSize == Size; }, 16.f);
 	};
 	auto BotButton = [PC](int32 Level, const TCHAR* Label)
 	{
 		return Button(T(Label),
 			[PC, Level]() { if (PC.IsValid()) { const ATaGGameState* S = GetGS(PC); PC->ServerSetLobbyOptions(S ? S->TeamSize : 3, Level); } },
-			false, nullptr, [PC, Level]() { const ATaGGameState* S = GetGS(PC); return S && S->BotSkill == Level; }, 15.f);
+			false, nullptr, [PC, Level]() { const ATaGGameState* S = GetGS(PC); return S && S->BotSkill == Level; }, 14.f);
 	};
 
-	// The chosen hero in detail
-	TSharedRef<SWidget> Detail = SNew(SBorder).BorderImage(White()).BorderBackgroundColor(FLinearColor(0.f, 0.f, 0.f, 0.45f)).Padding(FMargin(14.f, 10.f))
+	return SNew(SOverlay)
+		// Top bar
+		+ SOverlay::Slot().VAlign(VAlign_Top)
 		[
-			SNew(SVerticalBox)
-			+ SVerticalBox::Slot().AutoHeight()
+			SNew(SBorder).BorderImage(White()).BorderBackgroundColor(FLinearColor(0.01f, 0.015f, 0.03f, 0.82f)).Padding(FMargin(26.f, 10.f))
 			[
 				SNew(SHorizontalBox)
 				+ SHorizontalBox::Slot().AutoWidth().VAlign(VAlign_Center)
 				[
-					SNew(SBox).WidthOverride(84.f).HeightOverride(84.f)
-					[
-						SNew(SImage)
-						.Image_Lambda([Selected]() { const FSlateBrush* B = PortraitBrush(Selected()); return B ? B : White(); })
-						.ColorAndOpacity_Lambda([Selected]() { return FSlateColor(PortraitBrush(Selected()) ? FLinearColor::White : Selected().PrimaryColor); })
-					]
+					SNew(STextBlock).Font(Font(28.f)).ColorAndOpacity(Teal).Text(T(TEXT("ヒーロー選択")))
 				]
-				+ SHorizontalBox::Slot().FillWidth(1.f).VAlign(VAlign_Center).Padding(12.f, 0.f, 0.f, 0.f)
+				+ SHorizontalBox::Slot().AutoWidth().VAlign(VAlign_Center).Padding(26.f, 0.f, 6.f, 0.f)
 				[
-					SNew(SVerticalBox)
-					+ SVerticalBox::Slot().AutoHeight()
+					SNew(SHorizontalBox)
+					.Visibility(bHost ? EVisibility::Visible : EVisibility::Collapsed)
+					+ SHorizontalBox::Slot().AutoWidth().Padding(2.f)[ModeButton(1)]
+					+ SHorizontalBox::Slot().AutoWidth().Padding(2.f)[ModeButton(2)]
+					+ SHorizontalBox::Slot().AutoWidth().Padding(2.f)[ModeButton(3)]
+					+ SHorizontalBox::Slot().AutoWidth().VAlign(VAlign_Center).Padding(18.f, 0.f, 6.f, 0.f)
 					[
-						SNew(STextBlock).Font(Font(30.f)).Text_Lambda([Selected]() { return T(Selected().Name); })
+						SNew(STextBlock).Font(Font(14.f)).Text(T(TEXT("BOT")))
 					]
-					+ SVerticalBox::Slot().AutoHeight()
-					[
-						SNew(STextBlock).Font(Font(13.f)).AutoWrapText(true)
-						.ColorAndOpacity_Lambda([Selected]() { return FSlateColor(RoleColor(Selected().Role)); })
-						.Text_Lambda([Selected]()
-						{
-							const FTaGHeroDef& H = Selected();
-							return T(FString::Printf(TEXT("%s・体格%s・%s"), TaGHeroes::RoleName(H.Role), TaGHeroes::SizeName(H.Size), H.Kind));
-						})
-					]
-				]
-			]
-			+ SVerticalBox::Slot().AutoHeight().Padding(0.f, 6.f)
-			[
-				SNew(STextBlock).Font(Font(13.f, false)).AutoWrapText(true).Text_Lambda([Selected]() { return T(Selected().Blurb); })
-			]
-			+ SVerticalBox::Slot().AutoHeight()
-			[
-				SNew(STextBlock).Font(Font(15.f)).ColorAndOpacity(FLinearColor(0.85f, 0.65f, 1.f)).AutoWrapText(true)
-				.Text_Lambda([Selected]() { return ArtLine(TaGHeroes::GetArt(Selected().Art1), TEXT("LT/C")); })
-			]
-			+ SVerticalBox::Slot().AutoHeight()
-			[
-				SNew(STextBlock).Font(Font(12.f, false)).AutoWrapText(true).Text_Lambda([Selected]() { return T(TaGHeroes::GetArt(Selected().Art1).Desc); })
-			]
-			+ SVerticalBox::Slot().AutoHeight().Padding(0.f, 4.f, 0.f, 0.f)
-			[
-				SNew(STextBlock).Font(Font(15.f)).ColorAndOpacity(FLinearColor(0.85f, 0.65f, 1.f)).AutoWrapText(true)
-				.Text_Lambda([Selected]() { return ArtLine(TaGHeroes::GetArt(Selected().Art2), TEXT("Y/V")); })
-			]
-			+ SVerticalBox::Slot().AutoHeight()
-			[
-				SNew(STextBlock).Font(Font(12.f, false)).AutoWrapText(true).Text_Lambda([Selected]() { return T(TaGHeroes::GetArt(Selected().Art2).Desc); })
-			]
-			+ SVerticalBox::Slot().AutoHeight().Padding(0.f, 6.f, 0.f, 0.f)
-			[
-				SNew(STextBlock).Font(Font(12.f, false)).ColorAndOpacity(FLinearColor(0.75f, 0.78f, 0.82f))
-				.Text_Lambda([Selected]()
-				{
-					const FTaGHeroDef& H = Selected();
-					return T(FString::Printf(TEXT("ガード %d　速さ %d%%　ジャンプ %d%%　リーチ %d%%　重さ %.1f　視点 %.2fm"),
-						FMath::RoundToInt(H.Guard), FMath::RoundToInt(H.SpeedMul * 100.f), FMath::RoundToInt(H.JumpMul * 100.f),
-						FMath::RoundToInt(H.ReachMul * 100.f), H.Weight, H.EyeHeight / 100.f));
-				})
-			]
-		];
-
-	return SNew(SBorder).BorderImage(White()).BorderBackgroundColor(FLinearColor(0.f, 0.f, 0.f, 0.55f)).Padding(FMargin(28.f, 18.f))
-		[
-			SNew(SVerticalBox)
-			+ SVerticalBox::Slot().AutoHeight()
-			[
-				SNew(SHorizontalBox)
-				+ SHorizontalBox::Slot().AutoWidth().VAlign(VAlign_Center)
-				[
-					SNew(STextBlock).Font(Font(34.f)).ColorAndOpacity(Teal).Text(T(TEXT("ヒーロー選択（30体）")))
+					+ SHorizontalBox::Slot().AutoWidth().Padding(2.f)[BotButton(0, TEXT("練習"))]
+					+ SHorizontalBox::Slot().AutoWidth().Padding(2.f)[BotButton(1, TEXT("ふつう"))]
+					+ SHorizontalBox::Slot().AutoWidth().Padding(2.f)[BotButton(2, TEXT("強い"))]
+					+ SHorizontalBox::Slot().AutoWidth().Padding(2.f)[BotButton(3, TEXT("鬼"))]
 				]
 				+ SHorizontalBox::Slot().FillWidth(1.f).HAlign(HAlign_Right).VAlign(VAlign_Center)
 				[
-					SNew(STextBlock).Font(Font(15.f)).ColorAndOpacity(TaG::GoldColor())
+					SNew(STextBlock).Font(Font(14.f)).ColorAndOpacity(TaG::GoldColor())
 					.Text_Lambda([PC]()
 					{
 						const ATaGGameState* S = GetGS(PC);
 						if (S && S->bOnline && PC.IsValid() && PC->IsHost())
 						{
-							return T(FString::Printf(TEXT("友達に伝えるアドレス：%s（タイトルの「参加」に入力）"), *LocalIPs()));
+							return T(FString::Printf(TEXT("友達に伝えるアドレス：%s"), *LocalIPs()));
 						}
 						return S && S->bOnline ? T(TEXT("オンライン・ロビー")) : T(TEXT("オフライン（BOTと対戦）"));
 					})
 				]
 			]
-			+ SVerticalBox::Slot().AutoHeight().Padding(0.f, 6.f)
+		]
+		// The chosen hero (the body itself stands on the court to the right)
+		+ SOverlay::Slot().HAlign(HAlign_Left).VAlign(VAlign_Top).Padding(26.f, 74.f, 0.f, 0.f)
+		[
+			Detail
+		]
+		// The roster strip
+		+ SOverlay::Slot().HAlign(HAlign_Left).VAlign(VAlign_Bottom).Padding(26.f, 0.f, 0.f, 18.f)
+		[
+			SNew(SBorder).BorderImage(White()).BorderBackgroundColor(FLinearColor(0.01f, 0.015f, 0.03f, 0.72f)).Padding(FMargin(12.f, 8.f))
 			[
-				SNew(SHorizontalBox)
-				.Visibility(bHost ? EVisibility::Visible : EVisibility::Collapsed)
-				+ SHorizontalBox::Slot().AutoWidth().VAlign(VAlign_Center).Padding(0.f, 0.f, 10.f, 0.f)
-				[
-					SNew(STextBlock).Font(Font(17.f)).Text(T(TEXT("モード")))
-				]
-				+ SHorizontalBox::Slot().AutoWidth().Padding(3.f) [ ModeButton(1) ]
-				+ SHorizontalBox::Slot().AutoWidth().Padding(3.f) [ ModeButton(2) ]
-				+ SHorizontalBox::Slot().AutoWidth().Padding(3.f) [ ModeButton(3) ]
-				+ SHorizontalBox::Slot().AutoWidth().VAlign(VAlign_Center).Padding(30.f, 0.f, 10.f, 0.f)
-				[
-					SNew(STextBlock).Font(Font(17.f)).Text(T(TEXT("BOTの強さ")))
-				]
-				+ SHorizontalBox::Slot().AutoWidth().Padding(3.f) [ BotButton(0, TEXT("練習")) ]
-				+ SHorizontalBox::Slot().AutoWidth().Padding(3.f) [ BotButton(1, TEXT("ふつう")) ]
-				+ SHorizontalBox::Slot().AutoWidth().Padding(3.f) [ BotButton(2, TEXT("強い")) ]
-				+ SHorizontalBox::Slot().AutoWidth().Padding(3.f) [ BotButton(3, TEXT("鬼")) ]
+				Strip
 			]
-			+ SVerticalBox::Slot().FillHeight(1.f)
+		]
+		// Teams and start
+		+ SOverlay::Slot().HAlign(HAlign_Right).VAlign(VAlign_Bottom).Padding(0.f, 0.f, 26.f, 18.f)
+		[
+			SNew(SBorder).BorderImage(White()).BorderBackgroundColor(FLinearColor(0.01f, 0.015f, 0.03f, 0.8f)).Padding(FMargin(16.f, 12.f))
 			[
-				SNew(SHorizontalBox)
-				+ SHorizontalBox::Slot().AutoWidth()
-				[
-					SNew(SVerticalBox)
-					+ SVerticalBox::Slot().AutoHeight().Padding(3.f, 0.f, 0.f, 4.f)
-					[
-						SNew(STextBlock).Font(Font(12.f, false)).ColorAndOpacity(FLinearColor(0.75f, 0.78f, 0.82f))
-						.Text(T(TEXT("ウォール（壁役）10体 → スコアラー（点取り）10体 → プレイメーカー（司令塔）10体の順")))
-					]
-					+ SVerticalBox::Slot().AutoHeight()
-					[
-						Grid
-					]
-				]
-				+ SHorizontalBox::Slot().FillWidth(1.f).Padding(18.f, 0.f, 0.f, 0.f)
+				SNew(SBox).WidthOverride(330.f)
 				[
 					SNew(SVerticalBox)
 					+ SVerticalBox::Slot().AutoHeight()
-					[
-						Detail
-					]
-					+ SVerticalBox::Slot().AutoHeight().Padding(0.f, 10.f, 0.f, 0.f)
 					[
 						SNew(SHorizontalBox)
-						+ SHorizontalBox::Slot().FillWidth(1.f)
-						[
-							SNew(SVerticalBox)
-							+ SVerticalBox::Slot().AutoHeight()
-							[
-								SNew(STextBlock).Font(Font(18.f)).ColorAndOpacity(Teal).Text(T(TEXT("チームA")))
-							]
-							+ SVerticalBox::Slot().AutoHeight()
-							[
-								SNew(STextBlock).Font(Font(13.f, false)).Text_Lambda([Roster]() { return Roster(0); })
-							]
-							+ SVerticalBox::Slot().AutoHeight()
-							[
-								Button(T(TEXT("Aに入る")), [PC]() { if (PC.IsValid()) { PC->ServerSetTeam(0); } }, false, nullptr, [PC]() { const ATaGPlayerState* P = GetMyPS(PC); return P && P->Team == 0; }, 13.f)
-							]
-						]
-						+ SHorizontalBox::Slot().FillWidth(1.f)
-						[
-							SNew(SVerticalBox)
-							+ SVerticalBox::Slot().AutoHeight()
-							[
-								SNew(STextBlock).Font(Font(18.f)).ColorAndOpacity(Orange).Text(T(TEXT("チームB")))
-							]
-							+ SVerticalBox::Slot().AutoHeight()
-							[
-								SNew(STextBlock).Font(Font(13.f, false)).Text_Lambda([Roster]() { return Roster(1); })
-							]
-							+ SVerticalBox::Slot().AutoHeight()
-							[
-								Button(T(TEXT("Bに入る")), [PC]() { if (PC.IsValid()) { PC->ServerSetTeam(1); } }, false, nullptr, [PC]() { const ATaGPlayerState* P = GetMyPS(PC); return P && P->Team == 1; }, 13.f)
-							]
-						]
+						+ SHorizontalBox::Slot().FillWidth(1.f).Padding(0.f, 0.f, 8.f, 0.f)[TeamBox(0)]
+						+ SHorizontalBox::Slot().FillWidth(1.f)[TeamBox(1)]
 					]
+					// The start button takes the whole width (it was clipped beside the other one)
 					+ SVerticalBox::Slot().AutoHeight().Padding(0.f, 12.f, 0.f, 0.f)
 					[
-						SNew(SHorizontalBox)
-						+ SHorizontalBox::Slot().AutoWidth()
-						[
-							bHost
-							? Button(T(TEXT("試合開始")), [PC]() { if (PC.IsValid()) { PC->ServerStartMatch(); } }, true, nullptr, nullptr, 24.f)
-							: StaticCastSharedRef<SWidget>(SNew(STextBlock).Font(Font(16.f)).Text(T(TEXT("ホストの開始を待っています…"))))
-						]
-						+ SHorizontalBox::Slot().AutoWidth().Padding(10.f, 0.f, 0.f, 0.f).VAlign(VAlign_Center)
-						[
-							Button(T(TEXT("タイトルへ")), [PC]() { if (PC.IsValid()) { PC->LeaveToTitle(); } }, false, nullptr, nullptr, 14.f)
-						]
+						bHost
+						? Button(T(TEXT("試合開始")), [PC]() { if (PC.IsValid()) { PC->ServerStartMatch(); } }, true, nullptr, nullptr, 24.f)
+						: StaticCastSharedRef<SWidget>(SNew(STextBlock).Font(Font(16.f)).Text(T(TEXT("ホストの開始を待っています…"))))
+					]
+					+ SVerticalBox::Slot().AutoHeight().HAlign(HAlign_Right).Padding(0.f, 8.f, 0.f, 0.f)
+					[
+						Button(T(TEXT("タイトルへ")), [PC]() { if (PC.IsValid()) { PC->LeaveToTitle(); } }, false, nullptr, nullptr, 14.f)
 					]
 				]
 			]
@@ -1145,89 +875,250 @@ TSharedRef<SWidget> TaGUI::MakeLobby(FPCPtr PC, TSharedPtr<SWidget>& OutFocus)
 
 // ================================================================ Results
 
-TSharedRef<SWidget> TaGUI::MakeResults(FPCPtr PC, TSharedPtr<SWidget>& OutFocus)
+namespace
 {
-	const bool bHost = PC.IsValid() && PC->IsHost();
-	auto TeamLine = [PC](bool bMine)
+	TArray<const ATaGPlayerState*> TeamPlayers(const ATaGGameState* S, int32 Team)
 	{
-		const ATaGGameState* S = GetGS(PC);
-		if (!S) { return FText::GetEmpty(); }
-		const int32 Team = bMine ? S->GetLocalTeam() : 1 - S->GetLocalTeam();
-		const FTaGTeamStats& St = S->Stats(Team);
-		const float PPP = St.Possessions ? float(St.Points) / St.Possessions : 0.f;
-		const float Iso = St.IsoPossessions ? float(St.IsoPoints) / St.IsoPossessions : 0.f;
-		const float Tm = St.TeamPossessions ? float(St.TeamPoints) / St.TeamPossessions : 0.f;
-		return T(FString::Printf(TEXT("%s  %d点\n攻撃1回あたり %.2f（1対1 %.2f / 連携 %.2f）\nシュート %d/%d  読み勝ち %d  スティール %d  ブロック %d  パス %d"),
-			bMine ? TEXT("味方") : TEXT("相手"), S->GetScore(Team), PPP, Iso, Tm, St.Makes, St.Shots, St.ReadWins, St.Steals, St.Blocks, St.Passes));
-	};
-	auto Players = [PC]()
-	{
-		const ATaGGameState* S = GetGS(PC);
-		if (!S) { return FText::GetEmpty(); }
-		FString Out;
+		TArray<const ATaGPlayerState*> Out;
 		for (const APlayerState* P : S->PlayerArray)
 		{
 			const ATaGPlayerState* T2 = Cast<ATaGPlayerState>(P);
-			if (!T2 || T2->Team < 0) { continue; }
-			Out += FString::Printf(TEXT("%s  %s・%s   %d点 %dアシスト %dスティール %dブロック  読み %d勝%d敗\n"),
-				T2->Team == S->GetLocalTeam() ? TEXT("味方") : TEXT("相手"), *T2->GetPlayerName(), TaGHeroes::Get(T2->Hero).Name,
-				T2->Stats.Points, T2->Stats.Assists, T2->Stats.Steals, T2->Stats.Blocks, T2->Stats.ReadWins, T2->Stats.ReadLosses);
+			if (T2 && T2->Team == Team)
+			{
+				Out.Add(T2);
+			}
 		}
-		return T(Out);
+		return Out;
+	}
+
+	/** Who carried the match: points first, then the plays that made points for others or stopped them. */
+	float MvpScore(const ATaGPlayerState* P)
+	{
+		return P->Stats.Points + 0.7f * P->Stats.Assists + 0.5f * (P->Stats.Steals + P->Stats.Blocks) + 0.3f * P->Stats.ReadWins;
+	}
+
+	const ATaGPlayerState* Mvp(const ATaGGameState* S)
+	{
+		const ATaGPlayerState* Best = nullptr;
+		for (const APlayerState* P : S->PlayerArray)
+		{
+			const ATaGPlayerState* T2 = Cast<ATaGPlayerState>(P);
+			if (T2 && T2->Team >= 0 && (!Best || MvpScore(T2) > MvpScore(Best)))
+			{
+				Best = T2;
+			}
+		}
+		return Best;
+	}
+
+	FString PlayerLabel(const ATaGPlayerState* P)
+	{
+		return P->bIsBotPlayer ? FString(TEXT("BOT")) : P->GetPlayerName();
+	}
+}
+
+TSharedRef<SWidget> TaGUI::MakeResults(FPCPtr PC, TSharedPtr<SWidget>& OutFocus)
+{
+	const bool bHost = PC.IsValid() && PC->IsHost();
+	auto TeamOf = [PC](bool bMine) { const ATaGGameState* S = GetGS(PC); return S ? (bMine ? S->GetLocalTeam() : 1 - S->GetLocalTeam()) : 0; };
+
+	auto Cell = [](TFunction<FText()> Text, float Width, float Size, bool bBold)
+	{
+		return SNew(SBox).WidthOverride(Width).HAlign(HAlign_Center)
+			[
+				SNew(STextBlock).Font(Font(Size, bBold)).Text_Lambda([Text]() { return Text(); })
+			];
 	};
 
-	return SNew(SBox).HAlign(HAlign_Center).VAlign(VAlign_Center)
-		[
-			SNew(SBorder).BorderImage(White()).BorderBackgroundColor(Panel).Padding(FMargin(40.f, 26.f))
+	auto TeamPanel = [PC, TeamOf, Cell](bool bMine)
+	{
+		const FLinearColor C = bMine ? Teal : Orange;
+		const FLinearColor Deep = bMine ? FLinearColor(0.02f, 0.36f, 0.32f, 0.95f) : FLinearColor(0.46f, 0.12f, 0.035f, 0.95f);
+		TSharedRef<SVerticalBox> Rows = SNew(SVerticalBox);
+		for (int32 i = 0; i < 3; ++i)
+		{
+			auto Who = [PC, TeamOf, bMine, i]() -> const ATaGPlayerState*
+			{
+				const ATaGGameState* S = GetGS(PC);
+				if (!S) { return nullptr; }
+				const TArray<const ATaGPlayerState*> Team = TeamPlayers(S, TeamOf(bMine));
+				return Team.IsValidIndex(i) ? Team[i] : nullptr;
+			};
+			auto Num = [Who](int32 Field)
+			{
+				return [Who, Field]()
+				{
+					const ATaGPlayerState* P = Who();
+					if (!P) { return FText::GetEmpty(); }
+					const int32 V[5] = { P->Stats.Points, P->Stats.Assists, P->Stats.Steals, P->Stats.Blocks, P->Stats.ReadWins };
+					return FText::AsNumber(V[Field]);
+				};
+			};
+			Rows->AddSlot().AutoHeight().Padding(0.f, 3.f)
 			[
-				SNew(SVerticalBox)
-				+ SVerticalBox::Slot().AutoHeight().HAlign(HAlign_Center)
+				SNew(SHorizontalBox)
+				.Visibility_Lambda([Who]() { return Who() ? EVisibility::Visible : EVisibility::Collapsed; })
+				+ SHorizontalBox::Slot().AutoWidth().VAlign(VAlign_Center)
 				[
-					SNew(STextBlock).Font(Font(56.f))
-					.Text_Lambda([PC]()
-					{
-						const ATaGGameState* S = GetGS(PC);
-						return S && S->WinnerTeam == S->GetLocalTeam() ? T(TEXT("勝利！ 地区に明かりが灯った")) : T(TEXT("敗北…"));
-					})
-					.ColorAndOpacity_Lambda([PC]()
-					{
-						const ATaGGameState* S = GetGS(PC);
-						return FSlateColor(S && S->WinnerTeam == S->GetLocalTeam() ? Teal : Orange);
-					})
+					SNew(SBox).WidthOverride(42.f).HeightOverride(42.f)
+					[
+						SNew(SImage)
+						.Image_Lambda([Who]() { const ATaGPlayerState* P = Who(); const FSlateBrush* B = P ? PortraitBrush(TaGHeroes::Get(P->Hero)) : nullptr; return B ? B : White(); })
+						.ColorAndOpacity_Lambda([Who]() { const ATaGPlayerState* P = Who(); return FSlateColor(P && PortraitBrush(TaGHeroes::Get(P->Hero)) ? FLinearColor::White : FLinearColor(0.2f, 0.22f, 0.26f)); })
+					]
 				]
-				+ SVerticalBox::Slot().AutoHeight().Padding(0.f, 12.f)
+				+ SHorizontalBox::Slot().FillWidth(1.f).VAlign(VAlign_Center).Padding(10.f, 0.f, 0.f, 0.f)
+				[
+					SNew(SVerticalBox)
+					+ SVerticalBox::Slot().AutoHeight()
+					[
+						SNew(STextBlock).Font(Font(16.f)).Text_Lambda([Who]() { const ATaGPlayerState* P = Who(); return P ? T(TaGHeroes::Get(P->Hero).Name) : FText::GetEmpty(); })
+					]
+					+ SVerticalBox::Slot().AutoHeight()
+					[
+						SNew(STextBlock).Font(Font(11.f, false)).ColorAndOpacity(FLinearColor(0.7f, 0.73f, 0.78f))
+						.Text_Lambda([Who]() { const ATaGPlayerState* P = Who(); return P ? T(PlayerLabel(P)) : FText::GetEmpty(); })
+					]
+				]
+				+ SHorizontalBox::Slot().AutoWidth().VAlign(VAlign_Center)[Cell(Num(0), 44.f, 18.f, true)]
+				+ SHorizontalBox::Slot().AutoWidth().VAlign(VAlign_Center)[Cell(Num(1), 44.f, 16.f, false)]
+				+ SHorizontalBox::Slot().AutoWidth().VAlign(VAlign_Center)[Cell(Num(2), 44.f, 16.f, false)]
+				+ SHorizontalBox::Slot().AutoWidth().VAlign(VAlign_Center)[Cell(Num(3), 44.f, 16.f, false)]
+				+ SHorizontalBox::Slot().AutoWidth().VAlign(VAlign_Center)[Cell(Num(4), 44.f, 16.f, false)]
+			];
+		}
+		return SNew(SBox).WidthOverride(470.f)
+			[
+				SNew(SBorder).BorderImage(White()).BorderBackgroundColor(FLinearColor(0.015f, 0.02f, 0.04f, 0.86f)).Padding(0.f)
+				[
+					SNew(SVerticalBox)
+					+ SVerticalBox::Slot().AutoHeight()
+					[
+						SNew(SBorder).BorderImage(White()).BorderBackgroundColor(Deep).Padding(FMargin(14.f, 6.f))
+						[
+							SNew(SHorizontalBox)
+							+ SHorizontalBox::Slot().FillWidth(1.f).VAlign(VAlign_Center)
+							[
+								SNew(STextBlock).Font(Font(20.f))
+								.Text_Lambda([PC, TeamOf, bMine]() { const ATaGGameState* S = GetGS(PC); return S ? T(FString::Printf(TEXT("%s  %d点"), bMine ? TEXT("味方") : TEXT("相手"), S->GetScore(TeamOf(bMine)))) : FText::GetEmpty(); })
+							]
+							+ SHorizontalBox::Slot().AutoWidth().VAlign(VAlign_Center)[Cell([]() { return T(TEXT("点")); }, 44.f, 12.f, true)]
+							+ SHorizontalBox::Slot().AutoWidth().VAlign(VAlign_Center)[Cell([]() { return T(TEXT("アシ")); }, 44.f, 12.f, true)]
+							+ SHorizontalBox::Slot().AutoWidth().VAlign(VAlign_Center)[Cell([]() { return T(TEXT("スティ")); }, 44.f, 12.f, true)]
+							+ SHorizontalBox::Slot().AutoWidth().VAlign(VAlign_Center)[Cell([]() { return T(TEXT("ブロ")); }, 44.f, 12.f, true)]
+							+ SHorizontalBox::Slot().AutoWidth().VAlign(VAlign_Center)[Cell([]() { return T(TEXT("読み")); }, 44.f, 12.f, true)]
+						]
+					]
+					+ SVerticalBox::Slot().AutoHeight().Padding(FMargin(14.f, 6.f))
+					[
+						Rows
+					]
+					+ SVerticalBox::Slot().AutoHeight().Padding(FMargin(14.f, 0.f, 14.f, 10.f))
+					[
+						SNew(STextBlock).Font(Font(12.f, false)).ColorAndOpacity(FLinearColor(0.7f, 0.73f, 0.78f)).AutoWrapText(true)
+						.Text_Lambda([PC, TeamOf, bMine]()
+						{
+							const ATaGGameState* S = GetGS(PC);
+							if (!S) { return FText::GetEmpty(); }
+							const FTaGTeamStats& St = S->Stats(TeamOf(bMine));
+							const float PPP = St.Possessions ? float(St.Points) / St.Possessions : 0.f;
+							const float Iso = St.IsoPossessions ? float(St.IsoPoints) / St.IsoPossessions : 0.f;
+							const float Tm = St.TeamPossessions ? float(St.TeamPoints) / St.TeamPossessions : 0.f;
+							return T(FString::Printf(TEXT("シュート %d/%d　攻撃1回あたり %.2f（1対1 %.2f / 連携 %.2f）"), St.Makes, St.Shots, PPP, Iso, Tm));
+						})
+					]
+				]
+			];
+	};
+
+	auto MvpPS = [PC]() -> const ATaGPlayerState* { const ATaGGameState* S = GetGS(PC); return S ? Mvp(S) : nullptr; };
+	return SNew(SOverlay)
+		+ SOverlay::Slot()
+		[
+			SNew(SImage).Image(White()).ColorAndOpacity(FLinearColor(0.f, 0.f, 0.f, 0.45f))
+		]
+		+ SOverlay::Slot().HAlign(HAlign_Center).VAlign(VAlign_Center)
+		[
+			SNew(SVerticalBox)
+			+ SVerticalBox::Slot().AutoHeight().HAlign(HAlign_Center)
+			[
+				SNew(STextBlock).Font(Font(62.f))
+				.Text_Lambda([PC]() { const ATaGGameState* S = GetGS(PC); return S && S->WinnerTeam == S->GetLocalTeam() ? T(TEXT("勝利")) : T(TEXT("敗北")); })
+				.ColorAndOpacity_Lambda([PC]() { const ATaGGameState* S = GetGS(PC); return FSlateColor(S && S->WinnerTeam == S->GetLocalTeam() ? Teal : Orange); })
+			]
+			+ SVerticalBox::Slot().AutoHeight().HAlign(HAlign_Center)
+			[
+				SNew(STextBlock).Font(Font(16.f, false)).ColorAndOpacity(FLinearColor(0.82f, 0.85f, 0.9f))
+				.Text_Lambda([PC]()
+				{
+					const ATaGGameState* S = GetGS(PC);
+					if (!S) { return FText::GetEmpty(); }
+					const bool bWin = S->WinnerTeam == S->GetLocalTeam();
+					return T(FString::Printf(TEXT("%d - %d　%s"), S->GetScore(S->GetLocalTeam()), S->GetScore(1 - S->GetLocalTeam()),
+						bWin ? TEXT("味方の地区に明かりが灯った") : TEXT("相手の地区に明かりが灯った")));
+				})
+			]
+			+ SVerticalBox::Slot().AutoHeight().HAlign(HAlign_Center).Padding(0.f, 18.f, 0.f, 0.f)
+			[
+				SNew(SHorizontalBox)
+				+ SHorizontalBox::Slot().AutoWidth()[TeamPanel(true)]
+				+ SHorizontalBox::Slot().AutoWidth().Padding(22.f, 0.f, 0.f, 0.f)[TeamPanel(false)]
+			]
+			// The player of the match
+			+ SVerticalBox::Slot().AutoHeight().HAlign(HAlign_Center).Padding(0.f, 16.f, 0.f, 0.f)
+			[
+				SNew(SBorder).BorderImage(White()).BorderBackgroundColor(FLinearColor(0.2f, 0.15f, 0.02f, 0.9f)).Padding(FMargin(14.f, 8.f))
+				.Visibility_Lambda([MvpPS]() { return MvpPS() ? EVisibility::Visible : EVisibility::Collapsed; })
 				[
 					SNew(SHorizontalBox)
-					+ SHorizontalBox::Slot().AutoWidth().Padding(0.f, 0.f, 40.f, 0.f)
+					+ SHorizontalBox::Slot().AutoWidth().VAlign(VAlign_Center)
 					[
-						SNew(STextBlock).Font(Font(17.f)).ColorAndOpacity(Teal).Text_Lambda([TeamLine]() { return TeamLine(true); })
+						SNew(SBox).WidthOverride(64.f).HeightOverride(64.f)
+						[
+							SNew(SImage)
+							.Image_Lambda([MvpPS]() { const ATaGPlayerState* P = MvpPS(); const FSlateBrush* B = P ? PortraitBrush(TaGHeroes::Get(P->Hero)) : nullptr; return B ? B : White(); })
+						]
 					]
-					+ SHorizontalBox::Slot().AutoWidth()
+					+ SHorizontalBox::Slot().AutoWidth().VAlign(VAlign_Center).Padding(12.f, 0.f, 0.f, 0.f)
 					[
-						SNew(STextBlock).Font(Font(17.f)).ColorAndOpacity(Orange).Text_Lambda([TeamLine]() { return TeamLine(false); })
+						SNew(SVerticalBox)
+						+ SVerticalBox::Slot().AutoHeight()
+						[
+							SNew(STextBlock).Font(Font(14.f)).ColorAndOpacity(TaG::GoldColor()).Text(T(TEXT("この試合の主役")))
+						]
+						+ SVerticalBox::Slot().AutoHeight()
+						[
+							SNew(STextBlock).Font(Font(24.f))
+							.Text_Lambda([MvpPS]() { const ATaGPlayerState* P = MvpPS(); return P ? T(FString::Printf(TEXT("%s（%s）"), TaGHeroes::Get(P->Hero).Name, *PlayerLabel(P))) : FText::GetEmpty(); })
+						]
+						+ SVerticalBox::Slot().AutoHeight()
+						[
+							SNew(STextBlock).Font(Font(14.f, false))
+							.Text_Lambda([MvpPS]()
+							{
+								const ATaGPlayerState* P = MvpPS();
+								return P ? T(FString::Printf(TEXT("%d点　%dアシスト　%dスティール　%dブロック　読み勝ち%d"), P->Stats.Points, P->Stats.Assists, P->Stats.Steals, P->Stats.Blocks, P->Stats.ReadWins)) : FText::GetEmpty();
+							})
+						]
 					]
 				]
-				+ SVerticalBox::Slot().AutoHeight().Padding(0.f, 6.f)
+			]
+			+ SVerticalBox::Slot().AutoHeight().HAlign(HAlign_Center).Padding(0.f, 18.f, 0.f, 0.f)
+			[
+				SNew(SHorizontalBox)
+				+ SHorizontalBox::Slot().AutoWidth().Padding(6.f)
 				[
-					SNew(STextBlock).Font(Font(14.f, false)).Text_Lambda([Players]() { return Players(); })
+					bHost ? Button(T(TEXT("もう1回")), [PC]() { if (PC.IsValid()) { PC->ServerRematch(); } }, true, &OutFocus, nullptr, 24.f)
+					: StaticCastSharedRef<SWidget>(SNew(STextBlock).Font(Font(18.f)).Text(T(TEXT("ホストの選択を待っています…"))))
 				]
-				+ SVerticalBox::Slot().AutoHeight().HAlign(HAlign_Center).Padding(0.f, 14.f, 0.f, 0.f)
+				+ SHorizontalBox::Slot().AutoWidth().Padding(6.f)
 				[
-					SNew(SHorizontalBox)
-					+ SHorizontalBox::Slot().AutoWidth().Padding(6.f)
-					[
-						bHost ? Button(T(TEXT("もう1回")), [PC]() { if (PC.IsValid()) { PC->ServerRematch(); } }, true, &OutFocus, nullptr, 24.f)
-						: StaticCastSharedRef<SWidget>(SNew(STextBlock).Font(Font(18.f)).Text(T(TEXT("ホストの選択を待っています…"))))
-					]
-					+ SHorizontalBox::Slot().AutoWidth().Padding(6.f)
-					[
-						bHost ? Button(T(TEXT("ヒーロー選択へ")), [PC]() { if (PC.IsValid()) { PC->ServerBackToLobby(); } }, false, nullptr, nullptr, 20.f)
-						: StaticCastSharedRef<SWidget>(SNew(SBox))
-					]
-					+ SHorizontalBox::Slot().AutoWidth().Padding(6.f)
-					[
-						Button(T(TEXT("タイトルへ")), [PC]() { if (PC.IsValid()) { PC->LeaveToTitle(); } }, false, &OutFocus, nullptr, 20.f)
-					]
+					bHost ? Button(T(TEXT("ヒーロー選択へ")), [PC]() { if (PC.IsValid()) { PC->ServerBackToLobby(); } }, false, nullptr, nullptr, 20.f)
+					: StaticCastSharedRef<SWidget>(SNew(SBox))
+				]
+				+ SHorizontalBox::Slot().AutoWidth().Padding(6.f)
+				[
+					Button(T(TEXT("タイトルへ")), [PC]() { if (PC.IsValid()) { PC->LeaveToTitle(); } }, false, &OutFocus, nullptr, 20.f)
 				]
 			]
 		];
@@ -1351,6 +1242,12 @@ TSharedRef<SWidget> TaGUI::MakeSettings(FPCPtr PC, TSharedPtr<SWidget>& OutFocus
 						[PC, Percent]() { return Percent(PC.IsValid() ? PC->ViewBob : 1.f); },
 						[Apply]() { Apply([](ATaGPlayerController& P) { P.ViewBob -= 0.25f; }); },
 						[Apply]() { Apply([](ATaGPlayerController& P) { P.ViewBob += 0.25f; }); }))
+				]
+				+ SVerticalBox::Slot().AutoHeight().Padding(0.f, 4.f)
+				[
+					SettingRow(TEXT("リプレイ"), ValueButton(
+						[PC]() { return T(PC.IsValid() && PC->bReplays ? TEXT("ダンクとアリウープを再生する") : TEXT("再生しない")); },
+						[Apply]() { Apply([](ATaGPlayerController& P) { P.bReplays = !P.bReplays; }); }))
 				]
 				+ SVerticalBox::Slot().AutoHeight().Padding(0.f, 4.f)
 				[

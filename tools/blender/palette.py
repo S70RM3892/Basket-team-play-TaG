@@ -112,8 +112,10 @@ P.update({
         "Accent": dict(c="#E0B24A", r=0.6),            # pole padding
         "TaG": dict(c="#3A2A20", r=0.3, e="#FFA040", es=4.0),    # rim = goal furnace
         "Glow": dict(c="#FFE6B0", r=0.3, e="#FFE6B0", es=2.0),   # shooter's square
-        "Net": dict(c="#FFF6EC", r=0.7),
         "Dark": dict(c="#2A2633", r=0.6),
+    },
+    "Net": {                                           # SM_Net (its own mesh, pivot at the rim centre)
+        "Net": dict(c="#FFF6EC", r=0.7),
     },
     "Rooftop": {
         "Court": dict(c="#C8814A", r=0.7),             # warm lacquered wood

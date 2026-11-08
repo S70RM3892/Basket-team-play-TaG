@@ -1,4 +1,8 @@
 #include "Character/TaGPlayerController.h"
+#include "Core/TaGHeroDisplay.h"
+#include "Core/TaGReplay.h"
+#include "Core/TaGTypes.h"
+#include "Core/TaGPlayerState.h"
 #include "Character/TaGCharacter.h"
 #include "Core/TaGAudio.h"
 #include "Core/TaGGameMode.h"
@@ -79,6 +83,7 @@ void ATaGPlayerController::BeginPlay()
 	{
 		return;
 	}
+	ATaGReplay::Get(GetWorld()); // start recording for highlight replays
 
 	Mapping = NewObject<UInputMappingContext>(this, TEXT("IMC_TaG"));
 	// Move / look
@@ -287,6 +292,50 @@ void ATaGPlayerController::UpdateSpectatorCamera(float Dt)
 	if (!OrbitCamera || bExternalView)
 	{
 		return;
+	}
+	// Highlight replay: the broadcast camera
+	if (ATaGReplay::IsPlaying(GetWorld()))
+	{
+		if (ATaGReplay* R = ATaGReplay::Get(GetWorld()))
+		{
+			if (GetViewTarget() != R)
+			{
+				SetViewTarget(R);
+			}
+		}
+		return;
+	}
+	// Hero select: the chosen hero on the court, in front of its own camera
+	const ATaGGameState* LobbyGS = GetWorld()->GetGameState<ATaGGameState>();
+	const bool bLobby = LobbyGS && (LobbyGS->Phase == ETaGPhase::Lobby || LobbyGS->Phase == ETaGPhase::Title) && !GetPawn();
+	if (bLobby)
+	{
+		if (!LobbyHero)
+		{
+			FActorSpawnParameters Params;
+			Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+			LobbyHero = GetWorld()->SpawnActor<ATaGHeroDisplay>(ATaGHeroDisplay::StaticClass(), FTransform::Identity, Params);
+		}
+		if (LobbyHero)
+		{
+			const ATaGPlayerState* MyPS = GetPlayerState<ATaGPlayerState>();
+			const ETaGHero Want = MyPS ? MyPS->Hero : ETaGHero::Rei;
+			if (!LobbyHero->HasHero() || LobbyHero->GetHero() != Want)
+			{
+				LobbyHero->ShowHero(Want, TaG::AllyColor(), true);
+				LobbyHero->FrameForSelect(FVector(470.f, 150.f, 0.f), 0.f);
+			}
+			if (GetViewTarget() != LobbyHero)
+			{
+				SetViewTarget(LobbyHero);
+			}
+		}
+		return;
+	}
+	if (LobbyHero)
+	{
+		LobbyHero->Destroy();
+		LobbyHero = nullptr;
 	}
 	if (GetPawn())
 	{

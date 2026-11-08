@@ -84,6 +84,8 @@ public:
 	UPROPERTY(Replicated) bool bNeedsClear1 = false;
 	UPROPERTY(Replicated) int32 WinnerTeam = -1;
 	UPROPERTY(Replicated) float MatchTime = 0.f;
+	/** Seconds at the start of a match that show the two lineups before the first possession (0 = none). */
+	UPROPERTY(Replicated) float IntroSeconds = 0.f;
 	UPROPERTY(Replicated) FTaGTeamStats TeamStats0;
 	UPROPERTY(Replicated) FTaGTeamStats TeamStats1;
 
@@ -119,6 +121,13 @@ public:
 	/** Small world effects for events the server sees: 1 perfect release, 2 block, 3 steal. */
 	UFUNCTION(NetMulticast, Unreliable)
 	void MulticastWorldFx(uint8 Kind, FVector_NetQuantize At, int32 Team);
+
+	/** Highlights start this long after the basket and play at this speed (the server holds the ball for it). */
+	static constexpr float HighlightDelay = 0.6f;
+	static constexpr float HighlightSpeed = 0.6f;
+	/** Every machine plays back its recording of [From, To] (server time) during the dead ball. */
+	UFUNCTION(NetMulticast, Reliable)
+	void MulticastHighlight(float From, float To, uint8 Kind, const FText& Title, ATaGCharacter* Star);
 
 	const TArray<FTaGPopup>& GetPopups() const { return Popups; }
 	const FTaGBanner& GetBanner() const { return Banner; }

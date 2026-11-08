@@ -1,5 +1,6 @@
 #include "Core/TaGGameState.h"
 #include "Core/TaGAudio.h"
+#include "Core/TaGReplay.h"
 #include "Core/TaGFx.h"
 #include "Core/TaGPlayerState.h"
 #include "Core/TaGStage.h"
@@ -32,6 +33,7 @@ void ATaGGameState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLif
 	DOREPLIFETIME(ATaGGameState, bNeedsClear1);
 	DOREPLIFETIME(ATaGGameState, WinnerTeam);
 	DOREPLIFETIME(ATaGGameState, MatchTime);
+	DOREPLIFETIME(ATaGGameState, IntroSeconds);
 	DOREPLIFETIME(ATaGGameState, TeamStats0);
 	DOREPLIFETIME(ATaGGameState, TeamStats1);
 	DOREPLIFETIME(ATaGGameState, bTutorial);
@@ -208,6 +210,14 @@ void ATaGGameState::MulticastWorldFx_Implementation(uint8 Kind, FVector_NetQuant
 		break;
 	default:
 		break;
+	}
+}
+
+void ATaGGameState::MulticastHighlight_Implementation(float From, float To, uint8 Kind, const FText& Title, ATaGCharacter* Star)
+{
+	if (ATaGReplay* R = ATaGReplay::Get(GetWorld()))
+	{
+		R->Play(From, To, ATaGGameState::HighlightDelay, ATaGGameState::HighlightSpeed, Title, Kind, Star);
 	}
 }
 

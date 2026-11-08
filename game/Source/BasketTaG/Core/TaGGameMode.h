@@ -74,11 +74,15 @@ public:
 	void OnAlleyOopCaught(ATaGCharacter* Receiver);
 	/** A defender in the air tipped the lob away. */
 	void OnAlleyOopStopped(ATaGCharacter* Defender);
+	/** A player skipped the highlight replay: offline or as the host, the next possession comes sooner. */
+	void SkipHighlight();
 	void OnBasket(ATaGCharacter* Shooter, int32 Points, bool bValid);
 	void OnShotMissed(bool bTouchedRim);
 	void OnBlocked(ATaGCharacter* Blocker);
 	void OnBallPickedUp(ATaGCharacter* Picker, bool bFromPass);
 	void OnOutOfBounds(int32 LastTouchTeam);
+	/** The ball handler's foot touched the line or the floor beyond it (FIBA Art. 23): the other team's ball. */
+	void OnHandlerOutOfBounds(ATaGCharacter* Handler);
 	void OnStuckBall(int32 LastTouchTeam);
 	void ReadWin(ATaGCharacter* Winner, ATaGCharacter* Loser, const FString& Rule);
 	void Popup(const FString& Text, int32 Team);
@@ -168,6 +172,11 @@ protected:
 	int32 DunksTaken = 0;
 	bool bLastShotOop = false;
 	bool bLastLayupBank = false;
+	// Highlights: the last slam or alley-oop (server time) and when a replay was last shown (match time)
+	float LastSlamTime = -100.f;
+	uint8 LastSlamKind = 0;
+	float LastReplayAt = -100.f;
+	bool bHighlightShowing = false;
 	bool bForceMakes = false;     // tests: every shot is a planned make (checks that the paths drop in)
 
 	// -TaGSnap=Layup / -TaGSnap=AlleyOop: scripted finishes with step, timing and catch logs, and screenshots

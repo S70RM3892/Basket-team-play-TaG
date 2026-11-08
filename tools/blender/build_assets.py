@@ -63,14 +63,16 @@ def build_everything(log=print):
     b = ball.build_ball()
     b.finalize()
     assets.append(Asset(b, "/Game/Art/Ball", "Ball", "ball"))
-    for fn, owner in ((court.build_hoop, "Hoop"), (court.build_rooftop, "Rooftop"),
+    for fn, owner in ((court.build_hoop, "Hoop"), (court.build_net, "Net"), (court.build_rooftop, "Rooftop"),
                       (court.build_props, "RooftopProps"), (court.build_furnace, "RooftopProps_Furnace")):
         P = fn()
         if owner in ("RooftopProps", "RooftopProps_Furnace"):
             P.keep_out_violations = court.keep_out_violations(P)
-        P.uv_scale = 0.01 if owner == "Hoop" else 0.001
+        P.uv_scale = 0.01 if owner in ("Hoop", "Net") else 0.001
         P.finalize()
-        assets.append(Asset(P, "/Game/Art/Court", owner, "court"))
+        # SM_Net is authored around its pivot (the rim centre); every other court mesh spawns at the identity
+        extra = {"pivot": list(court.net_pivot())} if owner == "Net" else {}
+        assets.append(Asset(P, "/Game/Art/Court", owner, "court", **extra))
     parts, footprints = city.build_city()
     for side in ("A", "B"):
         for P in parts[side]:

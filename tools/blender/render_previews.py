@@ -460,7 +460,8 @@ def court_scene(assets, rigs, a_lit=3.0, b_lit=0.0):
         pass
     for a in assets:
         if a.category in ("court", "city", "sea") or a.name == "SM_Clouds":
-            scene_util.instantiate(a.part, a.owner, a.name, collection=sc.collection)
+            p = a.extra.get("pivot", (0.0, 0.0, 0.0))     # SM_Net: spawned at the rim centre (UE x, y -> Blender x, -y)
+            scene_util.instantiate(a.part, a.owner, a.name, (p[0], -p[1], p[2]), collection=sc.collection)
     window_vertex_colour_materials({"CityA": a_lit, "CityB": b_lit, "RooftopProps": 0.8})
     court_lines(sc)
     # a few heroes and the ball on the court for scale (preview only; UE: x, y -> Blender x, -y)

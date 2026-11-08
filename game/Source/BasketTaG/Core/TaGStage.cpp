@@ -105,7 +105,7 @@ void ATaGStage::BuildFromArt()
 	// Known meshes from tools/blender (loaded by name: in an uncooked -game run the asset registry may still be
 	// scanning at this point). Any extra meshes found under the same folders are added too.
 	TArray<FString> Paths = {
-		TEXT("/Game/Art/Court/SM_Rooftop"), TEXT("/Game/Art/Court/SM_Hoop"),
+		TEXT("/Game/Art/Court/SM_Rooftop"), TEXT("/Game/Art/Court/SM_Hoop"), TEXT("/Game/Art/Court/SM_Net"),
 		TEXT("/Game/Art/Court/SM_RooftopProps"), TEXT("/Game/Art/Court/SM_RooftopProps_Furnace"), TEXT("/Game/Art/City/SM_Sea"),
 		// Toon sky: a 1.6 km dome around the court, and clouds, floating islands and the moon inside it
 		TEXT("/Game/Art/City/SM_SkyDome"), TEXT("/Game/Art/City/SM_Clouds") };
@@ -141,7 +141,12 @@ void ATaGStage::BuildFromArt()
 		FString Name;
 		Path.Split(TEXT("/"), nullptr, &Name, ESearchCase::IgnoreCase, ESearchDir::FromEnd);
 		const bool bFloor = Name.Contains(TEXT("Rooftop")) && !Name.Contains(TEXT("Props"));
-		UStaticMeshComponent* C = AddMesh(Mesh, FTransform::Identity, bFloor);
+		const bool bNet = Name.Equals(TEXT("SM_Net"), ESearchCase::IgnoreCase);
+		UStaticMeshComponent* C = AddMesh(Mesh, bNet ? FTransform(TaG::RimCenter()) : FTransform::Identity, bFloor);
+		if (bNet)
+		{
+			NetMesh = C;
+		}
 		// Every art material is unlit toon, so no surface could receive a shadow anyway
 		C->SetCastShadow(false);
 		bHasArt = true;
@@ -422,6 +427,7 @@ void ATaGStage::SetCityLights(int32 Score0, int32 Score1, bool bAnimate)
 void ATaGStage::OnBasket(int32 Team, int32 NewScore)
 {
 	RimFlash = 1.f;
+	SwishNet(1.f);
 	const FVector Where = Team == 0 ? FVector(400.f, -6000.f, -1500.f) : FVector(400.f, 6000.f, -1500.f);
 	TaGAudio::Play2D(this, TEXT("CityPowerUp"), 0.7f);
 	TaGAudio::PlayAt(this, TEXT("Score"), TaG::RimCenter(), 1.f);
@@ -462,6 +468,20 @@ void ATaGStage::UpdateDistrict(TArray<FDistrictBlock>& D, float Dt)
 void ATaGStage::Tick(float DeltaSeconds)
 {
 	Super::Tick(DeltaSeconds);
+	if (NetMesh && NetSwish > 0.f)
+	{
+		// The ball drags the net down, it snaps back and sways out, then settles
+		NetSwish = FMath::Max(0.f, NetSwish - DeltaSeconds * 1.5f * NetRate);
+		const float Ph = (1.f - NetSwish) * 15.f;
+		const float Amp = NetSwish * NetSwish;
+		const float Down = 0.28f * Amp * FMath::Sin(Ph + 0.5f);
+		const float In = 0.12f * Amp * FMath::Sin(Ph);
+		NetMesh->SetRelativeScale3D(FVector(1.f - In, 1.f - In, 1.f + Down));
+		if (NetSwish <= 0.f)
+		{
+			NetMesh->SetRelativeScale3D(FVector(1.f));
+		}
+	}
 	UpdateDistrict(DistrictA, DeltaSeconds);
 	UpdateDistrict(DistrictB, DeltaSeconds);
 	if (RimFlash > 0.f || RimGlow.Num() > 0)

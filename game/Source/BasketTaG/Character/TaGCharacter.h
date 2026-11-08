@@ -5,6 +5,7 @@
 #include "AbilitySystemInterface.h"
 #include "Core/TaGHeroData.h"
 #include "Core/TaGRules.h"
+#include "Character/TaGRig.h"
 #include "TaGCharacter.generated.h"
 
 class UAbilitySystemComponent;
@@ -279,6 +280,15 @@ public:
 	FVector GetReachHands() const;
 	/** Server: the lob was caught in the air: finish it before landing. */
 	void StartAlleyOopFinish();
+	/**
+	 * Where a shot counts from: the last spot the feet touched the floor (a shooter in the air keeps the status of the
+	 * spot they took off from, for the arc as for the boundary lines of FIBA Art. 23).
+	 */
+	FVector GetShotSpot() const;
+	/** Highlight replay: the real body, its shadow and the first-person arms step aside for the stand-in. */
+	void SetHiddenForReplay(bool bHide);
+	/** The pose the body was drawn with this frame (the highlight replay records it). */
+	const FTaGPoseInput& GetLastPose() const { return LastPose; }
 	/** Tests drive a player-controlled body without a pad: what the stick would say. */
 	void SetTestStick(const FVector& Dir) { LastMoveInput = Dir.GetSafeNormal2D(); }
 
@@ -395,6 +405,11 @@ protected:
 	bool bWasAirFinish = false;           // last frame was a dunk / alley-oop in the air (for the slam feedback)
 	bool bWasOnFloorAct = true;           // take-off detection for the leap and run-up effects
 	int32 StopJumpWait = 0;               // ticks since a jump was asked for (it is released once taken)
+	FVector LastFloorFeet = FVector::ZeroVector; // the last place the feet touched the floor
+	FTaGPoseInput LastPose;
+	/** Bodies in contact share the shove by weight (screens, box-outs): stick input on the machine that owns the body. */
+	void TickBodyContact(float Dt);
+	float BumpCooldown = 0.f;      // the thud of running into a body (the local player's own body only)
 	float GazeAfterT = 0.f;               // after a close finish: watch the rim until landing, then level the view
 	/** Remote machines: the run-up from the replicated take-off time (action length) and hand (variant bit 7). */
 	void RestoreRunUp();

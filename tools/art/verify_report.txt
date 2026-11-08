@@ -1,38 +1,46 @@
 Basket Team-play TaG - asset verification report
-generated 2026-11-08 17:20:43 by tools/import/verify.py inside 5.8.4-58902052+++UE5+Release-5.8
+generated 2026-11-09 01:30:29 by tools/import/verify.py inside 5.8.4-58902052+++UE5+Release-5.8
 source: tools/build/fbx/assets.json (expected values), game\Source\BasketTaG\Core\TaGTypes.h
-SUMMARY: 1938 checks, 1938 passed, 0 failed, 0 warnings  (1.6s)
+SUMMARY: 2009 checks, 2009 passed, 0 failed, 0 warnings  (142.7s)
 
 
 == Toon materials (/Game/Art/Materials) ==
+  shader compile check: the mobile ES3.1 feature level (-FeatureLevelES31)
   [PASS] /Game/Art/Materials/M_TaGBase loads
-  [PASS] M_TaGBase parameters vectors ['Color', 'Emissive'] scalars ['EmissiveStrength', 'Metallic', 'Roughness'] (got ['Color', 'Emissive'] ['EmissiveStrength', 'Metallic', 'Roughness'])
-  [PASS] M_TaGBase scalar defaults {'EmissiveStrength': 0.0, 'Metallic': 0.0, 'Roughness': 0.6} (got {'EmissiveStrength': 0.0, 'Metallic': 0.0, 'Roughness': 0.6})
+  [PASS] M_TaGBase parameters vectors ['Color', 'Emissive', 'RimColor'] scalars ['EmissiveStrength', 'Metallic', 'RimStrength', 'Roughness'] (got ['Color', 'Emissive', 'RimColor'] ['EmissiveStrength', 'Metallic', 'RimStrength', 'Roughness'])
+  [PASS] M_TaGBase scalar defaults {'EmissiveStrength': 0.0, 'Metallic': 0.0, 'RimStrength': 0.0, 'Roughness': 0.6} (got {'EmissiveStrength': 0.0, 'Metallic': 0.0, 'RimStrength': 0.0, 'Roughness': 0.6})
   [PASS] M_TaGBase BLEND_OPAQUE, unlit (toon lighting from MPC_TaG) (got BLEND_OPAQUE MSM_UNLIT)
+  [PASS] M_TaGBase compiles for the mobile ES3.1 feature level (-FeatureLevelES31): PS 44 / VS 135 instructions
   [PASS] /Game/Art/Materials/M_TaGTranslucent loads
   [PASS] M_TaGTranslucent parameters vectors ['Color', 'Emissive'] scalars ['EmissiveStrength', 'Metallic', 'Opacity', 'Roughness'] (got ['Color', 'Emissive'] ['EmissiveStrength', 'Metallic', 'Opacity', 'Roughness'])
   [PASS] M_TaGTranslucent scalar defaults {'EmissiveStrength': 0.0, 'Metallic': 0.0, 'Opacity': 0.5, 'Roughness': 0.6} (got {'EmissiveStrength': 0.0, 'Metallic': 0.0, 'Opacity': 0.5, 'Roughness': 0.6})
   [PASS] M_TaGTranslucent BLEND_TRANSLUCENT, unlit (toon lighting from MPC_TaG) (got BLEND_TRANSLUCENT MSM_UNLIT)
+  [PASS] M_TaGTranslucent compiles for the mobile ES3.1 feature level (-FeatureLevelES31): PS 33 / VS 331 instructions
   [PASS] /Game/Art/Materials/M_TaGWater loads
   [PASS] M_TaGWater parameters vectors ['Color'] scalars ['Roughness'] (got ['Color'] ['Roughness'])
   [PASS] M_TaGWater scalar defaults {'Roughness': 0.06} (got {'Roughness': 0.06})
   [PASS] M_TaGWater BLEND_OPAQUE, unlit (toon lighting from MPC_TaG) (got BLEND_OPAQUE MSM_UNLIT)
+  [PASS] M_TaGWater compiles for the mobile ES3.1 feature level (-FeatureLevelES31): PS 49 / VS 134 instructions
   [PASS] /Game/Art/Materials/M_TaGOutline loads
   [PASS] M_TaGOutline parameters vectors ['Color'] scalars [] (got ['Color'] [])
   [PASS] M_TaGOutline scalar defaults {} (got {})
   [PASS] M_TaGOutline BLEND_OPAQUE, unlit (toon lighting from MPC_TaG) (got BLEND_OPAQUE MSM_UNLIT)
+  [PASS] M_TaGOutline compiles for the mobile ES3.1 feature level (-FeatureLevelES31): PS 9 / VS 134 instructions
   [PASS] /Game/Art/Materials/M_TaGSky loads
   [PASS] M_TaGSky parameters vectors [] scalars [] (got [] [])
   [PASS] M_TaGSky scalar defaults {} (got {})
   [PASS] M_TaGSky BLEND_OPAQUE, unlit (toon lighting from MPC_TaG) (got BLEND_OPAQUE MSM_UNLIT)
+  [PASS] M_TaGSky compiles for the mobile ES3.1 feature level (-FeatureLevelES31): PS 35 / VS 134 instructions
   [PASS] /Game/Art/Materials/M_TaGParticle loads
   [PASS] M_TaGParticle parameters vectors [] scalars ['Falloff', 'Intensity'] (got [] ['Falloff', 'Intensity'])
   [PASS] M_TaGParticle scalar defaults {'Falloff': 1.6, 'Intensity': 2.0} (got {'Falloff': 1.6, 'Intensity': 2.0})
   [PASS] M_TaGParticle BLEND_ADDITIVE, unlit (toon lighting from MPC_TaG) (got BLEND_ADDITIVE MSM_UNLIT)
+  [PASS] M_TaGParticle compiles for the mobile ES3.1 feature level (-FeatureLevelES31): PS 73 / VS 279 instructions
   [PASS] /Game/Art/Materials/M_TaGParticleAlpha loads
   [PASS] M_TaGParticleAlpha parameters vectors [] scalars ['Falloff', 'Intensity'] (got [] ['Falloff', 'Intensity'])
   [PASS] M_TaGParticleAlpha scalar defaults {'Falloff': 0.8, 'Intensity': 1.0} (got {'Falloff': 0.8, 'Intensity': 1.0})
   [PASS] M_TaGParticleAlpha BLEND_TRANSLUCENT, unlit (toon lighting from MPC_TaG) (got BLEND_TRANSLUCENT MSM_UNLIT)
+  [PASS] M_TaGParticleAlpha compiles for the mobile ES3.1 feature level (-FeatureLevelES31): PS 71 / VS 330 instructions
   [PASS] /Game/Art/Materials/MPC_TaG loads
   [PASS] MPC_TaG vectors ['Ambient', 'RimColor', 'ShadeColor', 'SkyGround', 'SkyHorizon', 'SkyZenith', 'SunColor', 'SunDir'] scalars ['BandOffset', 'BandSharpness', 'RimPower', 'RimStrength']
 
@@ -820,7 +828,9 @@ SUMMARY: 1938 checks, 1938 passed, 0 failed, 0 warnings  (1.6s)
   [PASS] /Game/Art/Ball/SM_Ball loads
   [PASS] SM_Ball slots ['Body', 'Dark', 'Glow'] each with MI_Ball_<Slot>
   [PASS] /Game/Art/Court/SM_Hoop loads
-  [PASS] SM_Hoop slots ['Accent', 'Dark', 'Metal', 'TaG', 'Glow', 'Net', 'Board'] each with MI_Hoop_<Slot>
+  [PASS] SM_Hoop slots ['Accent', 'Dark', 'Metal', 'TaG', 'Glow', 'Board'] each with MI_Hoop_<Slot>
+  [PASS] /Game/Art/Court/SM_Net loads
+  [PASS] SM_Net slots ['Net'] each with MI_Net_<Slot>
   [PASS] /Game/Art/Court/SM_Rooftop loads
   [PASS] SM_Rooftop slots ['Dark', 'Court', 'Paint', 'Apron'] each with MI_Rooftop_<Slot>
   [PASS] /Game/Art/Court/SM_RooftopProps loads
@@ -882,6 +892,7 @@ SUMMARY: 1938 checks, 1938 passed, 0 failed, 0 warnings  (1.6s)
   [PASS] /Game/Art/City/SM_Clouds loads
   [PASS] SM_Clouds slots ['Body', 'Accent', 'Extra', 'Hair', 'White', 'Glow'] each with MI_Clouds_<Slot>
   [PASS] all 312 material instances load
+  [PASS] edge light RimStrength 0.35 on the 169 hero instances (not Outline/TaG/Glow/Jelly), 0 on every other M_TaGBase instance
 
 == Heroes (rest pose assembled from the imported sockets) ==
 -- Gantetsu (XL) --
@@ -1907,12 +1918,68 @@ SUMMARY: 1938 checks, 1938 passed, 0 failed, 0 warnings  (1.6s)
   [PASS] /Game/Art/UI/T_Portrait_Ankou loads, 256x256
   [PASS] /Game/Art/UI/T_Portrait_Hotaru loads, 256x256
 
+== HUD icons (/Game/Art/UI/Icons, tools/ui/make_icons.py) ==
+  [PASS] tools/build/icons/icons.json exists
+  [PASS] /Game/Art/UI/Icons/T_Icon_Drive loads, 128x128, UserInterface2D, UI group, no mips
+  [PASS] /Game/Art/UI/Icons/T_Icon_Dodge loads, 128x128, UserInterface2D, UI group, no mips
+  [PASS] /Game/Art/UI/Icons/T_Icon_Tackle loads, 128x128, UserInterface2D, UI group, no mips
+  [PASS] /Game/Art/UI/Icons/T_Icon_Contest loads, 128x128, UserInterface2D, UI group, no mips
+  [PASS] /Game/Art/UI/Icons/T_Icon_Step loads, 128x128, UserInterface2D, UI group, no mips
+  [PASS] /Game/Art/UI/Icons/T_Icon_Pass loads, 128x128, UserInterface2D, UI group, no mips
+  [PASS] /Game/Art/UI/Icons/T_Icon_Steal loads, 128x128, UserInterface2D, UI group, no mips
+  [PASS] /Game/Art/UI/Icons/T_Icon_Shoot loads, 128x128, UserInterface2D, UI group, no mips
+  [PASS] /Game/Art/UI/Icons/T_Icon_Jump loads, 128x128, UserInterface2D, UI group, no mips
+  [PASS] /Game/Art/UI/Icons/T_Icon_Cut loads, 128x128, UserInterface2D, UI group, no mips
+  [PASS] /Game/Art/UI/Icons/T_Icon_Leap loads, 128x128, UserInterface2D, UI group, no mips
+  [PASS] /Game/Art/UI/Icons/T_Icon_Role_Wall loads, 128x128, UserInterface2D, UI group, no mips
+  [PASS] /Game/Art/UI/Icons/T_Icon_Role_Scorer loads, 128x128, UserInterface2D, UI group, no mips
+  [PASS] /Game/Art/UI/Icons/T_Icon_Role_Playmaker loads, 128x128, UserInterface2D, UI group, no mips
+  [PASS] /Game/Art/UI/Icons/T_Icon_Guard loads, 128x128, UserInterface2D, UI group, no mips
+  [PASS] /Game/Art/UI/Icons/T_Icon_Zone loads, 128x128, UserInterface2D, UI group, no mips
+  [PASS] /Game/Art/UI/Icons/T_Icon_Ball loads, 128x128, UserInterface2D, UI group, no mips
+  [PASS] /Game/Art/UI/Icons/T_Icon_Down loads, 128x128, UserInterface2D, UI group, no mips
+  [PASS] /Game/Art/UI/Icons/T_Icon_Clock loads, 128x128, UserInterface2D, UI group, no mips
+  [PASS] /Game/Art/UI/Icons/T_Icon_Ally loads, 128x128, UserInterface2D, UI group, no mips
+  [PASS] /Game/Art/UI/Icons/T_Icon_Enemy loads, 128x128, UserInterface2D, UI group, no mips
+  [PASS] /Game/Art/UI/Icons/T_Icon_ArtKind_Dash loads, 128x128, UserInterface2D, UI group, no mips
+  [PASS] /Game/Art/UI/Icons/T_Icon_ArtKind_Leap loads, 128x128, UserInterface2D, UI group, no mips
+  [PASS] /Game/Art/UI/Icons/T_Icon_ArtKind_Shell loads, 128x128, UserInterface2D, UI group, no mips
+  [PASS] /Game/Art/UI/Icons/T_Icon_ArtKind_Phase loads, 128x128, UserInterface2D, UI group, no mips
+  [PASS] /Game/Art/UI/Icons/T_Icon_ArtKind_Counter loads, 128x128, UserInterface2D, UI group, no mips
+  [PASS] /Game/Art/UI/Icons/T_Icon_ArtKind_Decoy loads, 128x128, UserInterface2D, UI group, no mips
+  [PASS] /Game/Art/UI/Icons/T_Icon_ArtKind_ShotBuff loads, 128x128, UserInterface2D, UI group, no mips
+  [PASS] /Game/Art/UI/Icons/T_Icon_ArtKind_Wall loads, 128x128, UserInterface2D, UI group, no mips
+  [PASS] /Game/Art/UI/Icons/T_Icon_ArtKind_ShieldFollow loads, 128x128, UserInterface2D, UI group, no mips
+  [PASS] /Game/Art/UI/Icons/T_Icon_ArtKind_Root loads, 128x128, UserInterface2D, UI group, no mips
+  [PASS] /Game/Art/UI/Icons/T_Icon_ArtKind_Tackle loads, 128x128, UserInterface2D, UI group, no mips
+  [PASS] /Game/Art/UI/Icons/T_Icon_ArtKind_Cone loads, 128x128, UserInterface2D, UI group, no mips
+  [PASS] /Game/Art/UI/Icons/T_Icon_ArtKind_Aura loads, 128x128, UserInterface2D, UI group, no mips
+  [PASS] /Game/Art/UI/Icons/T_Icon_ArtKind_Bolt loads, 128x128, UserInterface2D, UI group, no mips
+  [PASS] /Game/Art/UI/Icons/T_Icon_ArtKind_Field loads, 128x128, UserInterface2D, UI group, no mips
+  [PASS] /Game/Art/UI/Icons/T_Icon_ArtKind_TeamAura loads, 128x128, UserInterface2D, UI group, no mips
+  [PASS] /Game/Art/UI/Icons/T_Icon_ArtKind_TeamOne loads, 128x128, UserInterface2D, UI group, no mips
+  [PASS] /Game/Art/UI/Icons/T_Icon_ArtKind_Pass loads, 128x128, UserInterface2D, UI group, no mips
+  [PASS] /Game/Art/UI/Icons/T_Icon_ArtKind_ContestStance loads, 128x128, UserInterface2D, UI group, no mips
+  [PASS] /Game/Art/UI/Icons/T_Icon_ArtKind_ContestAt loads, 128x128, UserInterface2D, UI group, no mips
+  [PASS] /Game/Art/UI/Icons/T_Icon_Art_ShoulderCharge loads, 128x128, UserInterface2D, UI group, no mips
+  [PASS] /Game/Art/UI/Icons/T_Icon_Art_IronWall loads, 128x128, UserInterface2D, UI group, no mips
+  [PASS] /Game/Art/UI/Icons/T_Icon_Art_Pull loads, 128x128, UserInterface2D, UI group, no mips
+  [PASS] /Game/Art/UI/Icons/T_Icon_Art_SlowField loads, 128x128, UserInterface2D, UI group, no mips
+  [PASS] /Game/Art/UI/Icons/T_Icon_Art_Blink loads, 128x128, UserInterface2D, UI group, no mips
+  [PASS] /Game/Art/UI/Icons/T_Icon_Art_Afterimage loads, 128x128, UserInterface2D, UI group, no mips
+  [PASS] /Game/Art/UI/Icons/T_Icon_Art_Scope loads, 128x128, UserInterface2D, UI group, no mips
+  [PASS] /Game/Art/UI/Icons/T_Icon_Art_SpotUp loads, 128x128, UserInterface2D, UI group, no mips
+  [PASS] /Game/Art/UI/Icons/T_Icon_Art_ThreadPass loads, 128x128, UserInterface2D, UI group, no mips
+  [PASS] /Game/Art/UI/Icons/T_Icon_Art_Tether loads, 128x128, UserInterface2D, UI group, no mips
+  [PASS] /Game/Art/UI/Icons/T_Icon_Art_SonicWave loads, 128x128, UserInterface2D, UI group, no mips
+  [PASS] /Game/Art/UI/Icons/T_Icon_Art_Resync loads, 128x128, UserInterface2D, UI group, no mips
+
 == Ball ==
   [PASS] SM_Ball diameter (24.00, 23.96, 24.00) (24 cm), centred (0.00, 0.00, 0.00)
   [PASS] SM_Ball slots ['Body', 'Dark', 'Glow']
 
 == Hoop vs TaGTypes.h ==
-  [PASS] polygon groups (7) map 1:1 to material slots (7)
+  [PASS] polygon groups (6) map 1:1 to material slots (6)
   [PASS] BoardFrontX     TaGTypes 120.00  mesh 120.00
   [PASS] BoardBackX      TaGTypes 117.00  mesh 117.00
   [PASS] BoardHalfWidth  TaGTypes 90.00  mesh 90.00
@@ -1922,8 +1989,15 @@ SUMMARY: 1938 checks, 1938 passed, 0 failed, 0 warnings  (1.6s)
   [PASS] rim centre (157.50, 0.00, 305.00) == (RimX 157.5, 0, RimZ 305.0)
   [PASS] rim tube centre-line radius 22.500 == RimRadius 22.5 (as used by TaGBallSim)
   [PASS] rim tube radius 1.000 (z 304.00..306.00) == RimTube 1.0; inner edge r 21.50, outer r 23.50
-  [PASS] net hangs 39.7 cm below the rim
+  [PASS] SM_Hoop has no Net slot (the net is SM_Net)
   [PASS] pole/pad behind the baseline: max x -81.0 <= -80
+  [PASS] SM_Net exists (the net, split out of SM_Hoop)
+  [PASS] SM_Net slot ['Net'] with ['/Game/Art/Court/MI_Net_Net']
+  [PASS] SM_Net pivot (spawn location) [157.5, 0.0, 305.0] == rim centre (RimX 157.5, 0, RimZ 305.0)
+  [PASS] net top ring centred on the pivot: centre (0.000, 0.000), top z -0.62 (just under the rim centre)
+  [PASS] net top ring radius 22.20 < RimRadius 22.5 (hangs inside the rim tube)
+  [PASS] net hangs 39.7 cm below the rim
+  [PASS] SM_Net socket net_bottom (0.00, 0.00, -40.00) (pivot-relative)
 
 == Rooftop and props ==
   [PASS] SM_Rooftop top surface z = 0.0000
@@ -2054,7 +2128,8 @@ SUMMARY: 1938 checks, 1938 passed, 0 failed, 0 warnings  (1.6s)
   Hotaru      8520
   heroes total 215463 (budget 9000 each)
   ball 3088
-  SM_Hoop                    1848
+  SM_Hoop                     984
+  SM_Net                      864
   SM_Rooftop                   94
   SM_RooftopProps           14382
   SM_RooftopProps_Furnace    7492

@@ -96,6 +96,8 @@ public:
 	UPROPERTY(Config) float FieldOfView = 95.f;
 	/** First-person head motion with the steps (0 = off, 1 = as the body moves, 1.5 = stronger). */
 	UPROPERTY(Config) float ViewBob = 1.f;
+	/** Slow-motion replays of slams and alley-oops during the dead ball (the host's choice counts online). */
+	UPROPERTY(Config) bool bReplays = true;
 	UPROPERTY(Config) float MasterVolume = 1.f;
 	UPROPERTY(Config) float MusicVolume = 0.6f;
 	UPROPERTY(Config) bool bVibration = true;
@@ -106,6 +108,8 @@ protected:
 	UPROPERTY() FTaGInputActions Actions;
 	UPROPERTY() TObjectPtr<UInputMappingContext> Mapping;
 	UPROPERTY() TObjectPtr<ACameraActor> OrbitCamera;
+	/** Hero select: the chosen hero standing on the court in front of its own camera. */
+	UPROPERTY() TObjectPtr<class ATaGHeroDisplay> LobbyHero;
 
 	bool bPauseMenu = false;
 	bool bSettingsOpen = false;

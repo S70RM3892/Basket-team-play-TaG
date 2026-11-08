@@ -43,6 +43,9 @@ struct FTaGShotEval
 	bool bContested = false;   // a contest hand won the read (shot < contest)
 	bool bOpen = false;        // nobody close (shot > spacing)
 	bool bWalled = false;
+	bool bArtContest = false;  // the defender that matters contests with an art (the bodies do not count)
+	float ReachGap = 0.f;      // that defender's reach (with the jump) minus the shooter's, cm
+	bool bReached = false;     // a defender close enough to touch the shot (the gap above means something)
 	float Distance = 0.f;
 	ETaGShotType Type = ETaGShotType::Jumper;
 	TWeakObjectPtr<ATaGCharacter> Contester;

@@ -133,6 +133,22 @@ namespace TaG
 		return P.X < 0.f || P.X > CourtDepth || FMath::Abs(P.Y) > CourtHalfWidth;
 	}
 
+	/** cm from a floor position to the nearest boundary line (negative: beyond it). */
+	inline float DistToBoundary(const FVector& Feet)
+	{
+		return FMath::Min3(Feet.X, CourtDepth - Feet.X, CourtHalfWidth - FMath::Abs(Feet.Y));
+	}
+
+	/**
+	 * A player is out of bounds when a foot touches the boundary line or the floor beyond it (FIBA Official Basketball
+	 * Rules, Art. 23). The body centre is tested, so the feet get a margin.
+	 */
+	constexpr float LineFootMargin = 8.f;
+	inline bool IsPlayerOutOfBounds(const FVector& Feet)
+	{
+		return DistToBoundary(Feet) < LineFootMargin;
+	}
+
 	/** Offense spacing spots (floor positions) used by bots and possession setups. Index 0 is the top. */
 	inline FVector OffenseSpot(int32 Index)
 	{

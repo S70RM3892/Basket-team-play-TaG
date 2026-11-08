@@ -3,7 +3,8 @@ court.py - "Nagisa - rooftop court in Tetsuba (industrial district)", authored d
 origin = middle of the baseline on the floor, court X 0..1100, Y -750..750, Z up, cm.  (Parts are flagged
 ue_space and mirrored to Blender space at finalize, so the FBX round trip lands exactly on these numbers.)
 
-  SM_Hoop                 - backboard / rim / net / bracket / padded pole, numbers from TaGTypes.h
+  SM_Hoop                 - backboard / rim / bracket / padded pole, numbers from TaGTypes.h
+  SM_Net                  - the net, authored around its pivot = the rim centre (RimX, 0, RimZ): spawn it there
   SM_Rooftop              - the slab: top surface exactly z = 0 (Court / Paint / Apron), 100 cm thick
   SM_RooftopProps         - parapet + railing, 4 light towers, stair hut, water tank, pipes, gantry, vents,
                             host building below the slab
@@ -141,26 +142,7 @@ def build_hoop():
         beam(P, (bx1 + 1.0, s * 7.0, rz - 12.0), (rx - rr - 0.5, s * 4.0, rz - 1.4), 2.4, 2.4, "Metal",
              up=(0, 0, 1))
         beam(P, (bx1 + 1.0, s * 7.0, rz - 1.6), (rx - rr - 0.5, s * 4.0, rz - 1.4), 2.4, 1.6, "Metal")
-    # --- net: diamond lattice hanging from the rim, 40 cm
-    n_around, rows = 12, 4
-    rad = [rr - 0.6, 19.5, 16.8, 15.0, 14.2]
-    zs = [rz - 0.8, rz - 11.0, rz - 21.0, rz - 31.0, rz - 40.0]
-    pts = []
-    for i in range(rows + 1):
-        off = 0.5 * (i % 2)
-        pts.append([Vector((rx + rad[i] * math.cos(2 * math.pi * (j + off) / n_around),
-                            rad[i] * math.sin(2 * math.pi * (j + off) / n_around), zs[i])) for j in range(n_around)])
-    for i in range(rows):
-        for j in range(n_around):
-            a = pts[i][j]
-            if i % 2 == 0:
-                b1, b2 = pts[i + 1][j], pts[i + 1][j - 1]
-            else:
-                b1, b2 = pts[i + 1][j], pts[i + 1][(j + 1) % n_around]
-            for b in (b1, b2):
-                P.add(tube([a, b], 0.35, 4, False, False), "Net", True)
-    for j in range(n_around):
-        P.add(tube([pts[rows][j], pts[rows][(j + 1) % n_around]], 0.35, 4, False, False), "Net", True)
+    # --- the net is its own mesh: SM_Net (build_net), pivot at the rim centre
     # --- padded pole behind the baseline + arm to the board
     px = -100.0
     open_box(P, (px - 11, -11, 0), (px + 11, 11, 352), "Metal")
@@ -178,6 +160,46 @@ def build_hoop():
     # simple collision for the pole/pad only (C++ handles ball physics and walls)
     P.collision.append(((px, 0, 95.0), (40.0, 44.0, 190.0)))
     P.collision.append(((px, 0, 176.0), (22.0, 22.0, 352.0)))
+    return P
+
+
+# ================================================================================================================
+# SM_Net
+# ================================================================================================================
+NET_LENGTH = 40.0
+
+
+def net_pivot():
+    """World position of the SM_Net pivot (UE court coordinates): the rim centre (RimX, 0, RimZ)."""
+    return (TAG["RimX"], 0.0, TAG["RimZ"])
+
+
+def build_net():
+    """Diamond lattice hanging 40 cm from the rim, authored around its pivot = the rim centre, so the game can scale
+    and wobble it from the top. Spawned at net_pivot() it is exactly where the net of SM_Hoop used to be."""
+    P = Part("SM_Net")
+    P.ue_space = True
+    rr = TAG["RimRadius"]
+    n_around, rows = 12, 4
+    rad = [rr - 0.6, 19.5, 16.8, 15.0, 14.2]
+    zs = [-0.8, -11.0, -21.0, -31.0, -NET_LENGTH]
+    pts = []
+    for i in range(rows + 1):
+        off = 0.5 * (i % 2)
+        pts.append([Vector((rad[i] * math.cos(2 * math.pi * (j + off) / n_around),
+                            rad[i] * math.sin(2 * math.pi * (j + off) / n_around), zs[i])) for j in range(n_around)])
+    for i in range(rows):
+        for j in range(n_around):
+            a = pts[i][j]
+            if i % 2 == 0:
+                b1, b2 = pts[i + 1][j], pts[i + 1][j - 1]
+            else:
+                b1, b2 = pts[i + 1][j], pts[i + 1][(j + 1) % n_around]
+            for b in (b1, b2):
+                P.add(tube([a, b], 0.35, 4, False, False), "Net", True)
+    for j in range(n_around):
+        P.add(tube([pts[rows][j], pts[rows][(j + 1) % n_around]], 0.35, 4, False, False), "Net", True)
+    P.socket("net_bottom", (0.0, 0.0, -NET_LENGTH))
     return P
 
 

@@ -33,6 +33,8 @@ public:
 	/** Lights up the districts in proportion to each team's score. Team 0 owns district A. */
 	void SetCityLights(int32 Score0, int32 Score1, bool bAnimate);
 	void OnBasket(int32 Team, int32 NewScore);
+	/** The net stretches and sways as a ball drops through (Rate < 1 plays it slowed, for a replay). */
+	void SwishNet(float Rate = 1.f) { NetSwish = 1.f; NetRate = FMath::Max(Rate, 0.1f); }
 
 	bool HasArt() const { return bHasArt; }
 
@@ -52,6 +54,10 @@ protected:
 	TArray<FDistrictBlock> DistrictB;
 	TArray<TObjectPtr<UMaterialInstanceDynamic>> RimGlow;
 	float RimFlash = 0.f;
+	/** The net hangs from its own pivot at the rim centre (SM_Net) and stretches and sways when a ball drops through. */
+	UPROPERTY() TObjectPtr<UStaticMeshComponent> NetMesh;
+	float NetSwish = 0.f;
+	float NetRate = 1.f;
 	bool bHasArt = false;
 
 	UStaticMeshComponent* AddMesh(UStaticMesh* Mesh, const FTransform& Xf, bool bCollide);

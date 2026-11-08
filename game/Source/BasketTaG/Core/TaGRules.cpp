@@ -76,7 +76,12 @@ FTaGShotEval FTaGRules::EvaluateShot(const ATaGCharacter* Shooter, float Charge,
 	E.Type = Shooter->GetShotType();
 	const FTaGShotTypeDef& St = ShotType(E.Type);
 	E.Distance = TaG::DistToRim(Feet);
-	E.Points = TaG::IsBeyondArc(Feet) ? 2 : 1;
+	// Points come from where the shooter last touched the floor: a jump from outside the arc that is released
+	// inside it is still worth 2, and the arc line itself is inside (FIBA 3x3)
+	E.Points = TaG::IsBeyondArc(Shooter->GetShotSpot()) ? 2 : 1;
+	// Bodies: the defender's standing reach (arm length included) against the shooter's. A long defender bothers a
+	// short shooter far more than the other way round; the arts that contest (stances, waves, rooted walls) ignore it.
+	const float ShooterReach = StandingReach(Shooter->GetHeroDef()) * FMath::Sqrt(Shooter->GetHeroDef().ReachMul) + (Shooter->GetShotMod() == ETaGArtFx::ShotShoulder ? 70.f : 0.f);
 
 	// Distance and type
 	float Base = BaseChance(E.Distance);
@@ -148,30 +153,39 @@ FTaGShotEval FTaGRules::EvaluateShot(const ATaGCharacter* Shooter, float Charge,
 
 		float C = 1.f;
 		bool bThisContest = false;
+		bool bThisArt = false;
+		// 1 for bodies of the same size; a 2.5 m giant contesting a small shooter about 1.3, the other way round 0.35.
+		// A defender in the air reaches higher still.
+		const float DefReach = StandingReach(Def->GetHeroDef()) * FMath::Sqrt(Def->GetHeroDef().ReachMul) * Def->GetReachFactor()
+			+ FMath::Max(0.f, DefFeet.Z);
+		const float Body = FMath::Clamp(1.f + (DefReach - ShooterReach) / 110.f, 0.35f, 1.3f);
 		const FTaGArtDef* Stance = Def->GetContestArt();
 		if (Stance && D < Stance->Range && Facing > 0.2f)
 		{
 			C = 0.22f;          // Ankou's gulp: a strong contest in front
 			bThisContest = true;
+			bThisArt = true;
 		}
 		else if (Def->IsRootedWall() && D < Def->GetRootWallRadius())
 		{
 			C = 0.45f;          // Kokemaru rooted: every shot around him is contested
 			bThisContest = true;
+			bThisArt = true;
 		}
 		else if (Def->IsContesting() && Def->IsSonicContest() && D < 400.f)
 		{
 			C = 0.5f;           // Hibiki's sonic wave: area contest
 			bThisContest = true;
+			bThisArt = true;
 		}
 		else if (Def->IsContesting() && D < TaG::ContestRange && Facing > 0.2f)
 		{
-			C = 0.3f;           // contest > shot
+			C = FMath::Max(0.12f, 1.f - 0.7f * Body); // contest > shot (0.3 between equal bodies)
 			bThisContest = true;
 		}
 		else if (Def->IsContestStarting() && D < TaG::ContestRange)
 		{
-			C = 0.6f;
+			C = FMath::Max(0.3f, 1.f - 0.4f * Body);
 		}
 		else if (!Def->IsActiveDefender() || bZone)
 		{
@@ -182,8 +196,8 @@ FTaGShotEval FTaGRules::EvaluateShot(const ATaGCharacter* Shooter, float Charge,
 			if (D < 110.f) { C = 0.75f; }
 			else if (D < 180.f) { C = 0.88f; }
 			else if (D < 230.f) { C = 0.96f; }
-			// Shot types that resist closeouts (fadeaway, euro step, floater)
-			C = 1.f - (1.f - C) * St.Prox;
+			// Shot types that resist closeouts (fadeaway, euro step, floater); the bodies scale the closeout too
+			C = FMath::Clamp(1.f - (1.f - C) * St.Prox * Body, 0.6f, 1.f);
 		}
 		// Oboro's mist halves contests made from inside it; the high arc and the quick release resist them
 		if (C < 1.f && ATaGFieldActor::FindAt(Shooter->GetWorld(), ETaGFieldKind::Mist, Shooter->GetTeam(), DefFeet))
@@ -201,6 +215,10 @@ FTaGShotEval FTaGRules::EvaluateShot(const ATaGCharacter* Shooter, float Charge,
 		if (C < Contest)
 		{
 			Contest = C;
+			// What the shot meter tells the shooter: who is bothering the shot and by how much taller they reach
+			E.bReached = true;
+			E.ReachGap = DefReach - ShooterReach;
+			E.bArtContest = bThisArt;
 			if (bThisContest)
 			{
 				E.bContested = true;

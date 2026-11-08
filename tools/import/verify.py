@@ -4,6 +4,11 @@ verify.py - runs INSIDE Unreal after import_all.py (same helper project):
   "C:/Epic Games/UE_5.8/Engine/Binaries/Win64/UnrealEditor-Cmd.exe" "C:/TaG/tools/assetproj/TaGAssets.uproject"
       -run=pythonscript -script="C:/TaG/tools/import/verify.py" -unattended -nop4 -nosplash -nullrhi
 
+With -nullrhi no shader is compiled. To also check that every toon material compiles, replace -nullrhi with
+  -AllowCommandletRendering -dx12               (PC: D3D12 SM6, the helper project targets SM6 like the game)
+  -AllowCommandletRendering -FeatureLevelES31   (the mobile ES3.1 path that Android uses)
+(the first run per platform compiles the engine's own shaders and takes a few minutes).
+
 Loads every asset, reads sockets / slots / bounds / triangle counts / vertex data back from the imported UStaticMesh
 and SoundWave assets, checks them against the contract and TaGTypes.h, and writes
   tools/art/verify_report.txt   (human readable, PASS/FAIL per check)
@@ -20,6 +25,7 @@ TOOLS = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__))
 REPO = os.path.normpath(os.path.join(TOOLS, ".."))
 FBX_JSON = os.path.join(TOOLS, "build", "fbx", "assets.json")
 SFX_JSON = os.path.join(TOOLS, "build", "wav", "sfx.json")
+ICONS_JSON = os.path.join(TOOLS, "build", "icons", "icons.json")
 TAGTYPES = os.path.join(REPO, "game", "Source", "BasketTaG", "Core", "TaGTypes.h")
 REPORT = os.path.join(TOOLS, "art", "verify_report.txt")
 MANIFEST = os.path.join(TOOLS, "art", "manifest.json")
@@ -42,7 +48,8 @@ SKY_RADIUS = 160000.0
 SKY_CENTRE = (550.0, 0.0, 0.0)
 # toon material contract (import_all.py): name -> (blend mode, vector params, {scalar: default})
 MATERIALS = {
-    "M_TaGBase": ("BLEND_OPAQUE", ["Color", "Emissive"], {"EmissiveStrength": 0.0, "Metallic": 0.0, "Roughness": 0.6}),
+    "M_TaGBase": ("BLEND_OPAQUE", ["Color", "Emissive", "RimColor"],
+                  {"EmissiveStrength": 0.0, "Metallic": 0.0, "RimStrength": 0.0, "Roughness": 0.6}),
     "M_TaGTranslucent": ("BLEND_TRANSLUCENT", ["Color", "Emissive"],
                          {"EmissiveStrength": 0.0, "Metallic": 0.0, "Opacity": 0.5, "Roughness": 0.6}),
     "M_TaGWater": ("BLEND_OPAQUE", ["Color"], {"Roughness": 0.06}),
@@ -53,6 +60,9 @@ MATERIALS = {
 }
 MPC_VECTORS = ["Ambient", "RimColor", "ShadeColor", "SkyGround", "SkyHorizon", "SkyZenith", "SunColor", "SunDir"]
 MPC_SCALARS = ["BandOffset", "BandSharpness", "RimPower", "RimStrength"]
+# per-instance edge light of M_TaGBase (import_all.py HERO_RIM_STRENGTH / HERO_RIM_SKIP)
+HERO_RIM_STRENGTH = 0.35
+HERO_RIM_SKIP = ("Outline", "TaG", "Glow", "Jelly")
 
 lines = []
 stats = {"pass": 0, "fail": 0, "warn": 0}
@@ -107,12 +117,38 @@ def mi_params(mi):
              else ["Roughness", "Metallic", "EmissiveStrength"])
     if out["parent"].endswith("M_TaGTranslucent"):
         names.append("Opacity")
+    if base == "M_TaGBase":
+        names.append("RimStrength")
     for n in names:
         try:
             out[n] = round(mel.get_material_instance_scalar_parameter_value(mi, n), 4)
         except Exception:
             pass
     return out
+
+
+def tex_size(path, tx):
+    """Texture size from the asset registry tag "Dimensions". With an RHI (-AllowCommandletRendering) the live texture
+    may still be compiling and report the 32x32 placeholder."""
+    try:
+        dims = str(unreal.EditorAssetLibrary.find_asset_data(path).get_tag_value("Dimensions"))
+        w, h = dims.lower().split("x")
+        return int(w), int(h)
+    except Exception:
+        return tx.blueprint_get_size_x(), tx.blueprint_get_size_y()
+
+
+def compile_mode():
+    """Shaders are compiled only when the commandlet may render (-AllowCommandletRendering and no -nullrhi)."""
+    try:
+        cl = unreal.SystemLibrary.get_command_line().lower()
+    except Exception:
+        return None
+    if "-allowcommandletrendering" not in cl or "-nullrhi" in cl:
+        return None
+    if "-featureleveles31" in cl:
+        return "the mobile ES3.1 feature level (-FeatureLevelES31)"
+    return "PC %s" % ("D3D12 SM6 (-dx12)" if "-dx12" in cl else "(default RHI)")
 
 
 def tagtypes():
@@ -184,6 +220,9 @@ def main():
     # ------------------------------------------------------------------------------------------- base materials
     out("== Toon materials (/Game/Art/Materials) ==")
     mel = unreal.MaterialEditingLibrary
+    cmode = compile_mode()
+    out("  shader compile check: %s" % (cmode or "skipped (with -nullrhi no shader is compiled: run with "
+                                                 "-AllowCommandletRendering instead to compile the materials)"))
     for name, (blend, want_v, want_s) in MATERIALS.items():
         path = "/Game/Art/Materials/" + name
         m = unreal.load_asset(path)
@@ -204,6 +243,11 @@ def main():
         check(info["blend_mode"] == blend and info["shading_model"] == "MSM_UNLIT",
               "%s %s, unlit (toon lighting from MPC_TaG) (got %s %s)" % (name, blend, info["blend_mode"],
                                                                         info["shading_model"]))
+        if cmode:
+            # waits for the shader map; a material that failed to compile (e.g. float3 * float4) has no instructions
+            st = mel.get_statistics(m)
+            ps, vs = st.num_pixel_shader_instructions, st.num_vertex_shader_instructions
+            check(ps > 0 and vs > 0, "%s compiles for %s: PS %d / VS %d instructions" % (name, cmode, ps, vs))
         manifest["materials"][name] = info
         manifest["all_assets"].append(path)
     mpc = unreal.load_asset("/Game/Art/Materials/MPC_TaG")
@@ -248,6 +292,13 @@ def main():
             manifest["material_instances"][p] = mi_params(mi)
             manifest["all_assets"].append(p)
     check(len(manifest["material_instances"]) == len(mi_seen), "all %d material instances load" % len(mi_seen))
+    hero_rim = {e["materials"][s]["instance"] for e in entries.values() if e["category"] == "hero"
+                for s in e["slots"] if s not in HERO_RIM_SKIP and e["materials"][s]["base"] == "M_TaGBase"}
+    rim_bad = [p for p, prm in manifest["material_instances"].items() if "RimStrength" in prm and
+               abs(prm["RimStrength"] - (HERO_RIM_STRENGTH if p in hero_rim else 0.0)) > 1e-3]
+    check(not rim_bad and hero_rim <= set(manifest["material_instances"]),
+          "edge light RimStrength %.2f on the %d hero instances (not %s), 0 on every other M_TaGBase instance%s" %
+          (HERO_RIM_STRENGTH, len(hero_rim), "/".join(HERO_RIM_SKIP), (": wrong on %s" % rim_bad[:5]) if rim_bad else ""))
     out("")
 
     # ------------------------------------------------------------------------------------------- heroes
@@ -357,12 +408,31 @@ def main():
         path = "/Game/Art/UI/T_Portrait_" + hid
         tx = unreal.load_asset(path)
         ok = tx is not None and isinstance(tx, unreal.Texture2D)
-        size = (tx.blueprint_get_size_x(), tx.blueprint_get_size_y()) if ok else (0, 0)
+        size = tex_size(path, tx) if ok else (0, 0)
         check(ok and size == (256, 256), "%s loads, %dx%d" % (path, size[0], size[1]))
         if ok and hid in manifest["heroes"]:
             manifest["heroes"][hid]["portrait"] = path
         if ok:
             manifest["all_assets"].append(path)
+    out("")
+    out("== HUD icons (/Game/Art/UI/Icons, tools/ui/make_icons.py) ==")
+    manifest["ui"] = {"icons": {}, "icon_size": 128,
+                      "icon_note": "white glyph on transparent (tint it in Slate); UserInterface2D, UI group, no mips"}
+    if check(os.path.exists(ICONS_JSON), "tools/build/icons/icons.json exists"):
+        idoc = json.load(open(ICONS_JSON, encoding="utf-8"))
+        for ic in idoc["icons"]:
+            tx = unreal.load_asset(ic["asset"])
+            ok = tx is not None and isinstance(tx, unreal.Texture2D)
+            size = tex_size(ic["asset"], tx) if ok else (0, 0)
+            setup = ok and (ename(tx.get_editor_property("compression_settings")) == "TC_EDITOR_ICON" and
+                            ename(tx.get_editor_property("lod_group")) == "TEXTUREGROUP_UI" and
+                            ename(tx.get_editor_property("mip_gen_settings")) == "TMGS_NO_MIPMAPS" and
+                            tx.get_editor_property("srgb"))
+            check(ok and size == (128, 128) and setup, "%s loads, %dx%d, UserInterface2D, UI group, no mips" %
+                  (ic["asset"], size[0], size[1]))
+            if ok:
+                manifest["ui"]["icons"][ic["name"]] = ic["asset"]
+                manifest["all_assets"].append(ic["asset"])
     out("")
 
     # ------------------------------------------------------------------------------------------- ball
@@ -414,9 +484,7 @@ def main():
         check(abs(tube_r - tt["RimTube"]) < 0.05 and abs((zmax - zmin) / 2 - tt["RimTube"]) < 0.05,
               "rim tube radius %.3f (z %.2f..%.2f) == RimTube %.1f; inner edge r %.2f, outer r %.2f" %
               (tube_r, zmin, zmax, tt["RimTube"], r_in, r_out))
-        net = pos["Net"]
-        nlo, nhi = bbox(net)
-        check(35.0 <= nhi[2] - nlo[2] <= 45.0, "net hangs %.1f cm below the rim" % (nhi[2] - nlo[2]))
+        check("Net" not in pos, "SM_Hoop has no Net slot (the net is SM_Net)")
         pole = [p for s in ("Metal", "Accent") for p in pos.get(s, []) if p.x < 0]
         plo, phi = bbox(pole)
         check(phi[0] <= -80.0, "pole/pad behind the baseline: max x %.1f <= -80" % phi[0])
@@ -432,8 +500,38 @@ def main():
                                                       "rim_tube_centerline_radius": round(tube_c, 3),
                                                       "rim_tube_radius": round(tube_r, 3),
                                                       "rim_inner_edge_radius": round(r_in, 3),
-                                                      "net_length": round(nhi[2] - nlo[2], 2),
                                                       "simple_collision_boxes": len(entries["SM_Hoop"]["collision_boxes"])})
+    # the net: its own mesh, pivot = rim centre, so the game can scale / wobble it from the top
+    sm = meshes.get("SM_Net")
+    if check(sm is not None, "SM_Net exists (the net, split out of SM_Hoop)"):
+        pos, ng, ns = slot_vertex_sets(sm)
+        mi = mesh_info(sm)
+        net = pos.get("Net", [])
+        nlo, nhi = bbox(net)
+        pivot = [tt["RimX"], 0.0, tt["RimZ"]]
+        top = [p for p in net if p.z > nhi[2] - 1.0]
+        tcx = sum(p.x for p in top) / len(top)
+        tcy = sum(p.y for p in top) / len(top)
+        top_r = max(math.hypot(p.x - tcx, p.y - tcy) for p in top)
+        check(mi["slots"] == ["Net"] and mi["material_instances"] == ["/Game/Art/Court/MI_Net_Net"],
+              "SM_Net slot %s with %s" % (mi["slots"], mi["material_instances"]))
+        check(entries["SM_Net"].get("pivot") == pivot,
+              "SM_Net pivot (spawn location) %s == rim centre (RimX %.1f, 0, RimZ %.1f)" %
+              (entries["SM_Net"].get("pivot"), tt["RimX"], tt["RimZ"]))
+        check(abs(tcx) < 0.05 and abs(tcy) < 0.05 and -1.5 < nhi[2] <= 0.0,
+              "net top ring centred on the pivot: centre (%.3f, %.3f), top z %.2f (just under the rim centre)" %
+              (tcx, tcy, nhi[2]))
+        check(top_r < tt["RimRadius"],
+              "net top ring radius %.2f < RimRadius %.1f (hangs inside the rim tube)" % (top_r, tt["RimRadius"]))
+        check(35.0 <= nhi[2] - nlo[2] <= 45.0, "net hangs %.1f cm below the rim" % (nhi[2] - nlo[2]))
+        nb = sm.find_socket("net_bottom")
+        check(nb is not None and abs(nb.relative_location.z - nlo[2]) < 1.0,
+              "SM_Net socket net_bottom %s (pivot-relative)" % (fmt(v3(nb.relative_location)) if nb else "missing"))
+        manifest["court"]["SM_Net"] = dict(mi, pivot_world=pivot, spawn_at="(RimX, 0, RimZ) from TaGTypes.h",
+                                           sockets={"net_bottom": v3(nb.relative_location)} if nb else {},
+                                           measured={"net_length": round(nhi[2] - nlo[2], 2),
+                                                     "top_ring_radius": round(top_r, 3),
+                                                     "top_z_relative": round(nhi[2], 3)})
     out("")
 
     # ------------------------------------------------------------------------------------------- rooftop / props
@@ -556,9 +654,11 @@ def main():
         "All materials are unlit toon materials lit from MPC_TaG (SunDir, SunColor, ShadeColor, RimColor, Ambient, "
         "BandSharpness, BandOffset, RimStrength, RimPower; sky: SkyZenith, SkyHorizon, SkyGround). Use manual "
         "exposure (EV100 0 / exposure compensation so an unlit 1.0 shows as 1.0); dynamic shadows are not received.",
-        "M_TaGBase emissive = Color*(lerp(ShadeColor, SunColor, band)+Ambient) + rim + Emissive * EmissiveStrength * "
-        "VertexColor.R. Only window quads carry vertex colours (R 0.15..1.0, per-window variation); every other mesh "
+        "M_TaGBase emissive = Color*(lerp(ShadeColor, SunColor, band)+Ambient) + rim + edge + Emissive * EmissiveStrength "
+        "* VertexColor.R. Only window quads carry vertex colours (R 0.15..1.0, per-window variation); every other mesh "
         "reads 1.0.",
+        "M_TaGBase edge light (per instance) = RimColor * RimStrength * Fresnel(exponent 3, base reflect 0.04) * band "
+        "(lit side only). RimStrength defaults to 0; the hero instances set 0.35 (not Outline/TaG/Glow/Jelly).",
         "Every hero part has an Outline slot (inverted hull, M_TaGOutline, faces point inward): keep it in the same "
         "mesh component; it renders back faces only via its reversed winding.",
         "M_TaGParticle (additive) / M_TaGParticleAlpha (translucent) read PerInstanceCustomData 0..2 = RGB, 3 = alpha: "
@@ -567,7 +667,9 @@ def main():
         "identity, no collision, cast shadows off.",
         "Rim: torus with tube centre-line radius RimRadius (22.5) and tube radius RimTube (1.0), exactly the "
         "torus TaGBallSim collides against; inner edge radius is therefore 21.5.",
-        "Court/city meshes are authored in court coordinates: spawn them at the identity transform.",
+        "Court/city meshes are authored in court coordinates: spawn them at the identity transform, except SM_Net.",
+        "SM_Net (the net, slot Net, MI_Net_Net) has its pivot at the rim centre: spawn it at (RimX, 0, RimZ) = "
+        "(157.5, 0, 305) and scale / wobble it around that point; socket net_bottom is 40 cm below the pivot.",
         "Collision: SM_Rooftop has one simple box (x -600..1700, y -1300..1300, z -100..0); SM_Hoop has simple boxes "
         "for the pole and padding only; all other meshes have no simple collision.",
     ]
