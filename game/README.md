@@ -77,7 +77,7 @@ SDK="$LOCALAPPDATA/Android/Sdk/build-tools/36.0.0"
 ```
 - Android SDK（`%LOCALAPPDATA%\Android\Sdk`、NDK r27c）とJDK 21が必要。環境変数は `ANDROID_HOME`、`NDKROOT`、`JAVA_HOME`
 - Shippingビルド（検証レイヤーなどの開発用ライブラリが入らず、小さい）。署名はデバッグ鍵。配布用の署名鍵はまだない
-- versionCode は `Config/DefaultEngine.ini` の `StoreVersion`（いまは2）。上書きインストールするときは前より大きくする
+- versionCode は `Config/DefaultEngine.ini` の `StoreVersion`（いまは3。v0.3）。上書きインストールするときは前より大きくする
 
 ## 友達と遊ぶ（同じLAN、またはポート開放済みの回線）
 1. ホスト：タイトルで「友達と遊ぶ：ホストになる」。ロビーの右上に、友達に伝えるアドレスが出る
