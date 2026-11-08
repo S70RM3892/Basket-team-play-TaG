@@ -1,0 +1,498 @@
+Basket Team-play TaG - asset verification report
+generated 2026-11-08 12:59:47 by tools/import/verify.py inside 5.8.4-58902052+++UE5+Release-5.8
+source: tools/build/fbx/assets.json (expected values), game\Source\BasketTaG\Core\TaGTypes.h
+SUMMARY: 449 checks, 449 passed, 0 failed, 0 warnings  (0.5s)
+
+
+== Base materials (/Game/Art/Materials) ==
+  [PASS] /Game/Art/Materials/M_TaGBase loads
+  [PASS] M_TaGBase parameters Color, Emissive, EmissiveStrength, Roughness, Metallic (got ['Color', 'Emissive'] ['EmissiveStrength', 'Metallic', 'Roughness'])
+  [PASS] M_TaGBase defaults Roughness 0.6, Metallic 0, EmissiveStrength 0
+  [PASS] M_TaGBase is opaque
+  [PASS] /Game/Art/Materials/M_TaGTranslucent loads
+  [PASS] M_TaGTranslucent parameters Color, Emissive, EmissiveStrength, Roughness, Metallic, Opacity (got ['Color', 'Emissive'] ['EmissiveStrength', 'Metallic', 'Opacity', 'Roughness'])
+  [PASS] M_TaGTranslucent defaults Roughness 0.6, Metallic 0, EmissiveStrength 0
+  [PASS] M_TaGTranslucent Opacity default 0.5
+  [PASS] M_TaGTranslucent is translucent with lighting mode Surface Translucency Volume (Lumen)
+  [PASS] /Game/Art/Materials/M_TaGWater loads
+  [PASS] M_TaGWater parameters Color, Roughness (got ['Color'] ['Roughness'])
+
+== Static meshes: load, slots, material instances ==
+  [PASS] /Game/Art/Heroes/Gantetsu/SM_Gantetsu_Pelvis loads
+  [PASS] SM_Gantetsu_Pelvis slots ['Body', 'Accent', 'Dark'] each with MI_Gantetsu_<Slot>
+  [PASS] /Game/Art/Heroes/Gantetsu/SM_Gantetsu_Torso loads
+  [PASS] SM_Gantetsu_Torso slots ['Body', 'Accent', 'Dark', 'Metal', 'Team', 'Glow'] each with MI_Gantetsu_<Slot>
+  [PASS] /Game/Art/Heroes/Gantetsu/SM_Gantetsu_Head loads
+  [PASS] SM_Gantetsu_Head slots ['Body', 'Accent', 'Dark', 'Metal', 'Glow'] each with MI_Gantetsu_<Slot>
+  [PASS] /Game/Art/Heroes/Gantetsu/SM_Gantetsu_UpperArm_L loads
+  [PASS] SM_Gantetsu_UpperArm_L slots ['Body', 'Dark', 'Metal', 'Team'] each with MI_Gantetsu_<Slot>
+  [PASS] /Game/Art/Heroes/Gantetsu/SM_Gantetsu_UpperArm_R loads
+  [PASS] SM_Gantetsu_UpperArm_R slots ['Body', 'Dark', 'Metal', 'Team'] each with MI_Gantetsu_<Slot>
+  [PASS] /Game/Art/Heroes/Gantetsu/SM_Gantetsu_LowerArm_L loads
+  [PASS] SM_Gantetsu_LowerArm_L slots ['Body', 'Accent', 'Dark', 'Metal', 'TaG'] each with MI_Gantetsu_<Slot>
+  [PASS] /Game/Art/Heroes/Gantetsu/SM_Gantetsu_LowerArm_R loads
+  [PASS] SM_Gantetsu_LowerArm_R slots ['Body', 'Accent', 'Dark', 'Metal', 'TaG'] each with MI_Gantetsu_<Slot>
+  [PASS] /Game/Art/Heroes/Gantetsu/SM_Gantetsu_Thigh_L loads
+  [PASS] SM_Gantetsu_Thigh_L slots ['Body', 'Dark', 'Metal', 'Team'] each with MI_Gantetsu_<Slot>
+  [PASS] /Game/Art/Heroes/Gantetsu/SM_Gantetsu_Thigh_R loads
+  [PASS] SM_Gantetsu_Thigh_R slots ['Body', 'Dark', 'Metal', 'Team'] each with MI_Gantetsu_<Slot>
+  [PASS] /Game/Art/Heroes/Gantetsu/SM_Gantetsu_Shin_L loads
+  [PASS] SM_Gantetsu_Shin_L slots ['Body', 'Dark', 'Metal', 'TaG'] each with MI_Gantetsu_<Slot>
+  [PASS] /Game/Art/Heroes/Gantetsu/SM_Gantetsu_Shin_R loads
+  [PASS] SM_Gantetsu_Shin_R slots ['Body', 'Dark', 'Metal', 'TaG'] each with MI_Gantetsu_<Slot>
+  [PASS] /Game/Art/Heroes/Minamo/SM_Minamo_Pelvis loads
+  [PASS] SM_Minamo_Pelvis slots ['Body', 'Accent', 'Dark'] each with MI_Minamo_<Slot>
+  [PASS] /Game/Art/Heroes/Minamo/SM_Minamo_Torso loads
+  [PASS] SM_Minamo_Torso slots ['Body', 'Accent', 'Dark', 'Team'] each with MI_Minamo_<Slot>
+  [PASS] /Game/Art/Heroes/Minamo/SM_Minamo_Head loads
+  [PASS] SM_Minamo_Head slots ['Skin', 'Hair', 'Dark', 'Metal'] each with MI_Minamo_<Slot>
+  [PASS] /Game/Art/Heroes/Minamo/SM_Minamo_UpperArm_L loads
+  [PASS] SM_Minamo_UpperArm_L slots ['Body', 'Team'] each with MI_Minamo_<Slot>
+  [PASS] /Game/Art/Heroes/Minamo/SM_Minamo_UpperArm_R loads
+  [PASS] SM_Minamo_UpperArm_R slots ['Dark', 'Metal', 'Team'] each with MI_Minamo_<Slot>
+  [PASS] /Game/Art/Heroes/Minamo/SM_Minamo_LowerArm_L loads
+  [PASS] SM_Minamo_LowerArm_L slots ['Body', 'Skin', 'Dark', 'TaG'] each with MI_Minamo_<Slot>
+  [PASS] /Game/Art/Heroes/Minamo/SM_Minamo_LowerArm_R loads
+  [PASS] SM_Minamo_LowerArm_R slots ['Dark', 'Metal', 'TaG'] each with MI_Minamo_<Slot>
+  [PASS] /Game/Art/Heroes/Minamo/SM_Minamo_Thigh_L loads
+  [PASS] SM_Minamo_Thigh_L slots ['Dark', 'Metal', 'Team'] each with MI_Minamo_<Slot>
+  [PASS] /Game/Art/Heroes/Minamo/SM_Minamo_Thigh_R loads
+  [PASS] SM_Minamo_Thigh_R slots ['Dark', 'Metal', 'Team'] each with MI_Minamo_<Slot>
+  [PASS] /Game/Art/Heroes/Minamo/SM_Minamo_Shin_L loads
+  [PASS] SM_Minamo_Shin_L slots ['Dark', 'Metal', 'TaG', 'Glow'] each with MI_Minamo_<Slot>
+  [PASS] /Game/Art/Heroes/Minamo/SM_Minamo_Shin_R loads
+  [PASS] SM_Minamo_Shin_R slots ['Dark', 'Metal', 'TaG', 'Glow'] each with MI_Minamo_<Slot>
+  [PASS] /Game/Art/Heroes/Rei/SM_Rei_Pelvis loads
+  [PASS] SM_Rei_Pelvis slots ['Accent', 'Dark'] each with MI_Rei_<Slot>
+  [PASS] /Game/Art/Heroes/Rei/SM_Rei_Torso loads
+  [PASS] SM_Rei_Torso slots ['Body', 'Accent', 'Dark', 'Team', 'Glow'] each with MI_Rei_<Slot>
+  [PASS] /Game/Art/Heroes/Rei/SM_Rei_Head loads
+  [PASS] SM_Rei_Head slots ['Body', 'Skin', 'Hair', 'Dark', 'Glow'] each with MI_Rei_<Slot>
+  [PASS] /Game/Art/Heroes/Rei/SM_Rei_UpperArm_L loads
+  [PASS] SM_Rei_UpperArm_L slots ['Body', 'Team', 'Glow'] each with MI_Rei_<Slot>
+  [PASS] /Game/Art/Heroes/Rei/SM_Rei_UpperArm_R loads
+  [PASS] SM_Rei_UpperArm_R slots ['Body', 'Team'] each with MI_Rei_<Slot>
+  [PASS] /Game/Art/Heroes/Rei/SM_Rei_LowerArm_L loads
+  [PASS] SM_Rei_LowerArm_L slots ['Body', 'Skin', 'TaG'] each with MI_Rei_<Slot>
+  [PASS] /Game/Art/Heroes/Rei/SM_Rei_LowerArm_R loads
+  [PASS] SM_Rei_LowerArm_R slots ['Body', 'Skin', 'TaG'] each with MI_Rei_<Slot>
+  [PASS] /Game/Art/Heroes/Rei/SM_Rei_Thigh_L loads
+  [PASS] SM_Rei_Thigh_L slots ['Dark', 'Team'] each with MI_Rei_<Slot>
+  [PASS] /Game/Art/Heroes/Rei/SM_Rei_Thigh_R loads
+  [PASS] SM_Rei_Thigh_R slots ['Dark', 'Team'] each with MI_Rei_<Slot>
+  [PASS] /Game/Art/Heroes/Rei/SM_Rei_Shin_L loads
+  [PASS] SM_Rei_Shin_L slots ['Body', 'Accent', 'Dark', 'TaG'] each with MI_Rei_<Slot>
+  [PASS] /Game/Art/Heroes/Rei/SM_Rei_Shin_R loads
+  [PASS] SM_Rei_Shin_R slots ['Body', 'Accent', 'Dark', 'TaG'] each with MI_Rei_<Slot>
+  [PASS] /Game/Art/Heroes/Hayate/SM_Hayate_Pelvis loads
+  [PASS] SM_Hayate_Pelvis slots ['Body', 'Dark', 'Metal'] each with MI_Hayate_<Slot>
+  [PASS] /Game/Art/Heroes/Hayate/SM_Hayate_Torso loads
+  [PASS] SM_Hayate_Torso slots ['Body', 'Accent', 'Team', 'Glow'] each with MI_Hayate_<Slot>
+  [PASS] /Game/Art/Heroes/Hayate/SM_Hayate_Head loads
+  [PASS] SM_Hayate_Head slots ['Skin', 'Hair', 'Dark', 'Metal', 'Glow'] each with MI_Hayate_<Slot>
+  [PASS] /Game/Art/Heroes/Hayate/SM_Hayate_UpperArm_L loads
+  [PASS] SM_Hayate_UpperArm_L slots ['Body', 'Accent', 'Team'] each with MI_Hayate_<Slot>
+  [PASS] /Game/Art/Heroes/Hayate/SM_Hayate_UpperArm_R loads
+  [PASS] SM_Hayate_UpperArm_R slots ['Body', 'Accent', 'Team'] each with MI_Hayate_<Slot>
+  [PASS] /Game/Art/Heroes/Hayate/SM_Hayate_LowerArm_L loads
+  [PASS] SM_Hayate_LowerArm_L slots ['Body', 'Accent', 'Dark', 'TaG'] each with MI_Hayate_<Slot>
+  [PASS] /Game/Art/Heroes/Hayate/SM_Hayate_LowerArm_R loads
+  [PASS] SM_Hayate_LowerArm_R slots ['Body', 'Accent', 'Dark', 'TaG'] each with MI_Hayate_<Slot>
+  [PASS] /Game/Art/Heroes/Hayate/SM_Hayate_Thigh_L loads
+  [PASS] SM_Hayate_Thigh_L slots ['Body', 'Accent'] each with MI_Hayate_<Slot>
+  [PASS] /Game/Art/Heroes/Hayate/SM_Hayate_Thigh_R loads
+  [PASS] SM_Hayate_Thigh_R slots ['Body', 'Accent'] each with MI_Hayate_<Slot>
+  [PASS] /Game/Art/Heroes/Hayate/SM_Hayate_Shin_L loads
+  [PASS] SM_Hayate_Shin_L slots ['Body', 'Accent', 'Dark', 'TaG'] each with MI_Hayate_<Slot>
+  [PASS] /Game/Art/Heroes/Hayate/SM_Hayate_Shin_R loads
+  [PASS] SM_Hayate_Shin_R slots ['Body', 'Accent', 'Dark', 'TaG'] each with MI_Hayate_<Slot>
+  [PASS] /Game/Art/Heroes/Tsumugi/SM_Tsumugi_Pelvis loads
+  [PASS] SM_Tsumugi_Pelvis slots ['Dark', 'Team'] each with MI_Tsumugi_<Slot>
+  [PASS] /Game/Art/Heroes/Tsumugi/SM_Tsumugi_Torso loads
+  [PASS] SM_Tsumugi_Torso slots ['Body', 'Accent', 'Dark', 'Team'] each with MI_Tsumugi_<Slot>
+  [PASS] /Game/Art/Heroes/Tsumugi/SM_Tsumugi_Head loads
+  [PASS] SM_Tsumugi_Head slots ['Accent', 'Skin', 'Hair', 'Dark'] each with MI_Tsumugi_<Slot>
+  [PASS] /Game/Art/Heroes/Tsumugi/SM_Tsumugi_UpperArm_L loads
+  [PASS] SM_Tsumugi_UpperArm_L slots ['Dark'] each with MI_Tsumugi_<Slot>
+  [PASS] /Game/Art/Heroes/Tsumugi/SM_Tsumugi_UpperArm_R loads
+  [PASS] SM_Tsumugi_UpperArm_R slots ['Dark'] each with MI_Tsumugi_<Slot>
+  [PASS] /Game/Art/Heroes/Tsumugi/SM_Tsumugi_LowerArm_L loads
+  [PASS] SM_Tsumugi_LowerArm_L slots ['Skin', 'Dark', 'Metal', 'TaG', 'Glow'] each with MI_Tsumugi_<Slot>
+  [PASS] /Game/Art/Heroes/Tsumugi/SM_Tsumugi_LowerArm_R loads
+  [PASS] SM_Tsumugi_LowerArm_R slots ['Skin', 'Dark', 'Metal', 'TaG', 'Glow'] each with MI_Tsumugi_<Slot>
+  [PASS] /Game/Art/Heroes/Tsumugi/SM_Tsumugi_Thigh_L loads
+  [PASS] SM_Tsumugi_Thigh_L slots ['Dark', 'Team'] each with MI_Tsumugi_<Slot>
+  [PASS] /Game/Art/Heroes/Tsumugi/SM_Tsumugi_Thigh_R loads
+  [PASS] SM_Tsumugi_Thigh_R slots ['Dark', 'Team'] each with MI_Tsumugi_<Slot>
+  [PASS] /Game/Art/Heroes/Tsumugi/SM_Tsumugi_Shin_L loads
+  [PASS] SM_Tsumugi_Shin_L slots ['Body', 'Accent', 'Dark', 'TaG'] each with MI_Tsumugi_<Slot>
+  [PASS] /Game/Art/Heroes/Tsumugi/SM_Tsumugi_Shin_R loads
+  [PASS] SM_Tsumugi_Shin_R slots ['Body', 'Accent', 'Dark', 'TaG'] each with MI_Tsumugi_<Slot>
+  [PASS] /Game/Art/Heroes/Hibiki/SM_Hibiki_Pelvis loads
+  [PASS] SM_Hibiki_Pelvis slots ['Team', 'TaG', 'Jelly'] each with MI_Hibiki_<Slot>
+  [PASS] /Game/Art/Heroes/Hibiki/SM_Hibiki_Torso loads
+  [PASS] SM_Hibiki_Torso slots ['Team', 'Glow', 'Jelly'] each with MI_Hibiki_<Slot>
+  [PASS] /Game/Art/Heroes/Hibiki/SM_Hibiki_Head loads
+  [PASS] SM_Hibiki_Head slots ['TaG', 'Glow', 'Jelly'] each with MI_Hibiki_<Slot>
+  [PASS] /Game/Art/Heroes/Hibiki/SM_Hibiki_UpperArm_L loads
+  [PASS] SM_Hibiki_UpperArm_L slots ['Team', 'Glow', 'Jelly'] each with MI_Hibiki_<Slot>
+  [PASS] /Game/Art/Heroes/Hibiki/SM_Hibiki_UpperArm_R loads
+  [PASS] SM_Hibiki_UpperArm_R slots ['Team', 'Glow', 'Jelly'] each with MI_Hibiki_<Slot>
+  [PASS] /Game/Art/Heroes/Hibiki/SM_Hibiki_LowerArm_L loads
+  [PASS] SM_Hibiki_LowerArm_L slots ['Glow', 'Jelly'] each with MI_Hibiki_<Slot>
+  [PASS] /Game/Art/Heroes/Hibiki/SM_Hibiki_LowerArm_R loads
+  [PASS] SM_Hibiki_LowerArm_R slots ['Glow', 'Jelly'] each with MI_Hibiki_<Slot>
+  [PASS] /Game/Art/Heroes/Hibiki/SM_Hibiki_Thigh_L loads
+  [PASS] SM_Hibiki_Thigh_L slots ['Glow', 'Jelly'] each with MI_Hibiki_<Slot>
+  [PASS] /Game/Art/Heroes/Hibiki/SM_Hibiki_Thigh_R loads
+  [PASS] SM_Hibiki_Thigh_R slots ['Glow', 'Jelly'] each with MI_Hibiki_<Slot>
+  [PASS] /Game/Art/Heroes/Hibiki/SM_Hibiki_Shin_L loads
+  [PASS] SM_Hibiki_Shin_L slots ['Body', 'Glow', 'Jelly'] each with MI_Hibiki_<Slot>
+  [PASS] /Game/Art/Heroes/Hibiki/SM_Hibiki_Shin_R loads
+  [PASS] SM_Hibiki_Shin_R slots ['Body', 'Glow', 'Jelly'] each with MI_Hibiki_<Slot>
+  [PASS] /Game/Art/Ball/SM_Ball loads
+  [PASS] SM_Ball slots ['Body', 'Dark', 'Glow'] each with MI_Ball_<Slot>
+  [PASS] /Game/Art/Court/SM_Hoop loads
+  [PASS] SM_Hoop slots ['Accent', 'Dark', 'Metal', 'TaG', 'Glow', 'Net', 'Board'] each with MI_Hoop_<Slot>
+  [PASS] /Game/Art/Court/SM_Rooftop loads
+  [PASS] SM_Rooftop slots ['Dark', 'Court', 'Paint', 'Apron'] each with MI_Rooftop_<Slot>
+  [PASS] /Game/Art/Court/SM_RooftopProps loads
+  [PASS] SM_RooftopProps slots ['Body', 'Accent', 'Dark', 'Metal', 'Glow', 'Window'] each with MI_RooftopProps_<Slot>
+  [PASS] /Game/Art/Court/SM_RooftopProps_Furnace loads
+  [PASS] SM_RooftopProps_Furnace slots ['Body', 'Dark', 'Metal', 'Glow'] each with MI_RooftopProps_Furnace_<Slot>
+  [PASS] /Game/Art/City/SM_CityA_01 loads
+  [PASS] SM_CityA_01 slots ['Body', 'Accent', 'Dark', 'Metal', 'Glow', 'Window'] each with MI_CityA_<Slot>
+  [PASS] /Game/Art/City/SM_CityA_02 loads
+  [PASS] SM_CityA_02 slots ['Body', 'Dark', 'Metal', 'Glow', 'Window'] each with MI_CityA_<Slot>
+  [PASS] /Game/Art/City/SM_CityA_03 loads
+  [PASS] SM_CityA_03 slots ['Body', 'Dark', 'Metal', 'Glow', 'Window'] each with MI_CityA_<Slot>
+  [PASS] /Game/Art/City/SM_CityA_04 loads
+  [PASS] SM_CityA_04 slots ['Body', 'Accent', 'Dark', 'Glow', 'Window'] each with MI_CityA_<Slot>
+  [PASS] /Game/Art/City/SM_CityA_05 loads
+  [PASS] SM_CityA_05 slots ['Body', 'Accent', 'Dark', 'Metal', 'Glow', 'Window'] each with MI_CityA_<Slot>
+  [PASS] /Game/Art/City/SM_CityA_06 loads
+  [PASS] SM_CityA_06 slots ['Body', 'Accent', 'Dark', 'Metal', 'Glow', 'Window'] each with MI_CityA_<Slot>
+  [PASS] /Game/Art/City/SM_CityA_07 loads
+  [PASS] SM_CityA_07 slots ['Body', 'Accent', 'Dark', 'Metal', 'Glow', 'Window'] each with MI_CityA_<Slot>
+  [PASS] /Game/Art/City/SM_CityA_08 loads
+  [PASS] SM_CityA_08 slots ['Body', 'Dark', 'Metal', 'Glow', 'Window'] each with MI_CityA_<Slot>
+  [PASS] /Game/Art/City/SM_CityA_09 loads
+  [PASS] SM_CityA_09 slots ['Body', 'Accent', 'Dark', 'Metal', 'Glow', 'Window'] each with MI_CityA_<Slot>
+  [PASS] /Game/Art/City/SM_CityA_10 loads
+  [PASS] SM_CityA_10 slots ['Body', 'Accent', 'Dark', 'Metal', 'Glow', 'Window'] each with MI_CityA_<Slot>
+  [PASS] /Game/Art/City/SM_CityA_11 loads
+  [PASS] SM_CityA_11 slots ['Body', 'Accent', 'Dark', 'Metal', 'Glow', 'Window'] each with MI_CityA_<Slot>
+  [PASS] /Game/Art/City/SM_CityA_12 loads
+  [PASS] SM_CityA_12 slots ['Body', 'Dark', 'Metal', 'Glow', 'Window'] each with MI_CityA_<Slot>
+  [PASS] /Game/Art/City/SM_CityB_01 loads
+  [PASS] SM_CityB_01 slots ['Body', 'Accent', 'Dark', 'Glow', 'Window'] each with MI_CityB_<Slot>
+  [PASS] /Game/Art/City/SM_CityB_02 loads
+  [PASS] SM_CityB_02 slots ['Body', 'Dark', 'Metal', 'Glow', 'Window'] each with MI_CityB_<Slot>
+  [PASS] /Game/Art/City/SM_CityB_03 loads
+  [PASS] SM_CityB_03 slots ['Body', 'Accent', 'Dark', 'Metal', 'Glow', 'Window'] each with MI_CityB_<Slot>
+  [PASS] /Game/Art/City/SM_CityB_04 loads
+  [PASS] SM_CityB_04 slots ['Body', 'Accent', 'Dark', 'Metal', 'Glow', 'Window'] each with MI_CityB_<Slot>
+  [PASS] /Game/Art/City/SM_CityB_05 loads
+  [PASS] SM_CityB_05 slots ['Body', 'Dark', 'Metal', 'Glow', 'Window'] each with MI_CityB_<Slot>
+  [PASS] /Game/Art/City/SM_CityB_06 loads
+  [PASS] SM_CityB_06 slots ['Body', 'Accent', 'Dark', 'Metal', 'Glow', 'Window'] each with MI_CityB_<Slot>
+  [PASS] /Game/Art/City/SM_CityB_07 loads
+  [PASS] SM_CityB_07 slots ['Body', 'Accent', 'Dark', 'Metal', 'Glow', 'Window'] each with MI_CityB_<Slot>
+  [PASS] /Game/Art/City/SM_CityB_08 loads
+  [PASS] SM_CityB_08 slots ['Body', 'Accent', 'Dark', 'Metal', 'Glow', 'Window'] each with MI_CityB_<Slot>
+  [PASS] /Game/Art/City/SM_CityB_09 loads
+  [PASS] SM_CityB_09 slots ['Body', 'Dark', 'Metal', 'Glow', 'Window'] each with MI_CityB_<Slot>
+  [PASS] /Game/Art/City/SM_CityB_10 loads
+  [PASS] SM_CityB_10 slots ['Body', 'Accent', 'Dark', 'Metal', 'Glow', 'Window'] each with MI_CityB_<Slot>
+  [PASS] /Game/Art/City/SM_CityB_11 loads
+  [PASS] SM_CityB_11 slots ['Body', 'Accent', 'Dark', 'Metal', 'Glow', 'Window'] each with MI_CityB_<Slot>
+  [PASS] /Game/Art/City/SM_CityB_12 loads
+  [PASS] SM_CityB_12 slots ['Body', 'Accent', 'Dark', 'Metal', 'Glow', 'Window'] each with MI_CityB_<Slot>
+  [PASS] /Game/Art/City/SM_Sea loads
+  [PASS] SM_Sea slots ['Body', 'Dark', 'Glow', 'Water'] each with MI_Sea_<Slot>
+  [PASS] all 87 material instances load
+
+== Heroes (rest pose assembled from the imported sockets) ==
+-- Gantetsu (XL) --
+  [PASS] SM_Gantetsu_Pelvis sockets ['spine', 'hip_l', 'hip_r'] present (rotation 0, scale 1): spine(0.00, -0.00, 14.00), hip_l(0.00, -21.00, -10.00), hip_r(0.00, 21.00, -10.00)
+  [PASS] SM_Gantetsu_Torso sockets ['neck', 'shoulder_l', 'shoulder_r'] present (rotation 0, scale 1): neck(8.00, -0.00, 98.00), shoulder_l(-2.00, -33.00, 82.00), shoulder_r(-2.00, 33.00, 82.00)
+  [PASS] SM_Gantetsu_Head sockets ['eyes'] present (rotation 0, scale 1): eyes(18.00, -0.00, 22.00)
+  [PASS] SM_Gantetsu_UpperArm_L sockets ['elbow'] present (rotation 0, scale 1): elbow(0.00, 0.00, -56.00)
+  [PASS] SM_Gantetsu_UpperArm_R sockets ['elbow'] present (rotation 0, scale 1): elbow(0.00, 0.00, -56.00)
+  [PASS] SM_Gantetsu_LowerArm_L sockets ['hand'] present (rotation 0, scale 1): hand(2.00, 7.60, -57.00)
+  [PASS] SM_Gantetsu_LowerArm_R sockets ['hand'] present (rotation 0, scale 1): hand(2.00, -7.60, -57.00)
+  [PASS] SM_Gantetsu_Thigh_L sockets ['knee'] present (rotation 0, scale 1): knee(0.00, 0.00, -46.00)
+  [PASS] SM_Gantetsu_Thigh_R sockets ['knee'] present (rotation 0, scale 1): knee(0.00, 0.00, -46.00)
+  [PASS] SM_Gantetsu_Shin_L sockets ['sole'] present (rotation 0, scale 1): sole(6.00, 0.00, -60.00)
+  [PASS] SM_Gantetsu_Shin_R sockets ['sole'] present (rotation 0, scale 1): sole(6.00, 0.00, -60.00)
+  [PASS] soles level: left z -116.00 right z -116.00 (floor)
+  [PASS] floor-to-eyes 250.00 cm (target 250 +-5)
+  [PASS] overall width 94.40 cm (target 95, +-5 tolerance)
+  [PASS] triangles 7920 <= 8000
+  [PASS] left sockets negative Y: hip_l.y -21.00 shoulder_l.y -33.00 (right: 21.00, 33.00)
+  [PASS] L arm hangs down: shoulder z 212.0 > elbow z 156.0 > hand z 99.0
+  [PASS] L sole socket on the bottom of the foot: sole z -60.00, foot min z -60.00 (rel. knee)
+  [PASS] L knee below hip (-46.0)
+  [PASS] R arm hangs down: shoulder z 212.0 > elbow z 156.0 > hand z 99.0
+  [PASS] R sole socket on the bottom of the foot: sole z -60.00, foot min z -60.00 (rel. knee)
+  [PASS] R knee below hip (-46.0)
+  [PASS] uses slots TaG and Team
+  [PASS] faces +X (eyes x 18.0, sole x 6.0)
+   eye height 250.00  width 94.40  height 298.26  triangles 7920  pelvis height 116.00
+-- Minamo (L) --
+  [PASS] SM_Minamo_Pelvis sockets ['spine', 'hip_l', 'hip_r'] present (rotation 0, scale 1): spine(0.00, -0.00, 10.00), hip_l(0.00, -16.50, -6.00), hip_r(0.00, 16.50, -6.00)
+  [PASS] SM_Minamo_Torso sockets ['neck', 'shoulder_l', 'shoulder_r'] present (rotation 0, scale 1): neck(-1.00, -0.00, 58.00), shoulder_l(-1.00, -25.00, 51.00), shoulder_r(-1.00, 25.00, 51.00)
+  [PASS] SM_Minamo_Head sockets ['eyes'] present (rotation 0, scale 1): eyes(12.00, -0.00, 28.00)
+  [PASS] SM_Minamo_UpperArm_L sockets ['elbow'] present (rotation 0, scale 1): elbow(0.00, 0.00, -34.00)
+  [PASS] SM_Minamo_UpperArm_R sockets ['elbow'] present (rotation 0, scale 1): elbow(0.00, 0.00, -34.00)
+  [PASS] SM_Minamo_LowerArm_L sockets ['hand'] present (rotation 0, scale 1): hand(0.34, 1.90, -35.04)
+  [PASS] SM_Minamo_LowerArm_R sockets ['hand'] present (rotation 0, scale 1): hand(0.37, -2.31, -35.54)
+  [PASS] SM_Minamo_Thigh_L sockets ['knee'] present (rotation 0, scale 1): knee(0.00, 0.00, -46.00)
+  [PASS] SM_Minamo_Thigh_R sockets ['knee'] present (rotation 0, scale 1): knee(0.00, 0.00, -46.00)
+  [PASS] SM_Minamo_Shin_L sockets ['sole'] present (rotation 0, scale 1): sole(6.00, 0.00, -62.00)
+  [PASS] SM_Minamo_Shin_R sockets ['sole'] present (rotation 0, scale 1): sole(6.00, 0.00, -62.00)
+  [PASS] soles level: left z -114.00 right z -114.00 (floor)
+  [PASS] floor-to-eyes 210.00 cm (target 210 +-5)
+  [PASS] overall width 70.19 cm (target 70, +-5 tolerance)
+  [PASS] triangles 7972 <= 8000
+  [PASS] left sockets negative Y: hip_l.y -16.50 shoulder_l.y -25.00 (right: 16.50, 25.00)
+  [PASS] L arm hangs down: shoulder z 175.0 > elbow z 141.0 > hand z 106.0
+  [PASS] L sole socket on the bottom of the foot: sole z -62.00, foot min z -62.00 (rel. knee)
+  [PASS] L knee below hip (-46.0)
+  [PASS] R arm hangs down: shoulder z 175.0 > elbow z 141.0 > hand z 105.5
+  [PASS] R sole socket on the bottom of the foot: sole z -62.00, foot min z -62.00 (rel. knee)
+  [PASS] R knee below hip (-46.0)
+  [PASS] uses slots TaG and Team
+  [PASS] faces +X (eyes x 12.0, sole x 6.0)
+   eye height 210.00  width 70.19  height 221.60  triangles 7972  pelvis height 114.00
+-- Rei (M) --
+  [PASS] SM_Rei_Pelvis sockets ['spine', 'hip_l', 'hip_r'] present (rotation 0, scale 1): spine(0.00, -0.00, 9.00), hip_l(0.00, -9.50, -6.00), hip_r(0.00, 9.50, -6.00)
+  [PASS] SM_Rei_Torso sockets ['neck', 'shoulder_l', 'shoulder_r'] present (rotation 0, scale 1): neck(-1.00, -0.00, 44.00), shoulder_l(-1.00, -17.80, 38.00), shoulder_r(-1.00, 17.80, 38.00)
+  [PASS] SM_Rei_Head sockets ['eyes'] present (rotation 0, scale 1): eyes(10.00, -0.00, 23.00)
+  [PASS] SM_Rei_UpperArm_L sockets ['elbow'] present (rotation 0, scale 1): elbow(0.00, 0.00, -30.00)
+  [PASS] SM_Rei_UpperArm_R sockets ['elbow'] present (rotation 0, scale 1): elbow(0.00, 0.00, -30.00)
+  [PASS] SM_Rei_LowerArm_L sockets ['hand'] present (rotation 0, scale 1): hand(0.32, 1.83, -31.35)
+  [PASS] SM_Rei_LowerArm_R sockets ['hand'] present (rotation 0, scale 1): hand(0.32, -1.83, -31.35)
+  [PASS] SM_Rei_Thigh_L sockets ['knee'] present (rotation 0, scale 1): knee(0.00, 0.00, -43.00)
+  [PASS] SM_Rei_Thigh_R sockets ['knee'] present (rotation 0, scale 1): knee(0.00, 0.00, -43.00)
+  [PASS] SM_Rei_Shin_L sockets ['sole'] present (rotation 0, scale 1): sole(5.71, 0.00, -50.00)
+  [PASS] SM_Rei_Shin_R sockets ['sole'] present (rotation 0, scale 1): sole(5.71, 0.00, -50.00)
+  [PASS] soles level: left z -99.00 right z -99.00 (floor)
+  [PASS] floor-to-eyes 175.00 cm (target 175 +-5)
+  [PASS] overall width 47.98 cm (target 50, +-5 tolerance)
+  [PASS] triangles 6522 <= 8000
+  [PASS] left sockets negative Y: hip_l.y -9.50 shoulder_l.y -17.80 (right: 9.50, 17.80)
+  [PASS] L arm hangs down: shoulder z 146.0 > elbow z 116.0 > hand z 84.7
+  [PASS] L sole socket on the bottom of the foot: sole z -50.00, foot min z -50.00 (rel. knee)
+  [PASS] L knee below hip (-43.0)
+  [PASS] R arm hangs down: shoulder z 146.0 > elbow z 116.0 > hand z 84.7
+  [PASS] R sole socket on the bottom of the foot: sole z -50.00, foot min z -50.00 (rel. knee)
+  [PASS] R knee below hip (-43.0)
+  [PASS] uses slots TaG and Team
+  [PASS] faces +X (eyes x 10.0, sole x 5.7)
+   eye height 175.00  width 47.98  height 193.98  triangles 6522  pelvis height 99.00
+-- Hayate (M) --
+  [PASS] SM_Hayate_Pelvis sockets ['spine', 'hip_l', 'hip_r'] present (rotation 0, scale 1): spine(0.00, -0.00, 10.00), hip_l(0.00, -9.20, -6.50), hip_r(0.00, 9.20, -6.50)
+  [PASS] SM_Hayate_Torso sockets ['neck', 'shoulder_l', 'shoulder_r'] present (rotation 0, scale 1): neck(-1.00, -0.00, 48.00), shoulder_l(-1.00, -18.50, 41.00), shoulder_r(-1.00, 18.50, 41.00)
+  [PASS] SM_Hayate_Head sockets ['eyes'] present (rotation 0, scale 1): eyes(10.00, -0.00, 24.00)
+  [PASS] SM_Hayate_UpperArm_L sockets ['elbow'] present (rotation 0, scale 1): elbow(0.00, 0.00, -32.00)
+  [PASS] SM_Hayate_UpperArm_R sockets ['elbow'] present (rotation 0, scale 1): elbow(0.00, 0.00, -32.00)
+  [PASS] SM_Hayate_LowerArm_L sockets ['hand'] present (rotation 0, scale 1): hand(0.33, 1.86, -33.45)
+  [PASS] SM_Hayate_LowerArm_R sockets ['hand'] present (rotation 0, scale 1): hand(0.33, -1.86, -33.45)
+  [PASS] SM_Hayate_Thigh_L sockets ['knee'] present (rotation 0, scale 1): knee(0.00, 0.00, -46.50)
+  [PASS] SM_Hayate_Thigh_R sockets ['knee'] present (rotation 0, scale 1): knee(0.00, 0.00, -46.50)
+  [PASS] SM_Hayate_Shin_L sockets ['sole'] present (rotation 0, scale 1): sole(5.88, 0.00, -55.00)
+  [PASS] SM_Hayate_Shin_R sockets ['sole'] present (rotation 0, scale 1): sole(5.88, 0.00, -55.00)
+  [PASS] soles level: left z -108.00 right z -108.00 (floor)
+  [PASS] floor-to-eyes 190.00 cm (target 190 +-5)
+  [PASS] overall width 48.45 cm (target 50, +-5 tolerance)
+  [PASS] triangles 6774 <= 8000
+  [PASS] left sockets negative Y: hip_l.y -9.20 shoulder_l.y -18.50 (right: 9.20, 18.50)
+  [PASS] L arm hangs down: shoulder z 159.0 > elbow z 127.0 > hand z 93.6
+  [PASS] L sole socket on the bottom of the foot: sole z -55.00, foot min z -55.00 (rel. knee)
+  [PASS] L knee below hip (-46.5)
+  [PASS] R arm hangs down: shoulder z 159.0 > elbow z 127.0 > hand z 93.6
+  [PASS] R sole socket on the bottom of the foot: sole z -55.00, foot min z -55.00 (rel. knee)
+  [PASS] R knee below hip (-46.5)
+  [PASS] uses slots TaG and Team
+  [PASS] faces +X (eyes x 10.0, sole x 5.9)
+   eye height 190.00  width 48.45  height 200.50  triangles 6774  pelvis height 108.00
+-- Tsumugi (S) --
+  [PASS] SM_Tsumugi_Pelvis sockets ['spine', 'hip_l', 'hip_r'] present (rotation 0, scale 1): spine(0.00, -0.00, 7.50), hip_l(0.00, -7.50, -5.00), hip_r(0.00, 7.50, -5.00)
+  [PASS] SM_Tsumugi_Torso sockets ['neck', 'shoulder_l', 'shoulder_r'] present (rotation 0, scale 1): neck(-0.50, -0.00, 37.00), shoulder_l(-0.50, -14.50, 32.50), shoulder_r(-0.50, 14.50, 32.50)
+  [PASS] SM_Tsumugi_Head sockets ['eyes'] present (rotation 0, scale 1): eyes(9.20, -0.00, 20.50)
+  [PASS] SM_Tsumugi_UpperArm_L sockets ['elbow'] present (rotation 0, scale 1): elbow(0.00, 0.00, -22.50)
+  [PASS] SM_Tsumugi_UpperArm_R sockets ['elbow'] present (rotation 0, scale 1): elbow(0.00, 0.00, -22.50)
+  [PASS] SM_Tsumugi_LowerArm_L sockets ['hand'] present (rotation 0, scale 1): hand(0.25, 1.40, -24.56)
+  [PASS] SM_Tsumugi_LowerArm_R sockets ['hand'] present (rotation 0, scale 1): hand(0.25, -1.40, -24.56)
+  [PASS] SM_Tsumugi_Thigh_L sockets ['knee'] present (rotation 0, scale 1): knee(0.00, 0.00, -34.00)
+  [PASS] SM_Tsumugi_Thigh_R sockets ['knee'] present (rotation 0, scale 1): knee(0.00, 0.00, -34.00)
+  [PASS] SM_Tsumugi_Shin_L sockets ['sole'] present (rotation 0, scale 1): sole(4.76, 0.00, -41.00)
+  [PASS] SM_Tsumugi_Shin_R sockets ['sole'] present (rotation 0, scale 1): sole(4.76, 0.00, -41.00)
+  [PASS] soles level: left z -80.00 right z -80.00 (floor)
+  [PASS] floor-to-eyes 145.00 cm (target 145 +-5)
+  [PASS] overall width 41.39 cm (target 40, +-5 tolerance)
+  [PASS] triangles 7614 <= 8000
+  [PASS] left sockets negative Y: hip_l.y -7.50 shoulder_l.y -14.50 (right: 7.50, 14.50)
+  [PASS] L arm hangs down: shoulder z 120.0 > elbow z 97.5 > hand z 72.9
+  [PASS] L sole socket on the bottom of the foot: sole z -41.00, foot min z -41.00 (rel. knee)
+  [PASS] L knee below hip (-34.0)
+  [PASS] R arm hangs down: shoulder z 120.0 > elbow z 97.5 > hand z 72.9
+  [PASS] R sole socket on the bottom of the foot: sole z -41.00, foot min z -41.00 (rel. knee)
+  [PASS] R knee below hip (-34.0)
+  [PASS] uses slots TaG and Team
+  [PASS] faces +X (eyes x 9.2, sole x 4.8)
+   eye height 145.00  width 41.39  height 154.60  triangles 7614  pelvis height 80.00
+-- Hibiki (M) --
+  [PASS] SM_Hibiki_Pelvis sockets ['spine', 'hip_l', 'hip_r'] present (rotation 0, scale 1): spine(0.00, -0.00, 9.00), hip_l(0.00, -9.00, -6.00), hip_r(0.00, 9.00, -6.00)
+  [PASS] SM_Hibiki_Torso sockets ['neck', 'shoulder_l', 'shoulder_r'] present (rotation 0, scale 1): neck(-1.00, -0.00, 42.00), shoulder_l(-1.00, -18.50, 37.00), shoulder_r(-1.00, 18.50, 37.00)
+  [PASS] SM_Hibiki_Head sockets ['eyes'] present (rotation 0, scale 1): eyes(11.00, -0.00, 25.00)
+  [PASS] SM_Hibiki_UpperArm_L sockets ['elbow'] present (rotation 0, scale 1): elbow(0.00, 0.00, -29.00)
+  [PASS] SM_Hibiki_UpperArm_R sockets ['elbow'] present (rotation 0, scale 1): elbow(0.00, 0.00, -29.00)
+  [PASS] SM_Hibiki_LowerArm_L sockets ['hand'] present (rotation 0, scale 1): hand(0.29, 1.67, -29.85)
+  [PASS] SM_Hibiki_LowerArm_R sockets ['hand'] present (rotation 0, scale 1): hand(0.29, -1.67, -29.85)
+  [PASS] SM_Hibiki_Thigh_L sockets ['knee'] present (rotation 0, scale 1): knee(0.00, 0.00, -43.00)
+  [PASS] SM_Hibiki_Thigh_R sockets ['knee'] present (rotation 0, scale 1): knee(0.00, 0.00, -43.00)
+  [PASS] SM_Hibiki_Shin_L sockets ['sole'] present (rotation 0, scale 1): sole(5.49, 0.00, -50.00)
+  [PASS] SM_Hibiki_Shin_R sockets ['sole'] present (rotation 0, scale 1): sole(5.49, 0.00, -50.00)
+  [PASS] soles level: left z -99.00 right z -99.00 (floor)
+  [PASS] floor-to-eyes 175.00 cm (target 175 +-5)
+  [PASS] overall width 50.42 cm (target 50, +-5 tolerance)
+  [PASS] triangles 7786 <= 8000
+  [PASS] left sockets negative Y: hip_l.y -9.00 shoulder_l.y -18.50 (right: 9.00, 18.50)
+  [PASS] L arm hangs down: shoulder z 145.0 > elbow z 116.0 > hand z 86.1
+  [PASS] L sole socket on the bottom of the foot: sole z -50.00, foot min z -50.00 (rel. knee)
+  [PASS] L knee below hip (-43.0)
+  [PASS] R arm hangs down: shoulder z 145.0 > elbow z 116.0 > hand z 86.1
+  [PASS] R sole socket on the bottom of the foot: sole z -50.00, foot min z -50.00 (rel. knee)
+  [PASS] R knee below hip (-43.0)
+  [PASS] uses slots TaG and Team
+  [PASS] faces +X (eyes x 11.0, sole x 5.5)
+   eye height 175.00  width 50.42  height 194.50  triangles 7786  pelvis height 99.00
+
+== Ball ==
+  [PASS] SM_Ball diameter (24.00, 23.96, 24.00) (24 cm), centred (0.00, 0.00, 0.00)
+  [PASS] SM_Ball slots ['Body', 'Dark', 'Glow']
+
+== Hoop vs TaGTypes.h ==
+  [PASS] polygon groups (7) map 1:1 to material slots (7)
+  [PASS] BoardFrontX     TaGTypes 120.00  mesh 120.00
+  [PASS] BoardBackX      TaGTypes 117.00  mesh 117.00
+  [PASS] BoardHalfWidth  TaGTypes 90.00  mesh 90.00
+  [PASS] BoardBottomZ    TaGTypes 290.00  mesh 290.00
+  [PASS] BoardTopZ       TaGTypes 395.00  mesh 395.00
+  [PASS] board front face at x=120.0 spans y -90.00..90.00 z 290.00..395.00
+  [PASS] rim centre (157.50, 0.00, 305.00) == (RimX 157.5, 0, RimZ 305.0)
+  [PASS] rim tube centre-line radius 22.500 == RimRadius 22.5 (as used by TaGBallSim)
+  [PASS] rim tube radius 1.000 (z 304.00..306.00) == RimTube 1.0; inner edge r 21.50, outer r 23.50
+  [PASS] net hangs 39.7 cm below the rim
+  [PASS] pole/pad behind the baseline: max x -81.0 <= -80
+
+== Rooftop and props ==
+  [PASS] SM_Rooftop top surface z = 0.0000
+  [PASS] slot Court top region x 0..1100 y -750..750
+  [PASS] slot Paint top region x 0..580 y -245..245
+  [PASS] slot Apron top region x -600..1700 y -1300..1300
+  [PASS] slab thickness 100.0
+  [PASS] SM_RooftopProps: 0 vertices inside the play box x -150..1250, y -900..900 (above the floor)
+  [PASS] SM_RooftopProps_Furnace: 0 vertices inside the play box x -150..1250, y -900..900 (above the floor)
+
+== City skyline ==
+  [PASS] SM_CityA_01 side A: centre (-5787.92, -929.50, -1021.69), 64 m from the court, z -4000..1957, windows
+  [PASS] SM_CityA_02 side A: centre (-8001.73, -3802.63, -779.55), 94 m from the court, z -4000..2441, windows
+  [PASS] SM_CityA_03 side A: centre (-13944.86, -8718.75, -1069.40), 169 m from the court, z -4000..1861, windows
+  [PASS] SM_CityA_04 side A: centre (-4197.50, -4527.32, -3020.89), 66 m from the court, z -4132..-1910, windows
+  [PASS] SM_CityA_05 side A: centre (-6305.62, -10486.74, -1058.40), 125 m from the court, z -4000..1883, windows
+  [PASS] SM_CityA_06 side A: centre (-21341.34, -6457.58, 4083.62), 228 m from the court, z -4000..12167, windows
+  [PASS] SM_CityA_07 side A: centre (-83.13, -7509.17, -2774.75), 75 m from the court, z -4000..-1549, windows
+  [PASS] SM_CityA_08 side A: centre (2931.29, -15280.50, -1382.87), 155 m from the court, z -4000..1234, windows
+  [PASS] SM_CityA_09 side A: centre (5468.47, -9221.44, -1011.77), 105 m from the court, z -4000..1976, windows
+  [PASS] SM_CityA_10 side A: centre (16868.03, -13473.07, 6094.30), 212 m from the court, z -4000..16189, windows
+  [PASS] SM_CityA_11 side A: centre (5884.84, -2187.40, -2720.15), 58 m from the court, z -4000..-1440, windows
+  [PASS] SM_CityA_12 side A: centre (14123.74, -2120.02, -1080.94), 137 m from the court, z -4000..1838, windows
+  [PASS] SM_CityB_01 side B: centre (-5521.01, 759.09, -2910.69), 61 m from the court, z -4038..-1784, windows
+  [PASS] SM_CityB_02 side B: centre (-8515.25, 3673.11, -1693.33), 98 m from the court, z -4000..613, windows
+  [PASS] SM_CityB_03 side B: centre (-18071.59, 3814.72, 5596.56), 190 m from the court, z -4000..15193, windows
+  [PASS] SM_CityB_04 side B: centre (-3677.52, 4324.70, -2869.01), 60 m from the court, z -4290..-1448, windows
+  [PASS] SM_CityB_05 side B: centre (-6234.91, 10665.96, -1192.66), 126 m from the court, z -4000..1615, windows
+  [PASS] SM_CityB_06 side B: centre (-7121.41, 18951.41, 6171.08), 204 m from the court, z -4000..16342, windows
+  [PASS] SM_CityB_07 side B: centre (435.23, 7840.46, -1558.34), 78 m from the court, z -4000..883, windows
+  [PASS] SM_CityB_08 side B: centre (2022.79, 15798.96, 2097.43), 159 m from the court, z -4000..8195, windows
+  [PASS] SM_CityB_09 side B: centre (5280.02, 8479.31, -1084.95), 97 m from the court, z -4000..1830, windows
+  [PASS] SM_CityB_10 side B: centre (16269.99, 14470.42, 6146.54), 214 m from the court, z -4000..16293, windows
+  [PASS] SM_CityB_11 side B: centre (6141.55, 2663.96, -2958.00), 62 m from the court, z -4000..-1916, windows
+  [PASS] SM_CityB_12 side B: centre (14985.14, 2216.96, 4834.90), 146 m from the court, z -4000..13670, windows
+  [PASS] SM_Sea water plane z [-4000.0]
+
+== SFX (/Game/Audio/SFX) ==
+  [PASS] /Game/Audio/SFX/Bounce loads
+  [PASS] Bounce       0.380 s looping=False, source peak -3.0 dBFS
+  [PASS] /Game/Audio/SFX/Swish loads
+  [PASS] Swish        0.600 s looping=False, source peak -3.0 dBFS
+  [PASS] /Game/Audio/SFX/Rim loads
+  [PASS] Rim          1.000 s looping=False, source peak -3.0 dBFS
+  [PASS] /Game/Audio/SFX/Board loads
+  [PASS] Board        0.500 s looping=False, source peak -3.0 dBFS
+  [PASS] /Game/Audio/SFX/ShotRelease loads
+  [PASS] ShotRelease  0.320 s looping=False, source peak -3.0 dBFS
+  [PASS] /Game/Audio/SFX/Pass loads
+  [PASS] Pass         0.280 s looping=False, source peak -3.0 dBFS
+  [PASS] /Game/Audio/SFX/Catch loads
+  [PASS] Catch        0.220 s looping=False, source peak -3.0 dBFS
+  [PASS] /Game/Audio/SFX/Tackle loads
+  [PASS] Tackle       0.550 s looping=False, source peak -3.0 dBFS
+  [PASS] /Game/Audio/SFX/Block loads
+  [PASS] Block        0.420 s looping=False, source peak -3.0 dBFS
+  [PASS] /Game/Audio/SFX/Steal loads
+  [PASS] Steal        0.360 s looping=False, source peak -3.0 dBFS
+  [PASS] /Game/Audio/SFX/ReadWin loads
+  [PASS] ReadWin      0.900 s looping=False, source peak -3.0 dBFS
+  [PASS] /Game/Audio/SFX/ReadLose loads
+  [PASS] ReadLose     0.650 s looping=False, source peak -3.0 dBFS
+  [PASS] /Game/Audio/SFX/Whistle loads
+  [PASS] Whistle      0.750 s looping=False, source peak -3.0 dBFS
+  [PASS] /Game/Audio/SFX/Buzzer loads
+  [PASS] Buzzer       1.250 s looping=False, source peak -3.0 dBFS
+  [PASS] /Game/Audio/SFX/Score loads
+  [PASS] Score        1.700 s looping=False, source peak -3.0 dBFS
+  [PASS] /Game/Audio/SFX/Drive loads
+  [PASS] Drive        0.750 s looping=False, source peak -3.0 dBFS
+  [PASS] /Game/Audio/SFX/Dodge loads
+  [PASS] Dodge        0.550 s looping=False, source peak -3.0 dBFS
+  [PASS] /Game/Audio/SFX/ContestHum loads
+  [PASS] ContestHum   1.200 s looping=False, source peak -3.0 dBFS
+  [PASS] /Game/Audio/SFX/TackleCue loads
+  [PASS] TackleCue    0.250 s looping=False, source peak -3.0 dBFS
+  [PASS] /Game/Audio/SFX/Step loads
+  [PASS] Step         0.160 s looping=False, source peak -3.0 dBFS
+  [PASS] /Game/Audio/SFX/Down loads
+  [PASS] Down         1.000 s looping=False, source peak -3.0 dBFS
+  [PASS] /Game/Audio/SFX/Revive loads
+  [PASS] Revive       0.950 s looping=False, source peak -3.0 dBFS
+  [PASS] /Game/Audio/SFX/ArtCue loads
+  [PASS] ArtCue       0.850 s looping=False, source peak -3.0 dBFS
+  [PASS] /Game/Audio/SFX/UIMove loads
+  [PASS] UIMove       0.060 s looping=False, source peak -3.0 dBFS
+  [PASS] /Game/Audio/SFX/UIConfirm loads
+  [PASS] UIConfirm    0.200 s looping=False, source peak -3.0 dBFS
+  [PASS] /Game/Audio/SFX/CityPowerUp loads
+  [PASS] CityPowerUp  2.600 s looping=False, source peak -3.0 dBFS
+  [PASS] /Game/Audio/SFX/AmbientLoop loads
+  [PASS] AmbientLoop  24.000 s looping=True, source peak -3.0 dBFS
+
+== Triangle totals (LOD0, read from UE) ==
+  Gantetsu    7920
+  Minamo      7972
+  Rei         6522
+  Hayate      6774
+  Tsumugi     7614
+  Hibiki      7786
+  heroes total 44588 (budget 8000 each)
+  ball 3088
+  SM_Hoop                    1848
+  SM_Rooftop                   94
+  SM_RooftopProps            6454
+  SM_RooftopProps_Furnace    7492
+  city A (12 meshes) 19310, city B (12 meshes) 17326, sea 4376
+  [PASS] court + city + sea total 56900 (budget ~150k)
+

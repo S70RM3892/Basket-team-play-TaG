@@ -561,6 +561,29 @@ void ATaGGameMode::Tick(float DeltaSeconds)
 	{
 		TickSnap(DeltaSeconds);
 	}
+	// -TaGInputTest: a 1on1 against a practice bot with the hero from -TaGHero
+	if (FParse::Param(FCommandLine::Get(), TEXT("TaGInputTest")) && S->Phase != ETaGPhase::Playing && SnapTimer < 100.f)
+	{
+		SnapTimer += DeltaSeconds;
+		if (S->Phase == ETaGPhase::Title)
+		{
+			EnterLobby(1, 0);
+		}
+		else if (S->Phase == ETaGPhase::Lobby && SnapTimer > 1.f)
+		{
+			FString HeroKey;
+			if (FParse::Value(FCommandLine::Get(), TEXT("TaGHero="), HeroKey))
+			{
+				if (APlayerController* PC = GetWorld()->GetFirstPlayerController())
+				{
+					SetPlayerHero(PC, TaGHeroes::FromKey(HeroKey));
+				}
+			}
+			StartMatch();
+			SnapTimer = 100.f;
+		}
+	}
+
 	// -TaGNetHost: network smoke test. Start once a client joined, stop after a while.
 	if (FParse::Param(FCommandLine::Get(), TEXT("TaGNetHost")))
 	{

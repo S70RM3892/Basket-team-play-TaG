@@ -208,16 +208,16 @@ FVector ATaGBall::HoldPoint(const ATaGCharacter* Who) const
 		const FVector Fwd = View.Vector();
 		const FVector Right = FRotationMatrix(View).GetUnitAxis(EAxis::Y);
 		const FVector Up = FRotationMatrix(View).GetUnitAxis(EAxis::Z);
-		FVector P = Who->GetEyeLocation() + Fwd * 80.f;
+		FVector P = Who->GetEyeLocation() + Fwd * 100.f;
 		if (Who->IsChargingShot())
 		{
-			P -= Up * 12.f;
+			P -= Up * 16.f;
 		}
 		else
 		{
 			const bool bDribbling = Who->GetAction() == ETaGAction::None && Who->GetVelocity().Size2D() > 60.f;
 			const float Bob = bDribbling ? FMath::Abs(FMath::Sin(Time * 7.5f)) : 1.f;
-			P += Right * 32.f - Up * FMath::Lerp(75.f, 38.f, Bob);
+			P += Right * 40.f - Up * FMath::Lerp(85.f, 50.f, Bob);
 		}
 		return P;
 	}

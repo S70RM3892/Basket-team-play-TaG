@@ -1,5 +1,6 @@
 #include "Core/TaGStage.h"
 #include "BasketTaG.h"
+#include "Core/TaGArtLib.h"
 #include "Core/TaGAudio.h"
 #include "Core/TaGTypes.h"
 #include "AssetRegistry/AssetRegistryModule.h"
@@ -13,6 +14,7 @@
 #include "Engine/DirectionalLight.h"
 #include "Engine/ExponentialHeightFog.h"
 #include "Engine/SkyLight.h"
+#include "Engine/PostProcessVolume.h"
 #include "Engine/StaticMesh.h"
 #include "Materials/MaterialInstanceDynamic.h"
 #include "UObject/ConstructorHelpers.h"
@@ -99,26 +101,42 @@ void ATaGStage::AddLine(const FVector2D& A, const FVector2D& B)
 
 void ATaGStage::BuildFromArt()
 {
+	// Known meshes from tools/blender (loaded by name: in an uncooked -game run the asset registry may still be
+	// scanning at this point). Any extra meshes found under the same folders are added too.
+	TArray<FString> Paths = {
+		TEXT("/Game/Art/Court/SM_Rooftop"), TEXT("/Game/Art/Court/SM_Hoop"),
+		TEXT("/Game/Art/Court/SM_RooftopProps"), TEXT("/Game/Art/Court/SM_RooftopProps_Furnace"), TEXT("/Game/Art/City/SM_Sea") };
+	for (int32 i = 1; i <= 12; ++i)
+	{
+		Paths.Add(FString::Printf(TEXT("/Game/Art/City/SM_CityA_%02d"), i));
+		Paths.Add(FString::Printf(TEXT("/Game/Art/City/SM_CityB_%02d"), i));
+	}
 	IAssetRegistry& Registry = FModuleManager::LoadModuleChecked<FAssetRegistryModule>(TEXT("AssetRegistry")).Get();
-	TArray<FAssetData> Assets;
-	Registry.GetAssetsByPath(TEXT("/Game/Art/Court"), Assets, true);
-	TArray<FAssetData> City;
-	Registry.GetAssetsByPath(TEXT("/Game/Art/City"), City, true);
-	Assets.Append(City);
+	for (const TCHAR* Folder : { TEXT("/Game/Art/Court"), TEXT("/Game/Art/City") })
+	{
+		TArray<FAssetData> Found;
+		Registry.GetAssetsByPath(FName(Folder), Found, true);
+		for (const FAssetData& Data : Found)
+		{
+			if (Data.AssetClassPath == UStaticMesh::StaticClass()->GetClassPathName())
+			{
+				Paths.AddUnique(Data.PackageName.ToString());
+			}
+		}
+	}
 
 	TMap<int32, FDistrictBlock> BlocksA, BlocksB;
-	for (const FAssetData& Data : Assets)
+	int32 Loaded = 0;
+	for (const FString& Path : Paths)
 	{
-		if (Data.AssetClassPath != UStaticMesh::StaticClass()->GetClassPathName())
-		{
-			continue;
-		}
-		UStaticMesh* Mesh = Cast<UStaticMesh>(Data.GetAsset());
+		UStaticMesh* Mesh = TaGArt::LoadMesh(Path);
 		if (!Mesh)
 		{
 			continue;
 		}
-		const FString Name = Data.AssetName.ToString();
+		Loaded++;
+		FString Name;
+		Path.Split(TEXT("/"), nullptr, &Name, ESearchCase::IgnoreCase, ESearchDir::FromEnd);
 		const bool bFloor = Name.Contains(TEXT("Rooftop")) && !Name.Contains(TEXT("Props"));
 		UStaticMeshComponent* C = AddMesh(Mesh, FTransform::Identity, bFloor);
 		bHasArt = true;
@@ -169,7 +187,7 @@ void ATaGStage::BuildFromArt()
 	}
 	if (bHasArt)
 	{
-		UE_LOG(LogTaG, Log, TEXT("Stage: %d art meshes, district A %d blocks, district B %d blocks"), Assets.Num(), DistrictA.Num(), DistrictB.Num());
+		UE_LOG(LogTaG, Display, TEXT("Stage: %d art meshes, district A %d blocks, district B %d blocks"), Loaded, DistrictA.Num(), DistrictB.Num());
 	}
 }
 
@@ -266,13 +284,14 @@ void ATaGStage::BuildLights()
 	Params.Owner = this;
 
 	// Evening sun, low and warm: the city's windows and the TaG glow carry the scene.
-	if (ADirectionalLight* Sun = GetWorld()->SpawnActor<ADirectionalLight>(ADirectionalLight::StaticClass(), FVector(0.f, 0.f, 1000.f), FRotator(-14.f, 140.f, 0.f), Params))
+	// Sunset over the bay: the sun sits just above the horizon behind the city, so the windows and TaG glow read.
+	if (ADirectionalLight* Sun = GetWorld()->SpawnActor<ADirectionalLight>(ADirectionalLight::StaticClass(), FVector(0.f, 0.f, 1000.f), FRotator(-2.5f, 150.f, 0.f), Params))
 	{
 		Sun->SetMobility(EComponentMobility::Movable);
 		if (UDirectionalLightComponent* L = Cast<UDirectionalLightComponent>(Sun->GetLightComponent()))
 		{
-			L->SetIntensity(4.f);
-			L->SetLightColor(FLinearColor(1.f, 0.72f, 0.48f));
+			L->SetIntensity(3.f);
+			L->SetLightColor(FLinearColor(1.f, 0.58f, 0.32f));
 			L->SetAtmosphereSunLight(true);
 			L->SetDynamicShadowDistanceMovableLight(5000.f);
 		}
@@ -283,11 +302,27 @@ void ATaGStage::BuildLights()
 		{
 			S->SetMobility(EComponentMobility::Movable);
 			S->bRealTimeCapture = true;
-			S->SetIntensity(1.2f);
+			S->SetIntensity(0.8f);
 			S->RecaptureSky();
 		}
 	}
 	GetWorld()->SpawnActor<ASkyAtmosphere>(ASkyAtmosphere::StaticClass(), FTransform::Identity, Params);
+	// Dusk exposure: keep auto exposure from brightening the sunset back to day, and let emissive windows bloom.
+	if (APostProcessVolume* PP = GetWorld()->SpawnActor<APostProcessVolume>(APostProcessVolume::StaticClass(), FTransform::Identity, Params))
+	{
+		PP->bUnbound = true;
+		FPostProcessSettings& S = PP->Settings;
+		S.bOverride_AutoExposureBias = true;
+		S.AutoExposureBias = -0.8f;
+		S.bOverride_AutoExposureMaxBrightness = true;
+		S.AutoExposureMaxBrightness = 4.f;
+		S.bOverride_BloomIntensity = true;
+		S.BloomIntensity = 0.9f;
+		S.bOverride_VignetteIntensity = true;
+		S.VignetteIntensity = 0.35f;
+		S.bOverride_ColorSaturation = true;
+		S.ColorSaturation = FVector4(1.08f, 1.05f, 1.1f, 1.f);
+	}
 	if (AExponentialHeightFog* Fog = GetWorld()->SpawnActor<AExponentialHeightFog>(AExponentialHeightFog::StaticClass(), FTransform(FVector(0.f, 0.f, -3000.f)), Params))
 	{
 		if (UExponentialHeightFogComponent* F = Fog->GetComponent())

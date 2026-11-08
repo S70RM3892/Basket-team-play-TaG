@@ -93,7 +93,9 @@ namespace TaG
 	constexpr float ShotPerfectLo = 0.68f;
 	constexpr float ShotPerfectHi = 0.80f;
 	constexpr float ShotAutoRelease = 1.30f;
-	constexpr float ShotMeterSeconds = 0.75f; // a 1.0 meter jumper takes this long (v0.4 real tempo)
+	// Seconds for a Meter=1.0 shot to fill to 1.0 (athlete.gd: charge += delta / meter). With the jumper's auto jump
+	// at 0.40 s and 340 cm/s, the apex comes at ~0.75 s = charge 0.75, inside the perfect window.
+	constexpr float ShotMeterSeconds = 1.0f;
 	constexpr float ContactShotMult = 0.55f;
 
 	// ---------------------------------------------------------------- Guard / down

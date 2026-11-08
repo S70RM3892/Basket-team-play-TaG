@@ -245,9 +245,9 @@ TSharedRef<SWidget> TaGUI::MakeMatchHUD(FPCPtr PC)
 			]
 			+ SHorizontalBox::Slot().AutoWidth().VAlign(VAlign_Center)
 			[
-				SNew(SBox).WidthOverride(230.f)
+				SNew(SBox).WidthOverride(270.f)
 				[
-					SNew(STextBlock).Font(Font(15.f))
+					SNew(STextBlock).Font(Font(14.f))
 					.Text_Lambda([PC, Kind]()
 					{
 						const ATaGCharacter* Me = GetMe(PC);

@@ -82,6 +82,10 @@ protected:
 	bool bPauseMenu = false;
 	float NetLogTimer = 0.f;
 	float NetTestTime = 0.f;
+	float InputTestT = 0.f;
+	int32 InputTestStep = 0;
+
+	void TickInputTest(float Dt);
 	bool bUIMode = false;
 	float OrbitAngle = 0.f;
 

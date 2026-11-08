@@ -1973,12 +1973,23 @@ void ATaGCharacter::TickVisuals(float Dt)
 		const bool bShow = !bThirdPerson && (MyRole != 1 || Action == ETaGAction::Shoot) && Action != ETaGAction::Down;
 		FPArmL->SetVisibility(bShow);
 		FPArmR->SetVisibility(bShow);
-		// Forearms hang from the elbow (-Z); pitch them forward so the hands reach into view.
-		const float Lift = bUp ? 45.f : 0.f;
-		const float Pitch = bUp ? 160.f : 70.f;
-		const float Reach = FMath::Max(0.6f, S);
-		FPArmL->SetRelativeLocationAndRotation(FVector(25.f, -26.f * Reach, -50.f * Reach + Lift), FRotator(Pitch, 0.f, -8.f));
-		FPArmR->SetRelativeLocationAndRotation(FVector(25.f, 26.f * Reach, -50.f * Reach + Lift), FRotator(Pitch, 0.f, 8.f));
+		// Forearms hang from the elbow (-Z); pitch them forward and a little up so the hands sit in the
+		// lower part of the view (vertical half-FOV is only ~31 degrees at 95 horizontal).
+		const float Lift = bUp ? 30.f : 0.f;
+		const float Pitch = bUp ? 165.f : 98.f;
+		const float Reach = FMath::Clamp(S, 0.75f, 1.3f);
+		const bool bArtArms = FPArmL->GetStaticMesh() != TaGArt::EngineCylinder();
+		for (int32 Side = 0; Side < 2; ++Side)
+		{
+			UStaticMeshComponent* Arm = Side == 0 ? FPArmL.Get() : FPArmR.Get();
+			const float Y = (Side == 0 ? -24.f : 24.f) * Reach;
+			const FVector Elbow(18.f, Y, -24.f * Reach + Lift);
+			const FRotator Rot(Pitch, 0.f, Side == 0 ? -6.f : 6.f);
+			// Art meshes pivot at the elbow; the engine cylinder is centered, so shift it half a forearm along its axis.
+			const float Len = 32.f * S;
+			const FVector Loc = bArtArms ? Elbow : Elbow + Rot.RotateVector(FVector(0.f, 0.f, -Len * 0.5f));
+			Arm->SetRelativeLocationAndRotation(Loc, Rot);
+		}
 		TaGArt::SetGlow(FPGlowL, Tell, bFirstReady ? 6.f : 0.2f);
 		TaGArt::SetGlow(FPGlowR, Tell, bSecondReady ? 6.f : 0.2f);
 	}

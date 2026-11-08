@@ -1,0 +1,5742 @@
+{
+ "generated": "2026-11-08 12:59:47",
+ "engine": "5.8.4-58902052+++UE5+Release-5.8",
+ "units": "cm; UE axes: +X forward, +Y right (left = -Y), +Z up",
+ "notes": [
+  "Hero parts rotate rigidly around their pivots; every socket has zero rotation and unit scale.",
+  "Rest pose: pelvis pivot at pelvis_height above the floor; chain Pelvis.spine -> Torso, Torso.neck -> Head, Torso.shoulder_l/r -> UpperArm_L/R, UpperArm.elbow -> LowerArm, Pelvis.hip_l/r -> Thigh_L/R, Thigh.knee -> Shin. Shin.sole lies on the floor plane.",
+  "LowerArm hand socket = palm surface centre; palms face the body midline in rest pose (left palm normal +Y, right palm normal -Y) so arms raised forward hold the ball between the palms.",
+  "Head eyes socket = point between the eyes (first-person camera).",
+  "Runtime-overridden slots: Team (Color), TaG (Emissive/EmissiveStrength), Glow (Emissive/EmissiveStrength), Window (EmissiveStrength; default 0 = lights off).",
+  "M_TaGBase EmissiveColor = Emissive * EmissiveStrength * VertexColor.R. Only window quads carry vertex colours (R 0.15..1.0, per-window variation); every other mesh reads 1.0.",
+  "Rim: torus with tube centre-line radius RimRadius (22.5) and tube radius RimTube (1.0), exactly the torus TaGBallSim collides against; inner edge radius is therefore 21.5.",
+  "Court/city meshes are authored in court coordinates: spawn them at the identity transform.",
+  "Collision: SM_Rooftop has one simple box (x -600..1700, y -1300..1300, z -100..0); SM_Hoop has simple boxes for the pole and padding only; all other meshes have no simple collision."
+ ],
+ "materials": {
+  "M_TaGBase": {
+   "path": "/Game/Art/Materials/M_TaGBase",
+   "blend_mode": "BLEND_OPAQUE",
+   "scalar_parameters": {
+    "EmissiveStrength": 0.0,
+    "Metallic": 0.0,
+    "Roughness": 0.6000000238418579
+   },
+   "vector_parameters": {
+    "Color": [
+     0.5,
+     0.5,
+     0.5
+    ],
+    "Emissive": [
+     1.0,
+     1.0,
+     1.0
+    ]
+   }
+  },
+  "M_TaGTranslucent": {
+   "path": "/Game/Art/Materials/M_TaGTranslucent",
+   "blend_mode": "BLEND_TRANSLUCENT",
+   "scalar_parameters": {
+    "EmissiveStrength": 0.0,
+    "Metallic": 0.0,
+    "Opacity": 0.5,
+    "Roughness": 0.6000000238418579
+   },
+   "vector_parameters": {
+    "Color": [
+     0.5,
+     0.5,
+     0.5
+    ],
+    "Emissive": [
+     1.0,
+     1.0,
+     1.0
+    ]
+   },
+   "translucency_lighting_mode": "TLM_SURFACE"
+  },
+  "M_TaGWater": {
+   "path": "/Game/Art/Materials/M_TaGWater",
+   "blend_mode": "BLEND_OPAQUE",
+   "scalar_parameters": {
+    "Roughness": 0.05999999865889549
+   },
+   "vector_parameters": {
+    "Color": [
+     0.004,
+     0.024,
+     0.027
+    ]
+   }
+  }
+ },
+ "material_instances": {
+  "/Game/Art/Ball/MI_Ball_Body": {
+   "parent": "/Game/Art/Materials/M_TaGBase",
+   "Color": [
+    0.7454,
+    0.162,
+    0.013
+   ],
+   "Emissive": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "Roughness": 0.72,
+   "Metallic": 0.0,
+   "EmissiveStrength": 0.0
+  },
+  "/Game/Art/Ball/MI_Ball_Dark": {
+   "parent": "/Game/Art/Materials/M_TaGBase",
+   "Color": [
+    0.0116,
+    0.0103,
+    0.0091
+   ],
+   "Emissive": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "Roughness": 0.8,
+   "Metallic": 0.0,
+   "EmissiveStrength": 0.0
+  },
+  "/Game/Art/Ball/MI_Ball_Glow": {
+   "parent": "/Game/Art/Materials/M_TaGBase",
+   "Color": [
+    1.0,
+    0.6445,
+    0.1946
+   ],
+   "Emissive": [
+    1.0,
+    0.6445,
+    0.1946
+   ],
+   "Roughness": 0.4,
+   "Metallic": 0.0,
+   "EmissiveStrength": 1.0
+  },
+  "/Game/Art/City/MI_CityA_Accent": {
+   "parent": "/Game/Art/Materials/M_TaGBase",
+   "Color": [
+    0.2705,
+    0.0762,
+    0.0369
+   ],
+   "Emissive": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "Roughness": 0.85,
+   "Metallic": 0.0,
+   "EmissiveStrength": 0.0
+  },
+  "/Game/Art/City/MI_CityA_Body": {
+   "parent": "/Game/Art/Materials/M_TaGBase",
+   "Color": [
+    0.2345,
+    0.1779,
+    0.1301
+   ],
+   "Emissive": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "Roughness": 0.9,
+   "Metallic": 0.0,
+   "EmissiveStrength": 0.0
+  },
+  "/Game/Art/City/MI_CityA_Dark": {
+   "parent": "/Game/Art/Materials/M_TaGBase",
+   "Color": [
+    0.0242,
+    0.0232,
+    0.0273
+   ],
+   "Emissive": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "Roughness": 0.8,
+   "Metallic": 0.0,
+   "EmissiveStrength": 0.0
+  },
+  "/Game/Art/City/MI_CityA_Glow": {
+   "parent": "/Game/Art/Materials/M_TaGBase",
+   "Color": [
+    1.0,
+    0.4397,
+    0.107
+   ],
+   "Emissive": [
+    1.0,
+    0.4397,
+    0.107
+   ],
+   "Roughness": 0.3,
+   "Metallic": 0.0,
+   "EmissiveStrength": 5.0
+  },
+  "/Game/Art/City/MI_CityA_Metal": {
+   "parent": "/Game/Art/Materials/M_TaGBase",
+   "Color": [
+    0.1046,
+    0.117,
+    0.1384
+   ],
+   "Emissive": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "Roughness": 0.5,
+   "Metallic": 0.6,
+   "EmissiveStrength": 0.0
+  },
+  "/Game/Art/City/MI_CityA_Window": {
+   "parent": "/Game/Art/Materials/M_TaGBase",
+   "Color": [
+    0.011,
+    0.0168,
+    0.0296
+   ],
+   "Emissive": [
+    1.0,
+    0.5395,
+    0.1946
+   ],
+   "Roughness": 0.2,
+   "Metallic": 0.0,
+   "EmissiveStrength": 0.0
+  },
+  "/Game/Art/City/MI_CityB_Accent": {
+   "parent": "/Game/Art/Materials/M_TaGBase",
+   "Color": [
+    0.4852,
+    0.552,
+    0.6308
+   ],
+   "Emissive": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "Roughness": 0.4,
+   "Metallic": 0.0,
+   "EmissiveStrength": 0.0
+  },
+  "/Game/Art/City/MI_CityB_Body": {
+   "parent": "/Game/Art/Materials/M_TaGBase",
+   "Color": [
+    0.159,
+    0.2016,
+    0.2623
+   ],
+   "Emissive": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "Roughness": 0.5,
+   "Metallic": 0.2,
+   "EmissiveStrength": 0.0
+  },
+  "/Game/Art/City/MI_CityB_Dark": {
+   "parent": "/Game/Art/Materials/M_TaGBase",
+   "Color": [
+    0.0168,
+    0.0203,
+    0.0284
+   ],
+   "Emissive": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "Roughness": 0.7,
+   "Metallic": 0.0,
+   "EmissiveStrength": 0.0
+  },
+  "/Game/Art/City/MI_CityB_Glow": {
+   "parent": "/Game/Art/Materials/M_TaGBase",
+   "Color": [
+    0.7913,
+    0.8879,
+    1.0
+   ],
+   "Emissive": [
+    0.7913,
+    0.8879,
+    1.0
+   ],
+   "Roughness": 0.3,
+   "Metallic": 0.0,
+   "EmissiveStrength": 5.0
+  },
+  "/Game/Art/City/MI_CityB_Metal": {
+   "parent": "/Game/Art/Materials/M_TaGBase",
+   "Color": [
+    0.2542,
+    0.2918,
+    0.3419
+   ],
+   "Emissive": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "Roughness": 0.35,
+   "Metallic": 0.8,
+   "EmissiveStrength": 0.0
+  },
+  "/Game/Art/City/MI_CityB_Window": {
+   "parent": "/Game/Art/Materials/M_TaGBase",
+   "Color": [
+    0.0091,
+    0.0144,
+    0.0252
+   ],
+   "Emissive": [
+    0.6867,
+    0.8388,
+    1.0
+   ],
+   "Roughness": 0.15,
+   "Metallic": 0.0,
+   "EmissiveStrength": 0.0
+  },
+  "/Game/Art/City/MI_Sea_Body": {
+   "parent": "/Game/Art/Materials/M_TaGBase",
+   "Color": [
+    0.107,
+    0.0613,
+    0.0369
+   ],
+   "Emissive": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "Roughness": 0.8,
+   "Metallic": 0.0,
+   "EmissiveStrength": 0.0
+  },
+  "/Game/Art/City/MI_Sea_Dark": {
+   "parent": "/Game/Art/Materials/M_TaGBase",
+   "Color": [
+    0.0232,
+    0.0194,
+    0.016
+   ],
+   "Emissive": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "Roughness": 0.8,
+   "Metallic": 0.0,
+   "EmissiveStrength": 0.0
+  },
+  "/Game/Art/City/MI_Sea_Glow": {
+   "parent": "/Game/Art/Materials/M_TaGBase",
+   "Color": [
+    1.0,
+    0.4342,
+    0.1022
+   ],
+   "Emissive": [
+    1.0,
+    0.4342,
+    0.1022
+   ],
+   "Roughness": 0.3,
+   "Metallic": 0.0,
+   "EmissiveStrength": 6.0
+  },
+  "/Game/Art/City/MI_Sea_Water": {
+   "parent": "/Game/Art/Materials/M_TaGWater",
+   "Color": [
+    0.0033,
+    0.0232,
+    0.0273
+   ],
+   "Roughness": 0.06
+  },
+  "/Game/Art/Court/MI_Hoop_Accent": {
+   "parent": "/Game/Art/Materials/M_TaGBase",
+   "Color": [
+    0.6939,
+    0.3763,
+    0.0242
+   ],
+   "Emissive": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "Roughness": 0.6,
+   "Metallic": 0.0,
+   "EmissiveStrength": 0.0
+  },
+  "/Game/Art/Court/MI_Hoop_Board": {
+   "parent": "/Game/Art/Materials/M_TaGBase",
+   "Color": [
+    0.8148,
+    0.855,
+    0.8879
+   ],
+   "Emissive": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "Roughness": 0.2,
+   "Metallic": 0.0,
+   "EmissiveStrength": 0.0
+  },
+  "/Game/Art/Court/MI_Hoop_Dark": {
+   "parent": "/Game/Art/Materials/M_TaGBase",
+   "Color": [
+    0.013,
+    0.0144,
+    0.0176
+   ],
+   "Emissive": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "Roughness": 0.6,
+   "Metallic": 0.0,
+   "EmissiveStrength": 0.0
+  },
+  "/Game/Art/Court/MI_Hoop_Glow": {
+   "parent": "/Game/Art/Materials/M_TaGBase",
+   "Color": [
+    1.0,
+    0.7913,
+    0.4342
+   ],
+   "Emissive": [
+    1.0,
+    0.7913,
+    0.4342
+   ],
+   "Roughness": 0.3,
+   "Metallic": 0.0,
+   "EmissiveStrength": 2.0
+  },
+  "/Game/Art/Court/MI_Hoop_Metal": {
+   "parent": "/Game/Art/Materials/M_TaGBase",
+   "Color": [
+    0.0423,
+    0.0497,
+    0.0613
+   ],
+   "Emissive": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "Roughness": 0.4,
+   "Metallic": 0.8,
+   "EmissiveStrength": 0.0
+  },
+  "/Game/Art/Court/MI_Hoop_Net": {
+   "parent": "/Game/Art/Materials/M_TaGBase",
+   "Color": [
+    0.8879,
+    0.8879,
+    0.8879
+   ],
+   "Emissive": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "Roughness": 0.7,
+   "Metallic": 0.0,
+   "EmissiveStrength": 0.0
+  },
+  "/Game/Art/Court/MI_Hoop_TaG": {
+   "parent": "/Game/Art/Materials/M_TaGBase",
+   "Color": [
+    0.0423,
+    0.0232,
+    0.0144
+   ],
+   "Emissive": [
+    1.0,
+    0.3515,
+    0.0513
+   ],
+   "Roughness": 0.3,
+   "Metallic": 0.0,
+   "EmissiveStrength": 4.0
+  },
+  "/Game/Art/Court/MI_RooftopProps_Accent": {
+   "parent": "/Game/Art/Materials/M_TaGBase",
+   "Color": [
+    0.5841,
+    0.3613,
+    0.0203
+   ],
+   "Emissive": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "Roughness": 0.6,
+   "Metallic": 0.0,
+   "EmissiveStrength": 0.0
+  },
+  "/Game/Art/Court/MI_RooftopProps_Body": {
+   "parent": "/Game/Art/Materials/M_TaGBase",
+   "Color": [
+    0.147,
+    0.1559,
+    0.1714
+   ],
+   "Emissive": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "Roughness": 0.8,
+   "Metallic": 0.0,
+   "EmissiveStrength": 0.0
+  },
+  "/Game/Art/Court/MI_RooftopProps_Dark": {
+   "parent": "/Game/Art/Materials/M_TaGBase",
+   "Color": [
+    0.0137,
+    0.0152,
+    0.0185
+   ],
+   "Emissive": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "Roughness": 0.8,
+   "Metallic": 0.0,
+   "EmissiveStrength": 0.0
+  },
+  "/Game/Art/Court/MI_RooftopProps_Furnace_Body": {
+   "parent": "/Game/Art/Materials/M_TaGBase",
+   "Color": [
+    0.0704,
+    0.0513,
+    0.0395
+   ],
+   "Emissive": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "Roughness": 0.9,
+   "Metallic": 0.0,
+   "EmissiveStrength": 0.0
+  },
+  "/Game/Art/Court/MI_RooftopProps_Furnace_Dark": {
+   "parent": "/Game/Art/Materials/M_TaGBase",
+   "Color": [
+    0.0116,
+    0.0103,
+    0.0097
+   ],
+   "Emissive": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "Roughness": 0.85,
+   "Metallic": 0.0,
+   "EmissiveStrength": 0.0
+  },
+  "/Game/Art/Court/MI_RooftopProps_Furnace_Glow": {
+   "parent": "/Game/Art/Materials/M_TaGBase",
+   "Color": [
+    1.0,
+    0.3231,
+    0.0452
+   ],
+   "Emissive": [
+    1.0,
+    0.3231,
+    0.0452
+   ],
+   "Roughness": 0.4,
+   "Metallic": 0.0,
+   "EmissiveStrength": 8.0
+  },
+  "/Game/Art/Court/MI_RooftopProps_Furnace_Metal": {
+   "parent": "/Game/Art/Materials/M_TaGBase",
+   "Color": [
+    0.1022,
+    0.0802,
+    0.0648
+   ],
+   "Emissive": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "Roughness": 0.6,
+   "Metallic": 0.5,
+   "EmissiveStrength": 0.0
+  },
+  "/Game/Art/Court/MI_RooftopProps_Glow": {
+   "parent": "/Game/Art/Materials/M_TaGBase",
+   "Color": [
+    1.0,
+    0.9047,
+    0.7454
+   ],
+   "Emissive": [
+    1.0,
+    0.9047,
+    0.7454
+   ],
+   "Roughness": 0.2,
+   "Metallic": 0.0,
+   "EmissiveStrength": 12.0
+  },
+  "/Game/Art/Court/MI_RooftopProps_Metal": {
+   "parent": "/Game/Art/Materials/M_TaGBase",
+   "Color": [
+    0.0685,
+    0.0782,
+    0.0953
+   ],
+   "Emissive": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "Roughness": 0.45,
+   "Metallic": 0.7,
+   "EmissiveStrength": 0.0
+  },
+  "/Game/Art/Court/MI_RooftopProps_Window": {
+   "parent": "/Game/Art/Materials/M_TaGBase",
+   "Color": [
+    0.011,
+    0.0168,
+    0.0296
+   ],
+   "Emissive": [
+    1.0,
+    0.5395,
+    0.1946
+   ],
+   "Roughness": 0.2,
+   "Metallic": 0.0,
+   "EmissiveStrength": 0.0
+  },
+  "/Game/Art/Court/MI_Rooftop_Apron": {
+   "parent": "/Game/Art/Materials/M_TaGBase",
+   "Color": [
+    0.0423,
+    0.0467,
+    0.0545
+   ],
+   "Emissive": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "Roughness": 0.85,
+   "Metallic": 0.0,
+   "EmissiveStrength": 0.0
+  },
+  "/Game/Art/Court/MI_Rooftop_Court": {
+   "parent": "/Game/Art/Materials/M_TaGBase",
+   "Color": [
+    0.4342,
+    0.1946,
+    0.0648
+   ],
+   "Emissive": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "Roughness": 0.7,
+   "Metallic": 0.0,
+   "EmissiveStrength": 0.0
+  },
+  "/Game/Art/Court/MI_Rooftop_Dark": {
+   "parent": "/Game/Art/Materials/M_TaGBase",
+   "Color": [
+    0.0194,
+    0.0212,
+    0.0252
+   ],
+   "Emissive": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "Roughness": 0.85,
+   "Metallic": 0.0,
+   "EmissiveStrength": 0.0
+  },
+  "/Game/Art/Court/MI_Rooftop_Paint": {
+   "parent": "/Game/Art/Materials/M_TaGBase",
+   "Color": [
+    0.0048,
+    0.0685,
+    0.0908
+   ],
+   "Emissive": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "Roughness": 0.6,
+   "Metallic": 0.0,
+   "EmissiveStrength": 0.0
+  },
+  "/Game/Art/Heroes/Gantetsu/MI_Gantetsu_Accent": {
+   "parent": "/Game/Art/Materials/M_TaGBase",
+   "Color": [
+    0.7913,
+    0.7454,
+    0.6038
+   ],
+   "Emissive": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "Roughness": 0.6,
+   "Metallic": 0.0,
+   "EmissiveStrength": 0.0
+  },
+  "/Game/Art/Heroes/Gantetsu/MI_Gantetsu_Body": {
+   "parent": "/Game/Art/Materials/M_TaGBase",
+   "Color": [
+    0.5776,
+    0.2789,
+    0.013
+   ],
+   "Emissive": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "Roughness": 0.55,
+   "Metallic": 0.1,
+   "EmissiveStrength": 0.0
+  },
+  "/Game/Art/Heroes/Gantetsu/MI_Gantetsu_Dark": {
+   "parent": "/Game/Art/Materials/M_TaGBase",
+   "Color": [
+    0.0232,
+    0.0252,
+    0.0307
+   ],
+   "Emissive": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "Roughness": 0.55,
+   "Metallic": 0.35,
+   "EmissiveStrength": 0.0
+  },
+  "/Game/Art/Heroes/Gantetsu/MI_Gantetsu_Glow": {
+   "parent": "/Game/Art/Materials/M_TaGBase",
+   "Color": [
+    1.0,
+    0.4342,
+    0.117
+   ],
+   "Emissive": [
+    1.0,
+    0.4508,
+    0.063
+   ],
+   "Roughness": 0.3,
+   "Metallic": 0.0,
+   "EmissiveStrength": 6.0
+  },
+  "/Game/Art/Heroes/Gantetsu/MI_Gantetsu_Metal": {
+   "parent": "/Game/Art/Materials/M_TaGBase",
+   "Color": [
+    0.3325,
+    0.3613,
+    0.3968
+   ],
+   "Emissive": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "Roughness": 0.32,
+   "Metallic": 0.9,
+   "EmissiveStrength": 0.0
+  },
+  "/Game/Art/Heroes/Gantetsu/MI_Gantetsu_TaG": {
+   "parent": "/Game/Art/Materials/M_TaGBase",
+   "Color": [
+    0.0103,
+    0.0116,
+    0.0144
+   ],
+   "Emissive": [
+    0.9047,
+    0.9647,
+    1.0
+   ],
+   "Roughness": 0.35,
+   "Metallic": 0.0,
+   "EmissiveStrength": 3.0
+  },
+  "/Game/Art/Heroes/Gantetsu/MI_Gantetsu_Team": {
+   "parent": "/Game/Art/Materials/M_TaGBase",
+   "Color": [
+    0.6939,
+    0.7011,
+    0.7157
+   ],
+   "Emissive": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "Roughness": 0.45,
+   "Metallic": 0.0,
+   "EmissiveStrength": 0.0
+  },
+  "/Game/Art/Heroes/Hayate/MI_Hayate_Accent": {
+   "parent": "/Game/Art/Materials/M_TaGBase",
+   "Color": [
+    0.6584,
+    0.3864,
+    0.0452
+   ],
+   "Emissive": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "Roughness": 0.4,
+   "Metallic": 0.0,
+   "EmissiveStrength": 0.0
+  },
+  "/Game/Art/Heroes/Hayate/MI_Hayate_Body": {
+   "parent": "/Game/Art/Materials/M_TaGBase",
+   "Color": [
+    0.855,
+    0.8714,
+    0.8879
+   ],
+   "Emissive": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "Roughness": 0.35,
+   "Metallic": 0.0,
+   "EmissiveStrength": 0.0
+  },
+  "/Game/Art/Heroes/Hayate/MI_Hayate_Dark": {
+   "parent": "/Game/Art/Materials/M_TaGBase",
+   "Color": [
+    0.0168,
+    0.0194,
+    0.0273
+   ],
+   "Emissive": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "Roughness": 0.5,
+   "Metallic": 0.0,
+   "EmissiveStrength": 0.0
+  },
+  "/Game/Art/Heroes/Hayate/MI_Hayate_Glow": {
+   "parent": "/Game/Art/Materials/M_TaGBase",
+   "Color": [
+    1.0,
+    0.8796,
+    0.5841
+   ],
+   "Emissive": [
+    1.0,
+    0.8796,
+    0.5841
+   ],
+   "Roughness": 0.2,
+   "Metallic": 0.0,
+   "EmissiveStrength": 5.0
+  },
+  "/Game/Art/Heroes/Hayate/MI_Hayate_Hair": {
+   "parent": "/Game/Art/Materials/M_TaGBase",
+   "Color": [
+    0.0097,
+    0.011,
+    0.016
+   ],
+   "Emissive": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "Roughness": 0.45,
+   "Metallic": 0.0,
+   "EmissiveStrength": 0.0
+  },
+  "/Game/Art/Heroes/Hayate/MI_Hayate_Metal": {
+   "parent": "/Game/Art/Materials/M_TaGBase",
+   "Color": [
+    0.7454,
+    0.4793,
+    0.1022
+   ],
+   "Emissive": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "Roughness": 0.25,
+   "Metallic": 1.0,
+   "EmissiveStrength": 0.0
+  },
+  "/Game/Art/Heroes/Hayate/MI_Hayate_Skin": {
+   "parent": "/Game/Art/Materials/M_TaGBase",
+   "Color": [
+    0.7758,
+    0.4852,
+    0.305
+   ],
+   "Emissive": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "Roughness": 0.6,
+   "Metallic": 0.0,
+   "EmissiveStrength": 0.0
+  },
+  "/Game/Art/Heroes/Hayate/MI_Hayate_TaG": {
+   "parent": "/Game/Art/Materials/M_TaGBase",
+   "Color": [
+    0.0103,
+    0.0116,
+    0.0144
+   ],
+   "Emissive": [
+    0.9047,
+    0.9647,
+    1.0
+   ],
+   "Roughness": 0.35,
+   "Metallic": 0.0,
+   "EmissiveStrength": 3.0
+  },
+  "/Game/Art/Heroes/Hayate/MI_Hayate_Team": {
+   "parent": "/Game/Art/Materials/M_TaGBase",
+   "Color": [
+    0.6939,
+    0.7011,
+    0.7157
+   ],
+   "Emissive": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "Roughness": 0.45,
+   "Metallic": 0.0,
+   "EmissiveStrength": 0.0
+  },
+  "/Game/Art/Heroes/Hibiki/MI_Hibiki_Body": {
+   "parent": "/Game/Art/Materials/M_TaGBase",
+   "Color": [
+    0.0423,
+    0.0137,
+    0.147
+   ],
+   "Emissive": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "Roughness": 0.4,
+   "Metallic": 0.0,
+   "EmissiveStrength": 0.0
+  },
+  "/Game/Art/Heroes/Hibiki/MI_Hibiki_Glow": {
+   "parent": "/Game/Art/Materials/M_TaGBase",
+   "Color": [
+    1.0,
+    0.147,
+    0.7913
+   ],
+   "Emissive": [
+    1.0,
+    0.147,
+    0.7913
+   ],
+   "Roughness": 0.3,
+   "Metallic": 0.0,
+   "EmissiveStrength": 6.0
+  },
+  "/Game/Art/Heroes/Hibiki/MI_Hibiki_Jelly": {
+   "parent": "/Game/Art/Materials/M_TaGTranslucent",
+   "Color": [
+    0.3968,
+    0.3278,
+    1.0
+   ],
+   "Emissive": [
+    0.2542,
+    0.107,
+    1.0
+   ],
+   "Roughness": 0.15,
+   "Metallic": 0.0,
+   "EmissiveStrength": 0.6,
+   "Opacity": 0.45
+  },
+  "/Game/Art/Heroes/Hibiki/MI_Hibiki_TaG": {
+   "parent": "/Game/Art/Materials/M_TaGBase",
+   "Color": [
+    0.0103,
+    0.0116,
+    0.0144
+   ],
+   "Emissive": [
+    0.9047,
+    0.9647,
+    1.0
+   ],
+   "Roughness": 0.35,
+   "Metallic": 0.0,
+   "EmissiveStrength": 3.0
+  },
+  "/Game/Art/Heroes/Hibiki/MI_Hibiki_Team": {
+   "parent": "/Game/Art/Materials/M_TaGBase",
+   "Color": [
+    0.6939,
+    0.7011,
+    0.7157
+   ],
+   "Emissive": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "Roughness": 0.45,
+   "Metallic": 0.0,
+   "EmissiveStrength": 0.0
+  },
+  "/Game/Art/Heroes/Minamo/MI_Minamo_Accent": {
+   "parent": "/Game/Art/Materials/M_TaGBase",
+   "Color": [
+    0.8879,
+    0.6584,
+    0.0423
+   ],
+   "Emissive": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "Roughness": 0.5,
+   "Metallic": 0.0,
+   "EmissiveStrength": 0.0
+  },
+  "/Game/Art/Heroes/Minamo/MI_Minamo_Body": {
+   "parent": "/Game/Art/Materials/M_TaGBase",
+   "Color": [
+    0.011,
+    0.0176,
+    0.0513
+   ],
+   "Emissive": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "Roughness": 0.45,
+   "Metallic": 0.0,
+   "EmissiveStrength": 0.0
+  },
+  "/Game/Art/Heroes/Minamo/MI_Minamo_Dark": {
+   "parent": "/Game/Art/Materials/M_TaGBase",
+   "Color": [
+    0.0091,
+    0.0097,
+    0.0123
+   ],
+   "Emissive": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "Roughness": 0.6,
+   "Metallic": 0.0,
+   "EmissiveStrength": 0.0
+  },
+  "/Game/Art/Heroes/Minamo/MI_Minamo_Glow": {
+   "parent": "/Game/Art/Materials/M_TaGBase",
+   "Color": [
+    0.521,
+    0.8069,
+    1.0
+   ],
+   "Emissive": [
+    0.521,
+    0.8069,
+    1.0
+   ],
+   "Roughness": 0.2,
+   "Metallic": 0.0,
+   "EmissiveStrength": 4.0
+  },
+  "/Game/Art/Heroes/Minamo/MI_Minamo_Hair": {
+   "parent": "/Game/Art/Materials/M_TaGBase",
+   "Color": [
+    0.013,
+    0.016,
+    0.0369
+   ],
+   "Emissive": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "Roughness": 0.5,
+   "Metallic": 0.0,
+   "EmissiveStrength": 0.0
+  },
+  "/Game/Art/Heroes/Minamo/MI_Minamo_Metal": {
+   "parent": "/Game/Art/Materials/M_TaGBase",
+   "Color": [
+    0.2122,
+    0.2623,
+    0.3231
+   ],
+   "Emissive": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "Roughness": 0.3,
+   "Metallic": 0.85,
+   "EmissiveStrength": 0.0
+  },
+  "/Game/Art/Heroes/Minamo/MI_Minamo_Skin": {
+   "parent": "/Game/Art/Materials/M_TaGBase",
+   "Color": [
+    0.8796,
+    0.5711,
+    0.3916
+   ],
+   "Emissive": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "Roughness": 0.6,
+   "Metallic": 0.0,
+   "EmissiveStrength": 0.0
+  },
+  "/Game/Art/Heroes/Minamo/MI_Minamo_TaG": {
+   "parent": "/Game/Art/Materials/M_TaGBase",
+   "Color": [
+    0.0103,
+    0.0116,
+    0.0144
+   ],
+   "Emissive": [
+    0.9047,
+    0.9647,
+    1.0
+   ],
+   "Roughness": 0.35,
+   "Metallic": 0.0,
+   "EmissiveStrength": 3.0
+  },
+  "/Game/Art/Heroes/Minamo/MI_Minamo_Team": {
+   "parent": "/Game/Art/Materials/M_TaGBase",
+   "Color": [
+    0.6939,
+    0.7011,
+    0.7157
+   ],
+   "Emissive": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "Roughness": 0.45,
+   "Metallic": 0.0,
+   "EmissiveStrength": 0.0
+  },
+  "/Game/Art/Heroes/Rei/MI_Rei_Accent": {
+   "parent": "/Game/Art/Materials/M_TaGBase",
+   "Color": [
+    0.8469,
+    0.8469,
+    0.8469
+   ],
+   "Emissive": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "Roughness": 0.6,
+   "Metallic": 0.0,
+   "EmissiveStrength": 0.0
+  },
+  "/Game/Art/Heroes/Rei/MI_Rei_Body": {
+   "parent": "/Game/Art/Materials/M_TaGBase",
+   "Color": [
+    0.0242,
+    0.0262,
+    0.0331
+   ],
+   "Emissive": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "Roughness": 0.8,
+   "Metallic": 0.0,
+   "EmissiveStrength": 0.0
+  },
+  "/Game/Art/Heroes/Rei/MI_Rei_Dark": {
+   "parent": "/Game/Art/Materials/M_TaGBase",
+   "Color": [
+    0.006,
+    0.0065,
+    0.008
+   ],
+   "Emissive": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "Roughness": 0.7,
+   "Metallic": 0.0,
+   "EmissiveStrength": 0.0
+  },
+  "/Game/Art/Heroes/Rei/MI_Rei_Glow": {
+   "parent": "/Game/Art/Materials/M_TaGBase",
+   "Color": [
+    0.2122,
+    0.7913,
+    1.0
+   ],
+   "Emissive": [
+    0.2122,
+    0.7913,
+    1.0
+   ],
+   "Roughness": 0.3,
+   "Metallic": 0.0,
+   "EmissiveStrength": 2.5
+  },
+  "/Game/Art/Heroes/Rei/MI_Rei_Hair": {
+   "parent": "/Game/Art/Materials/M_TaGBase",
+   "Color": [
+    0.6939,
+    0.7157,
+    0.7681
+   ],
+   "Emissive": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "Roughness": 0.45,
+   "Metallic": 0.0,
+   "EmissiveStrength": 0.0
+  },
+  "/Game/Art/Heroes/Rei/MI_Rei_Skin": {
+   "parent": "/Game/Art/Materials/M_TaGBase",
+   "Color": [
+    0.8308,
+    0.5841,
+    0.4342
+   ],
+   "Emissive": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "Roughness": 0.6,
+   "Metallic": 0.0,
+   "EmissiveStrength": 0.0
+  },
+  "/Game/Art/Heroes/Rei/MI_Rei_TaG": {
+   "parent": "/Game/Art/Materials/M_TaGBase",
+   "Color": [
+    0.0103,
+    0.0116,
+    0.0144
+   ],
+   "Emissive": [
+    0.9047,
+    0.9647,
+    1.0
+   ],
+   "Roughness": 0.35,
+   "Metallic": 0.0,
+   "EmissiveStrength": 3.0
+  },
+  "/Game/Art/Heroes/Rei/MI_Rei_Team": {
+   "parent": "/Game/Art/Materials/M_TaGBase",
+   "Color": [
+    0.6939,
+    0.7011,
+    0.7157
+   ],
+   "Emissive": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "Roughness": 0.45,
+   "Metallic": 0.0,
+   "EmissiveStrength": 0.0
+  },
+  "/Game/Art/Heroes/Tsumugi/MI_Tsumugi_Accent": {
+   "parent": "/Game/Art/Materials/M_TaGBase",
+   "Color": [
+    0.8714,
+    0.3916,
+    0.0116
+   ],
+   "Emissive": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "Roughness": 0.7,
+   "Metallic": 0.0,
+   "EmissiveStrength": 0.0
+  },
+  "/Game/Art/Heroes/Tsumugi/MI_Tsumugi_Body": {
+   "parent": "/Game/Art/Materials/M_TaGBase",
+   "Color": [
+    0.0273,
+    0.0423,
+    0.2623
+   ],
+   "Emissive": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "Roughness": 0.75,
+   "Metallic": 0.0,
+   "EmissiveStrength": 0.0
+  },
+  "/Game/Art/Heroes/Tsumugi/MI_Tsumugi_Dark": {
+   "parent": "/Game/Art/Materials/M_TaGBase",
+   "Color": [
+    0.0437,
+    0.0232,
+    0.016
+   ],
+   "Emissive": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "Roughness": 0.8,
+   "Metallic": 0.0,
+   "EmissiveStrength": 0.0
+  },
+  "/Game/Art/Heroes/Tsumugi/MI_Tsumugi_Glow": {
+   "parent": "/Game/Art/Materials/M_TaGBase",
+   "Color": [
+    1.0,
+    0.7605,
+    0.3515
+   ],
+   "Emissive": [
+    1.0,
+    0.7605,
+    0.3515
+   ],
+   "Roughness": 0.4,
+   "Metallic": 0.0,
+   "EmissiveStrength": 2.5
+  },
+  "/Game/Art/Heroes/Tsumugi/MI_Tsumugi_Hair": {
+   "parent": "/Game/Art/Materials/M_TaGBase",
+   "Color": [
+    0.0086,
+    0.0075,
+    0.0103
+   ],
+   "Emissive": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "Roughness": 0.5,
+   "Metallic": 0.0,
+   "EmissiveStrength": 0.0
+  },
+  "/Game/Art/Heroes/Tsumugi/MI_Tsumugi_Metal": {
+   "parent": "/Game/Art/Materials/M_TaGBase",
+   "Color": [
+    0.5711,
+    0.3231,
+    0.0423
+   ],
+   "Emissive": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "Roughness": 0.35,
+   "Metallic": 0.9,
+   "EmissiveStrength": 0.0
+  },
+  "/Game/Art/Heroes/Tsumugi/MI_Tsumugi_Skin": {
+   "parent": "/Game/Art/Materials/M_TaGBase",
+   "Color": [
+    0.8963,
+    0.6105,
+    0.4287
+   ],
+   "Emissive": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "Roughness": 0.6,
+   "Metallic": 0.0,
+   "EmissiveStrength": 0.0
+  },
+  "/Game/Art/Heroes/Tsumugi/MI_Tsumugi_TaG": {
+   "parent": "/Game/Art/Materials/M_TaGBase",
+   "Color": [
+    0.0103,
+    0.0116,
+    0.0144
+   ],
+   "Emissive": [
+    0.9047,
+    0.9647,
+    1.0
+   ],
+   "Roughness": 0.35,
+   "Metallic": 0.0,
+   "EmissiveStrength": 3.0
+  },
+  "/Game/Art/Heroes/Tsumugi/MI_Tsumugi_Team": {
+   "parent": "/Game/Art/Materials/M_TaGBase",
+   "Color": [
+    0.6939,
+    0.7011,
+    0.7157
+   ],
+   "Emissive": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "Roughness": 0.45,
+   "Metallic": 0.0,
+   "EmissiveStrength": 0.0
+  }
+ },
+ "heroes": {
+  "Gantetsu": {
+   "class": "XL",
+   "target_eye_height": 250.0,
+   "eye_height": 250.0,
+   "target_width": 95.0,
+   "width": 94.4,
+   "height": 298.26,
+   "depth": 65.49,
+   "triangles": 7920,
+   "pelvis_height": 116.0,
+   "eyes_in_rest_pose": [
+    26.0,
+    0.0,
+    250.0
+   ],
+   "hand_l_in_rest_pose": [
+    0.0,
+    -25.4,
+    99.0
+   ],
+   "hand_r_in_rest_pose": [
+    0.0,
+    25.4,
+    99.0
+   ],
+   "palm_normal_rest": {
+    "hand_l": [
+     0,
+     1,
+     0
+    ],
+    "hand_r": [
+     0,
+     -1,
+     0
+    ]
+   },
+   "parts": {
+    "Pelvis": {
+     "path": "/Game/Art/Heroes/Gantetsu/SM_Gantetsu_Pelvis",
+     "sockets": {
+      "spine": [
+       0.0,
+       -0.0,
+       14.0
+      ],
+      "hip_l": [
+       0.0,
+       -21.0,
+       -10.0
+      ],
+      "hip_r": [
+       0.0,
+       21.0,
+       -10.0
+      ]
+     },
+     "rest_pivot": [
+      0.0,
+      0.0,
+      116.0
+     ],
+     "triangles": 256,
+     "slots": [
+      "Body",
+      "Accent",
+      "Dark"
+     ],
+     "material_instances": [
+      "/Game/Art/Heroes/Gantetsu/MI_Gantetsu_Body",
+      "/Game/Art/Heroes/Gantetsu/MI_Gantetsu_Accent",
+      "/Game/Art/Heroes/Gantetsu/MI_Gantetsu_Dark"
+     ],
+     "bounds_min": [
+      -20.516,
+      -26.5,
+      -20.0
+     ],
+     "bounds_max": [
+      21.224,
+      26.5,
+      18.0
+     ]
+    },
+    "Torso": {
+     "path": "/Game/Art/Heroes/Gantetsu/SM_Gantetsu_Torso",
+     "sockets": {
+      "neck": [
+       8.0,
+       -0.0,
+       98.0
+      ],
+      "shoulder_l": [
+       -2.0,
+       -33.0,
+       82.0
+      ],
+      "shoulder_r": [
+       -2.0,
+       33.0,
+       82.0
+      ]
+     },
+     "rest_pivot": [
+      0.0,
+      0.0,
+      130.0
+     ],
+     "triangles": 1872,
+     "slots": [
+      "Body",
+      "Accent",
+      "Dark",
+      "Metal",
+      "Team",
+      "Glow"
+     ],
+     "material_instances": [
+      "/Game/Art/Heroes/Gantetsu/MI_Gantetsu_Body",
+      "/Game/Art/Heroes/Gantetsu/MI_Gantetsu_Accent",
+      "/Game/Art/Heroes/Gantetsu/MI_Gantetsu_Dark",
+      "/Game/Art/Heroes/Gantetsu/MI_Gantetsu_Metal",
+      "/Game/Art/Heroes/Gantetsu/MI_Gantetsu_Team",
+      "/Game/Art/Heroes/Gantetsu/MI_Gantetsu_Glow"
+     ],
+     "bounds_min": [
+      -34.491,
+      -32.5,
+      -8.0
+     ],
+     "bounds_max": [
+      31.0,
+      32.5,
+      168.259
+     ]
+    },
+    "Head": {
+     "path": "/Game/Art/Heroes/Gantetsu/SM_Gantetsu_Head",
+     "sockets": {
+      "eyes": [
+       18.0,
+       -0.0,
+       22.0
+      ]
+     },
+     "rest_pivot": [
+      8.0,
+      0.0,
+      228.0
+     ],
+     "triangles": 384,
+     "slots": [
+      "Body",
+      "Accent",
+      "Dark",
+      "Metal",
+      "Glow"
+     ],
+     "material_instances": [
+      "/Game/Art/Heroes/Gantetsu/MI_Gantetsu_Body",
+      "/Game/Art/Heroes/Gantetsu/MI_Gantetsu_Accent",
+      "/Game/Art/Heroes/Gantetsu/MI_Gantetsu_Dark",
+      "/Game/Art/Heroes/Gantetsu/MI_Gantetsu_Metal",
+      "/Game/Art/Heroes/Gantetsu/MI_Gantetsu_Glow"
+     ],
+     "bounds_min": [
+      -11.405,
+      -17.4,
+      -7.344
+     ],
+     "bounds_max": [
+      21.321,
+      17.4,
+      44.076
+     ]
+    },
+    "UpperArm_L": {
+     "path": "/Game/Art/Heroes/Gantetsu/SM_Gantetsu_UpperArm_L",
+     "sockets": {
+      "elbow": [
+       0.0,
+       0.0,
+       -56.0
+      ]
+     },
+     "rest_pivot": [
+      -2.0,
+      -33.0,
+      212.0
+     ],
+     "triangles": 584,
+     "slots": [
+      "Body",
+      "Dark",
+      "Metal",
+      "Team"
+     ],
+     "material_instances": [
+      "/Game/Art/Heroes/Gantetsu/MI_Gantetsu_Body",
+      "/Game/Art/Heroes/Gantetsu/MI_Gantetsu_Dark",
+      "/Game/Art/Heroes/Gantetsu/MI_Gantetsu_Metal",
+      "/Game/Art/Heroes/Gantetsu/MI_Gantetsu_Team"
+     ],
+     "bounds_min": [
+      -17.549,
+      -13.247,
+      -67.0
+     ],
+     "bounds_max": [
+      17.549,
+      13.0,
+      16.738
+     ]
+    },
+    "UpperArm_R": {
+     "path": "/Game/Art/Heroes/Gantetsu/SM_Gantetsu_UpperArm_R",
+     "sockets": {
+      "elbow": [
+       0.0,
+       0.0,
+       -56.0
+      ]
+     },
+     "rest_pivot": [
+      -2.0,
+      33.0,
+      212.0
+     ],
+     "triangles": 584,
+     "slots": [
+      "Body",
+      "Dark",
+      "Metal",
+      "Team"
+     ],
+     "material_instances": [
+      "/Game/Art/Heroes/Gantetsu/MI_Gantetsu_Body",
+      "/Game/Art/Heroes/Gantetsu/MI_Gantetsu_Dark",
+      "/Game/Art/Heroes/Gantetsu/MI_Gantetsu_Metal",
+      "/Game/Art/Heroes/Gantetsu/MI_Gantetsu_Team"
+     ],
+     "bounds_min": [
+      -17.549,
+      -13.0,
+      -67.0
+     ],
+     "bounds_max": [
+      17.549,
+      13.247,
+      16.738
+     ]
+    },
+    "LowerArm_L": {
+     "path": "/Game/Art/Heroes/Gantetsu/SM_Gantetsu_LowerArm_L",
+     "sockets": {
+      "hand": [
+       2.0,
+       7.6,
+       -57.0
+      ]
+     },
+     "rest_pivot": [
+      -2.0,
+      -33.0,
+      156.0
+     ],
+     "triangles": 960,
+     "slots": [
+      "Body",
+      "Accent",
+      "Dark",
+      "Metal",
+      "TaG"
+     ],
+     "material_instances": [
+      "/Game/Art/Heroes/Gantetsu/MI_Gantetsu_Body",
+      "/Game/Art/Heroes/Gantetsu/MI_Gantetsu_Accent",
+      "/Game/Art/Heroes/Gantetsu/MI_Gantetsu_Dark",
+      "/Game/Art/Heroes/Gantetsu/MI_Gantetsu_Metal",
+      "/Game/Art/Heroes/Gantetsu/MI_Gantetsu_TaG"
+     ],
+     "bounds_min": [
+      -13.4,
+      -14.2,
+      -83.347
+     ],
+     "bounds_max": [
+      18.797,
+      13.6,
+      10.6
+     ]
+    },
+    "LowerArm_R": {
+     "path": "/Game/Art/Heroes/Gantetsu/SM_Gantetsu_LowerArm_R",
+     "sockets": {
+      "hand": [
+       2.0,
+       -7.6,
+       -57.0
+      ]
+     },
+     "rest_pivot": [
+      -2.0,
+      33.0,
+      156.0
+     ],
+     "triangles": 960,
+     "slots": [
+      "Body",
+      "Accent",
+      "Dark",
+      "Metal",
+      "TaG"
+     ],
+     "material_instances": [
+      "/Game/Art/Heroes/Gantetsu/MI_Gantetsu_Body",
+      "/Game/Art/Heroes/Gantetsu/MI_Gantetsu_Accent",
+      "/Game/Art/Heroes/Gantetsu/MI_Gantetsu_Dark",
+      "/Game/Art/Heroes/Gantetsu/MI_Gantetsu_Metal",
+      "/Game/Art/Heroes/Gantetsu/MI_Gantetsu_TaG"
+     ],
+     "bounds_min": [
+      -13.4,
+      -13.6,
+      -83.347
+     ],
+     "bounds_max": [
+      18.797,
+      14.2,
+      10.6
+     ]
+    },
+    "Thigh_L": {
+     "path": "/Game/Art/Heroes/Gantetsu/SM_Gantetsu_Thigh_L",
+     "sockets": {
+      "knee": [
+       0.0,
+       0.0,
+       -46.0
+      ]
+     },
+     "rest_pivot": [
+      0.0,
+      -21.0,
+      106.0
+     ],
+     "triangles": 440,
+     "slots": [
+      "Body",
+      "Dark",
+      "Metal",
+      "Team"
+     ],
+     "material_instances": [
+      "/Game/Art/Heroes/Gantetsu/MI_Gantetsu_Body",
+      "/Game/Art/Heroes/Gantetsu/MI_Gantetsu_Dark",
+      "/Game/Art/Heroes/Gantetsu/MI_Gantetsu_Metal",
+      "/Game/Art/Heroes/Gantetsu/MI_Gantetsu_Team"
+     ],
+     "bounds_min": [
+      -13.5,
+      -15.9,
+      -57.8
+     ],
+     "bounds_max": [
+      14.0,
+      13.5,
+      13.5
+     ]
+    },
+    "Thigh_R": {
+     "path": "/Game/Art/Heroes/Gantetsu/SM_Gantetsu_Thigh_R",
+     "sockets": {
+      "knee": [
+       0.0,
+       0.0,
+       -46.0
+      ]
+     },
+     "rest_pivot": [
+      0.0,
+      21.0,
+      106.0
+     ],
+     "triangles": 440,
+     "slots": [
+      "Body",
+      "Dark",
+      "Metal",
+      "Team"
+     ],
+     "material_instances": [
+      "/Game/Art/Heroes/Gantetsu/MI_Gantetsu_Body",
+      "/Game/Art/Heroes/Gantetsu/MI_Gantetsu_Dark",
+      "/Game/Art/Heroes/Gantetsu/MI_Gantetsu_Metal",
+      "/Game/Art/Heroes/Gantetsu/MI_Gantetsu_Team"
+     ],
+     "bounds_min": [
+      -13.5,
+      -13.5,
+      -57.8
+     ],
+     "bounds_max": [
+      14.0,
+      15.9,
+      13.5
+     ]
+    },
+    "Shin_L": {
+     "path": "/Game/Art/Heroes/Gantetsu/SM_Gantetsu_Shin_L",
+     "sockets": {
+      "sole": [
+       6.0,
+       0.0,
+       -60.0
+      ]
+     },
+     "rest_pivot": [
+      0.0,
+      -21.0,
+      60.0
+     ],
+     "triangles": 720,
+     "slots": [
+      "Body",
+      "Dark",
+      "Metal",
+      "TaG"
+     ],
+     "material_instances": [
+      "/Game/Art/Heroes/Gantetsu/MI_Gantetsu_Body",
+      "/Game/Art/Heroes/Gantetsu/MI_Gantetsu_Dark",
+      "/Game/Art/Heroes/Gantetsu/MI_Gantetsu_Metal",
+      "/Game/Art/Heroes/Gantetsu/MI_Gantetsu_TaG"
+     ],
+     "bounds_min": [
+      -16.0,
+      -15.8,
+      -60.0
+     ],
+     "bounds_max": [
+      28.0,
+      15.8,
+      11.2
+     ]
+    },
+    "Shin_R": {
+     "path": "/Game/Art/Heroes/Gantetsu/SM_Gantetsu_Shin_R",
+     "sockets": {
+      "sole": [
+       6.0,
+       0.0,
+       -60.0
+      ]
+     },
+     "rest_pivot": [
+      0.0,
+      21.0,
+      60.0
+     ],
+     "triangles": 720,
+     "slots": [
+      "Body",
+      "Dark",
+      "Metal",
+      "TaG"
+     ],
+     "material_instances": [
+      "/Game/Art/Heroes/Gantetsu/MI_Gantetsu_Body",
+      "/Game/Art/Heroes/Gantetsu/MI_Gantetsu_Dark",
+      "/Game/Art/Heroes/Gantetsu/MI_Gantetsu_Metal",
+      "/Game/Art/Heroes/Gantetsu/MI_Gantetsu_TaG"
+     ],
+     "bounds_min": [
+      -16.0,
+      -15.8,
+      -60.0
+     ],
+     "bounds_max": [
+      28.0,
+      15.8,
+      11.2
+     ]
+    }
+   }
+  },
+  "Minamo": {
+   "class": "L",
+   "target_eye_height": 210.0,
+   "eye_height": 210.0,
+   "target_width": 70.0,
+   "width": 70.19,
+   "height": 221.6,
+   "depth": 46.18,
+   "triangles": 7972,
+   "pelvis_height": 114.0,
+   "eyes_in_rest_pose": [
+    11.0,
+    0.0,
+    210.0
+   ],
+   "hand_l_in_rest_pose": [
+    -0.66,
+    -23.1,
+    105.96
+   ],
+   "hand_r_in_rest_pose": [
+    -0.63,
+    22.7,
+    105.46
+   ],
+   "palm_normal_rest": {
+    "hand_l": [
+     0,
+     1,
+     0
+    ],
+    "hand_r": [
+     0,
+     -1,
+     0
+    ]
+   },
+   "parts": {
+    "Pelvis": {
+     "path": "/Game/Art/Heroes/Minamo/SM_Minamo_Pelvis",
+     "sockets": {
+      "spine": [
+       0.0,
+       -0.0,
+       10.0
+      ],
+      "hip_l": [
+       0.0,
+       -16.5,
+       -6.0
+      ],
+      "hip_r": [
+       0.0,
+       16.5,
+       -6.0
+      ]
+     },
+     "rest_pivot": [
+      0.0,
+      0.0,
+      114.0
+     ],
+     "triangles": 320,
+     "slots": [
+      "Body",
+      "Accent",
+      "Dark"
+     ],
+     "material_instances": [
+      "/Game/Art/Heroes/Minamo/MI_Minamo_Body",
+      "/Game/Art/Heroes/Minamo/MI_Minamo_Accent",
+      "/Game/Art/Heroes/Minamo/MI_Minamo_Dark"
+     ],
+     "bounds_min": [
+      -12.15,
+      -19.6,
+      -14.0
+     ],
+     "bounds_max": [
+      12.8,
+      19.6,
+      12.0
+     ]
+    },
+    "Torso": {
+     "path": "/Game/Art/Heroes/Minamo/SM_Minamo_Torso",
+     "sockets": {
+      "neck": [
+       -1.0,
+       -0.0,
+       58.0
+      ],
+      "shoulder_l": [
+       -1.0,
+       -25.0,
+       51.0
+      ],
+      "shoulder_r": [
+       -1.0,
+       25.0,
+       51.0
+      ]
+     },
+     "rest_pivot": [
+      0.0,
+      0.0,
+      124.0
+     ],
+     "triangles": 920,
+     "slots": [
+      "Body",
+      "Accent",
+      "Dark",
+      "Team"
+     ],
+     "material_instances": [
+      "/Game/Art/Heroes/Minamo/MI_Minamo_Body",
+      "/Game/Art/Heroes/Minamo/MI_Minamo_Accent",
+      "/Game/Art/Heroes/Minamo/MI_Minamo_Dark",
+      "/Game/Art/Heroes/Minamo/MI_Minamo_Team"
+     ],
+     "bounds_min": [
+      -14.2,
+      -23.7,
+      -5.0
+     ],
+     "bounds_max": [
+      15.75,
+      23.7,
+      59.0
+     ]
+    },
+    "Head": {
+     "path": "/Game/Art/Heroes/Minamo/SM_Minamo_Head",
+     "sockets": {
+      "eyes": [
+       12.0,
+       -0.0,
+       28.0
+      ]
+     },
+     "rest_pivot": [
+      -1.0,
+      0.0,
+      182.0
+     ],
+     "triangles": 1272,
+     "slots": [
+      "Skin",
+      "Hair",
+      "Dark",
+      "Metal"
+     ],
+     "material_instances": [
+      "/Game/Art/Heroes/Minamo/MI_Minamo_Skin",
+      "/Game/Art/Heroes/Minamo/MI_Minamo_Hair",
+      "/Game/Art/Heroes/Minamo/MI_Minamo_Dark",
+      "/Game/Art/Heroes/Minamo/MI_Minamo_Metal"
+     ],
+     "bounds_min": [
+      -14.199,
+      -13.073,
+      -8.885
+     ],
+     "bounds_max": [
+      15.451,
+      13.073,
+      39.6
+     ]
+    },
+    "UpperArm_L": {
+     "path": "/Game/Art/Heroes/Minamo/SM_Minamo_UpperArm_L",
+     "sockets": {
+      "elbow": [
+       0.0,
+       0.0,
+       -34.0
+      ]
+     },
+     "rest_pivot": [
+      -1.0,
+      -25.0,
+      175.0
+     ],
+     "triangles": 288,
+     "slots": [
+      "Body",
+      "Team"
+     ],
+     "material_instances": [
+      "/Game/Art/Heroes/Minamo/MI_Minamo_Body",
+      "/Game/Art/Heroes/Minamo/MI_Minamo_Team"
+     ],
+     "bounds_min": [
+      -7.593,
+      -8.478,
+      -39.0
+     ],
+     "bounds_max": [
+      7.593,
+      6.4,
+      6.771
+     ]
+    },
+    "UpperArm_R": {
+     "path": "/Game/Art/Heroes/Minamo/SM_Minamo_UpperArm_R",
+     "sockets": {
+      "elbow": [
+       0.0,
+       0.0,
+       -34.0
+      ]
+     },
+     "rest_pivot": [
+      -1.0,
+      25.0,
+      175.0
+     ],
+     "triangles": 608,
+     "slots": [
+      "Dark",
+      "Metal",
+      "Team"
+     ],
+     "material_instances": [
+      "/Game/Art/Heroes/Minamo/MI_Minamo_Dark",
+      "/Game/Art/Heroes/Minamo/MI_Minamo_Metal",
+      "/Game/Art/Heroes/Minamo/MI_Minamo_Team"
+     ],
+     "bounds_min": [
+      -10.724,
+      -8.384,
+      -40.6
+     ],
+     "bounds_max": [
+      10.724,
+      11.709,
+      10.709
+     ]
+    },
+    "LowerArm_L": {
+     "path": "/Game/Art/Heroes/Minamo/SM_Minamo_LowerArm_L",
+     "sockets": {
+      "hand": [
+       0.336,
+       1.898,
+       -35.044
+      ]
+     },
+     "rest_pivot": [
+      -1.0,
+      -25.0,
+      141.0
+     ],
+     "triangles": 792,
+     "slots": [
+      "Body",
+      "Skin",
+      "Dark",
+      "TaG"
+     ],
+     "material_instances": [
+      "/Game/Art/Heroes/Minamo/MI_Minamo_Body",
+      "/Game/Art/Heroes/Minamo/MI_Minamo_Skin",
+      "/Game/Art/Heroes/Minamo/MI_Minamo_Dark",
+      "/Game/Art/Heroes/Minamo/MI_Minamo_TaG"
+     ],
+     "bounds_min": [
+      -5.0,
+      -5.0,
+      -48.407
+     ],
+     "bounds_max": [
+      6.13,
+      5.0,
+      5.0
+     ]
+    },
+    "LowerArm_R": {
+     "path": "/Game/Art/Heroes/Minamo/SM_Minamo_LowerArm_R",
+     "sockets": {
+      "hand": [
+       0.366,
+       -2.305,
+       -35.539
+      ]
+     },
+     "rest_pivot": [
+      -1.0,
+      25.0,
+      141.0
+     ],
+     "triangles": 784,
+     "slots": [
+      "Dark",
+      "Metal",
+      "TaG"
+     ],
+     "material_instances": [
+      "/Game/Art/Heroes/Minamo/MI_Minamo_Dark",
+      "/Game/Art/Heroes/Minamo/MI_Minamo_Metal",
+      "/Game/Art/Heroes/Minamo/MI_Minamo_TaG"
+     ],
+     "bounds_min": [
+      -7.2,
+      -7.8,
+      -50.175
+     ],
+     "bounds_max": [
+      9.2,
+      8.0,
+      6.4
+     ]
+    },
+    "Thigh_L": {
+     "path": "/Game/Art/Heroes/Minamo/SM_Minamo_Thigh_L",
+     "sockets": {
+      "knee": [
+       0.0,
+       0.0,
+       -46.0
+      ]
+     },
+     "rest_pivot": [
+      0.0,
+      -16.5,
+      108.0
+     ],
+     "triangles": 480,
+     "slots": [
+      "Dark",
+      "Metal",
+      "Team"
+     ],
+     "material_instances": [
+      "/Game/Art/Heroes/Minamo/MI_Minamo_Dark",
+      "/Game/Art/Heroes/Minamo/MI_Minamo_Metal",
+      "/Game/Art/Heroes/Minamo/MI_Minamo_Team"
+     ],
+     "bounds_min": [
+      -11.4,
+      -14.3,
+      -56.0
+     ],
+     "bounds_max": [
+      14.1,
+      11.4,
+      11.4
+     ]
+    },
+    "Thigh_R": {
+     "path": "/Game/Art/Heroes/Minamo/SM_Minamo_Thigh_R",
+     "sockets": {
+      "knee": [
+       0.0,
+       0.0,
+       -46.0
+      ]
+     },
+     "rest_pivot": [
+      0.0,
+      16.5,
+      108.0
+     ],
+     "triangles": 480,
+     "slots": [
+      "Dark",
+      "Metal",
+      "Team"
+     ],
+     "material_instances": [
+      "/Game/Art/Heroes/Minamo/MI_Minamo_Dark",
+      "/Game/Art/Heroes/Minamo/MI_Minamo_Metal",
+      "/Game/Art/Heroes/Minamo/MI_Minamo_Team"
+     ],
+     "bounds_min": [
+      -11.4,
+      -11.4,
+      -56.0
+     ],
+     "bounds_max": [
+      14.1,
+      14.3,
+      11.4
+     ]
+    },
+    "Shin_L": {
+     "path": "/Game/Art/Heroes/Minamo/SM_Minamo_Shin_L",
+     "sockets": {
+      "sole": [
+       6.0,
+       0.0,
+       -62.0
+      ]
+     },
+     "rest_pivot": [
+      0.0,
+      -16.5,
+      62.0
+     ],
+     "triangles": 1014,
+     "slots": [
+      "Dark",
+      "Metal",
+      "TaG",
+      "Glow"
+     ],
+     "material_instances": [
+      "/Game/Art/Heroes/Minamo/MI_Minamo_Dark",
+      "/Game/Art/Heroes/Minamo/MI_Minamo_Metal",
+      "/Game/Art/Heroes/Minamo/MI_Minamo_TaG",
+      "/Game/Art/Heroes/Minamo/MI_Minamo_Glow"
+     ],
+     "bounds_min": [
+      -19.176,
+      -12.8,
+      -62.0
+     ],
+     "bounds_max": [
+      27.0,
+      12.8,
+      9.0
+     ]
+    },
+    "Shin_R": {
+     "path": "/Game/Art/Heroes/Minamo/SM_Minamo_Shin_R",
+     "sockets": {
+      "sole": [
+       6.0,
+       0.0,
+       -62.0
+      ]
+     },
+     "rest_pivot": [
+      0.0,
+      16.5,
+      62.0
+     ],
+     "triangles": 1014,
+     "slots": [
+      "Dark",
+      "Metal",
+      "TaG",
+      "Glow"
+     ],
+     "material_instances": [
+      "/Game/Art/Heroes/Minamo/MI_Minamo_Dark",
+      "/Game/Art/Heroes/Minamo/MI_Minamo_Metal",
+      "/Game/Art/Heroes/Minamo/MI_Minamo_TaG",
+      "/Game/Art/Heroes/Minamo/MI_Minamo_Glow"
+     ],
+     "bounds_min": [
+      -19.176,
+      -12.8,
+      -62.0
+     ],
+     "bounds_max": [
+      27.0,
+      12.8,
+      9.0
+     ]
+    }
+   }
+  },
+  "Rei": {
+   "class": "M",
+   "target_eye_height": 175.0,
+   "eye_height": 175.0,
+   "target_width": 50.0,
+   "width": 47.98,
+   "height": 193.98,
+   "depth": 38.46,
+   "triangles": 6522,
+   "pelvis_height": 99.0,
+   "eyes_in_rest_pose": [
+    9.0,
+    0.0,
+    175.0
+   ],
+   "hand_l_in_rest_pose": [
+    -0.68,
+    -15.97,
+    84.65
+   ],
+   "hand_r_in_rest_pose": [
+    -0.68,
+    15.97,
+    84.65
+   ],
+   "palm_normal_rest": {
+    "hand_l": [
+     0,
+     1,
+     0
+    ],
+    "hand_r": [
+     0,
+     -1,
+     0
+    ]
+   },
+   "parts": {
+    "Pelvis": {
+     "path": "/Game/Art/Heroes/Rei/SM_Rei_Pelvis",
+     "sockets": {
+      "spine": [
+       0.0,
+       -0.0,
+       9.0
+      ],
+      "hip_l": [
+       0.0,
+       -9.5,
+       -6.0
+      ],
+      "hip_r": [
+       0.0,
+       9.5,
+       -6.0
+      ]
+     },
+     "rest_pivot": [
+      0.0,
+      0.0,
+      99.0
+     ],
+     "triangles": 220,
+     "slots": [
+      "Accent",
+      "Dark"
+     ],
+     "material_instances": [
+      "/Game/Art/Heroes/Rei/MI_Rei_Accent",
+      "/Game/Art/Heroes/Rei/MI_Rei_Dark"
+     ],
+     "bounds_min": [
+      -10.5,
+      -15.2,
+      -15.0
+     ],
+     "bounds_max": [
+      10.5,
+      15.2,
+      12.0
+     ]
+    },
+    "Torso": {
+     "path": "/Game/Art/Heroes/Rei/SM_Rei_Torso",
+     "sockets": {
+      "neck": [
+       -1.0,
+       -0.0,
+       44.0
+      ],
+      "shoulder_l": [
+       -1.0,
+       -17.8,
+       38.0
+      ],
+      "shoulder_r": [
+       -1.0,
+       17.8,
+       38.0
+      ]
+     },
+     "rest_pivot": [
+      0.0,
+      0.0,
+      108.0
+     ],
+     "triangles": 960,
+     "slots": [
+      "Body",
+      "Accent",
+      "Dark",
+      "Team",
+      "Glow"
+     ],
+     "material_instances": [
+      "/Game/Art/Heroes/Rei/MI_Rei_Body",
+      "/Game/Art/Heroes/Rei/MI_Rei_Accent",
+      "/Game/Art/Heroes/Rei/MI_Rei_Dark",
+      "/Game/Art/Heroes/Rei/MI_Rei_Team",
+      "/Game/Art/Heroes/Rei/MI_Rei_Glow"
+     ],
+     "bounds_min": [
+      -12.5,
+      -17.9,
+      -6.5
+     ],
+     "bounds_max": [
+      13.6,
+      17.9,
+      45.5
+     ]
+    },
+    "Head": {
+     "path": "/Game/Art/Heroes/Rei/SM_Rei_Head",
+     "sockets": {
+      "eyes": [
+       10.0,
+       -0.0,
+       23.0
+      ]
+     },
+     "rest_pivot": [
+      -1.0,
+      0.0,
+      152.0
+     ],
+     "triangles": 1190,
+     "slots": [
+      "Body",
+      "Skin",
+      "Hair",
+      "Dark",
+      "Glow"
+     ],
+     "material_instances": [
+      "/Game/Art/Heroes/Rei/MI_Rei_Body",
+      "/Game/Art/Heroes/Rei/MI_Rei_Skin",
+      "/Game/Art/Heroes/Rei/MI_Rei_Hair",
+      "/Game/Art/Heroes/Rei/MI_Rei_Dark",
+      "/Game/Art/Heroes/Rei/MI_Rei_Glow"
+     ],
+     "bounds_min": [
+      -18.076,
+      -16.2,
+      -7.983
+     ],
+     "bounds_max": [
+      12.2,
+      16.2,
+      41.979
+     ]
+    },
+    "UpperArm_L": {
+     "path": "/Game/Art/Heroes/Rei/SM_Rei_UpperArm_L",
+     "sockets": {
+      "elbow": [
+       0.0,
+       0.0,
+       -30.0
+      ]
+     },
+     "rest_pivot": [
+      -1.0,
+      -17.8,
+      146.0
+     ],
+     "triangles": 312,
+     "slots": [
+      "Body",
+      "Team",
+      "Glow"
+     ],
+     "material_instances": [
+      "/Game/Art/Heroes/Rei/MI_Rei_Body",
+      "/Game/Art/Heroes/Rei/MI_Rei_Team",
+      "/Game/Art/Heroes/Rei/MI_Rei_Glow"
+     ],
+     "bounds_min": [
+      -6.672,
+      -6.191,
+      -34.6
+     ],
+     "bounds_max": [
+      6.672,
+      5.6,
+      6.031
+     ]
+    },
+    "UpperArm_R": {
+     "path": "/Game/Art/Heroes/Rei/SM_Rei_UpperArm_R",
+     "sockets": {
+      "elbow": [
+       0.0,
+       0.0,
+       -30.0
+      ]
+     },
+     "rest_pivot": [
+      -1.0,
+      17.8,
+      146.0
+     ],
+     "triangles": 288,
+     "slots": [
+      "Body",
+      "Team"
+     ],
+     "material_instances": [
+      "/Game/Art/Heroes/Rei/MI_Rei_Body",
+      "/Game/Art/Heroes/Rei/MI_Rei_Team"
+     ],
+     "bounds_min": [
+      -6.672,
+      -5.6,
+      -34.6
+     ],
+     "bounds_max": [
+      6.672,
+      6.191,
+      6.031
+     ]
+    },
+    "LowerArm_L": {
+     "path": "/Game/Art/Heroes/Rei/SM_Rei_LowerArm_L",
+     "sockets": {
+      "hand": [
+       0.324,
+       1.832,
+       -31.346
+      ]
+     },
+     "rest_pivot": [
+      -1.0,
+      -17.8,
+      116.0
+     ],
+     "triangles": 792,
+     "slots": [
+      "Body",
+      "Skin",
+      "TaG"
+     ],
+     "material_instances": [
+      "/Game/Art/Heroes/Rei/MI_Rei_Body",
+      "/Game/Art/Heroes/Rei/MI_Rei_Skin",
+      "/Game/Art/Heroes/Rei/MI_Rei_TaG"
+     ],
+     "bounds_min": [
+      -4.5,
+      -4.5,
+      -44.232
+     ],
+     "bounds_max": [
+      5.911,
+      4.5,
+      4.5
+     ]
+    },
+    "LowerArm_R": {
+     "path": "/Game/Art/Heroes/Rei/SM_Rei_LowerArm_R",
+     "sockets": {
+      "hand": [
+       0.324,
+       -1.832,
+       -31.346
+      ]
+     },
+     "rest_pivot": [
+      -1.0,
+      17.8,
+      116.0
+     ],
+     "triangles": 792,
+     "slots": [
+      "Body",
+      "Skin",
+      "TaG"
+     ],
+     "material_instances": [
+      "/Game/Art/Heroes/Rei/MI_Rei_Body",
+      "/Game/Art/Heroes/Rei/MI_Rei_Skin",
+      "/Game/Art/Heroes/Rei/MI_Rei_TaG"
+     ],
+     "bounds_min": [
+      -4.5,
+      -4.5,
+      -44.232
+     ],
+     "bounds_max": [
+      5.911,
+      4.5,
+      4.5
+     ]
+    },
+    "Thigh_L": {
+     "path": "/Game/Art/Heroes/Rei/SM_Rei_Thigh_L",
+     "sockets": {
+      "knee": [
+       0.0,
+       0.0,
+       -43.0
+      ]
+     },
+     "rest_pivot": [
+      0.0,
+      -9.5,
+      93.0
+     ],
+     "triangles": 192,
+     "slots": [
+      "Dark",
+      "Team"
+     ],
+     "material_instances": [
+      "/Game/Art/Heroes/Rei/MI_Rei_Dark",
+      "/Game/Art/Heroes/Rei/MI_Rei_Team"
+     ],
+     "bounds_min": [
+      -7.7,
+      -8.037,
+      -48.8
+     ],
+     "bounds_max": [
+      7.7,
+      7.7,
+      7.7
+     ]
+    },
+    "Thigh_R": {
+     "path": "/Game/Art/Heroes/Rei/SM_Rei_Thigh_R",
+     "sockets": {
+      "knee": [
+       0.0,
+       0.0,
+       -43.0
+      ]
+     },
+     "rest_pivot": [
+      0.0,
+      9.5,
+      93.0
+     ],
+     "triangles": 192,
+     "slots": [
+      "Dark",
+      "Team"
+     ],
+     "material_instances": [
+      "/Game/Art/Heroes/Rei/MI_Rei_Dark",
+      "/Game/Art/Heroes/Rei/MI_Rei_Team"
+     ],
+     "bounds_min": [
+      -7.7,
+      -7.7,
+      -48.8
+     ],
+     "bounds_max": [
+      7.7,
+      8.037,
+      7.7
+     ]
+    },
+    "Shin_L": {
+     "path": "/Game/Art/Heroes/Rei/SM_Rei_Shin_L",
+     "sockets": {
+      "sole": [
+       5.712,
+       0.0,
+       -50.0
+      ]
+     },
+     "rest_pivot": [
+      0.0,
+      -9.5,
+      50.0
+     ],
+     "triangles": 792,
+     "slots": [
+      "Body",
+      "Accent",
+      "Dark",
+      "TaG"
+     ],
+     "material_instances": [
+      "/Game/Art/Heroes/Rei/MI_Rei_Body",
+      "/Game/Art/Heroes/Rei/MI_Rei_Accent",
+      "/Game/Art/Heroes/Rei/MI_Rei_Dark",
+      "/Game/Art/Heroes/Rei/MI_Rei_TaG"
+     ],
+     "bounds_min": [
+      -7.956,
+      -5.9,
+      -50.0
+     ],
+     "bounds_max": [
+      19.38,
+      5.9,
+      5.8
+     ]
+    },
+    "Shin_R": {
+     "path": "/Game/Art/Heroes/Rei/SM_Rei_Shin_R",
+     "sockets": {
+      "sole": [
+       5.712,
+       0.0,
+       -50.0
+      ]
+     },
+     "rest_pivot": [
+      0.0,
+      9.5,
+      50.0
+     ],
+     "triangles": 792,
+     "slots": [
+      "Body",
+      "Accent",
+      "Dark",
+      "TaG"
+     ],
+     "material_instances": [
+      "/Game/Art/Heroes/Rei/MI_Rei_Body",
+      "/Game/Art/Heroes/Rei/MI_Rei_Accent",
+      "/Game/Art/Heroes/Rei/MI_Rei_Dark",
+      "/Game/Art/Heroes/Rei/MI_Rei_TaG"
+     ],
+     "bounds_min": [
+      -7.956,
+      -5.9,
+      -50.0
+     ],
+     "bounds_max": [
+      19.38,
+      5.9,
+      5.8
+     ]
+    }
+   }
+  },
+  "Hayate": {
+   "class": "M",
+   "target_eye_height": 190.0,
+   "eye_height": 190.0,
+   "target_width": 50.0,
+   "width": 48.45,
+   "height": 200.5,
+   "depth": 33.95,
+   "triangles": 6774,
+   "pelvis_height": 108.0,
+   "eyes_in_rest_pose": [
+    9.0,
+    0.0,
+    190.0
+   ],
+   "hand_l_in_rest_pose": [
+    -0.67,
+    -16.64,
+    93.56
+   ],
+   "hand_r_in_rest_pose": [
+    -0.67,
+    16.64,
+    93.56
+   ],
+   "palm_normal_rest": {
+    "hand_l": [
+     0,
+     1,
+     0
+    ],
+    "hand_r": [
+     0,
+     -1,
+     0
+    ]
+   },
+   "parts": {
+    "Pelvis": {
+     "path": "/Game/Art/Heroes/Hayate/SM_Hayate_Pelvis",
+     "sockets": {
+      "spine": [
+       0.0,
+       -0.0,
+       10.0
+      ],
+      "hip_l": [
+       0.0,
+       -9.2,
+       -6.5
+      ],
+      "hip_r": [
+       0.0,
+       9.2,
+       -6.5
+      ]
+     },
+     "rest_pivot": [
+      0.0,
+      0.0,
+      108.0
+     ],
+     "triangles": 264,
+     "slots": [
+      "Body",
+      "Dark",
+      "Metal"
+     ],
+     "material_instances": [
+      "/Game/Art/Heroes/Hayate/MI_Hayate_Body",
+      "/Game/Art/Heroes/Hayate/MI_Hayate_Dark",
+      "/Game/Art/Heroes/Hayate/MI_Hayate_Metal"
+     ],
+     "bounds_min": [
+      -10.05,
+      -14.4,
+      -15.0
+     ],
+     "bounds_max": [
+      10.7,
+      14.4,
+      12.0
+     ]
+    },
+    "Torso": {
+     "path": "/Game/Art/Heroes/Hayate/SM_Hayate_Torso",
+     "sockets": {
+      "neck": [
+       -1.0,
+       -0.0,
+       48.0
+      ],
+      "shoulder_l": [
+       -1.0,
+       -18.5,
+       41.0
+      ],
+      "shoulder_r": [
+       -1.0,
+       18.5,
+       41.0
+      ]
+     },
+     "rest_pivot": [
+      0.0,
+      0.0,
+      118.0
+     ],
+     "triangles": 962,
+     "slots": [
+      "Body",
+      "Accent",
+      "Team",
+      "Glow"
+     ],
+     "material_instances": [
+      "/Game/Art/Heroes/Hayate/MI_Hayate_Body",
+      "/Game/Art/Heroes/Hayate/MI_Hayate_Accent",
+      "/Game/Art/Heroes/Hayate/MI_Hayate_Team",
+      "/Game/Art/Heroes/Hayate/MI_Hayate_Glow"
+     ],
+     "bounds_min": [
+      -12.0,
+      -18.65,
+      -19.312
+     ],
+     "bounds_max": [
+      13.149,
+      18.65,
+      50.4
+     ]
+    },
+    "Head": {
+     "path": "/Game/Art/Heroes/Hayate/SM_Hayate_Head",
+     "sockets": {
+      "eyes": [
+       10.0,
+       -0.0,
+       24.0
+      ]
+     },
+     "rest_pivot": [
+      -1.0,
+      0.0,
+      166.0
+     ],
+     "triangles": 1252,
+     "slots": [
+      "Skin",
+      "Hair",
+      "Dark",
+      "Metal",
+      "Glow"
+     ],
+     "material_instances": [
+      "/Game/Art/Heroes/Hayate/MI_Hayate_Skin",
+      "/Game/Art/Heroes/Hayate/MI_Hayate_Hair",
+      "/Game/Art/Heroes/Hayate/MI_Hayate_Dark",
+      "/Game/Art/Heroes/Hayate/MI_Hayate_Metal",
+      "/Game/Art/Heroes/Hayate/MI_Hayate_Glow"
+     ],
+     "bounds_min": [
+      -13.0,
+      -9.454,
+      -7.883
+     ],
+     "bounds_max": [
+      14.9,
+      10.0,
+      34.5
+     ]
+    },
+    "UpperArm_L": {
+     "path": "/Game/Art/Heroes/Hayate/SM_Hayate_UpperArm_L",
+     "sockets": {
+      "elbow": [
+       0.0,
+       0.0,
+       -32.0
+      ]
+     },
+     "rest_pivot": [
+      -1.0,
+      -18.5,
+      159.0
+     ],
+     "triangles": 328,
+     "slots": [
+      "Body",
+      "Accent",
+      "Team"
+     ],
+     "material_instances": [
+      "/Game/Art/Heroes/Hayate/MI_Hayate_Body",
+      "/Game/Art/Heroes/Hayate/MI_Hayate_Accent",
+      "/Game/Art/Heroes/Hayate/MI_Hayate_Team"
+     ],
+     "bounds_min": [
+      -6.327,
+      -5.723,
+      -36.3
+     ],
+     "bounds_max": [
+      6.327,
+      5.3,
+      5.3
+     ]
+    },
+    "UpperArm_R": {
+     "path": "/Game/Art/Heroes/Hayate/SM_Hayate_UpperArm_R",
+     "sockets": {
+      "elbow": [
+       0.0,
+       0.0,
+       -32.0
+      ]
+     },
+     "rest_pivot": [
+      -1.0,
+      18.5,
+      159.0
+     ],
+     "triangles": 328,
+     "slots": [
+      "Body",
+      "Accent",
+      "Team"
+     ],
+     "material_instances": [
+      "/Game/Art/Heroes/Hayate/MI_Hayate_Body",
+      "/Game/Art/Heroes/Hayate/MI_Hayate_Accent",
+      "/Game/Art/Heroes/Hayate/MI_Hayate_Team"
+     ],
+     "bounds_min": [
+      -6.327,
+      -5.3,
+      -36.3
+     ],
+     "bounds_max": [
+      6.327,
+      5.723,
+      5.3
+     ]
+    },
+    "LowerArm_L": {
+     "path": "/Game/Art/Heroes/Hayate/SM_Hayate_LowerArm_L",
+     "sockets": {
+      "hand": [
+       0.33,
+       1.865,
+       -33.445
+      ]
+     },
+     "rest_pivot": [
+      -1.0,
+      -18.5,
+      127.0
+     ],
+     "triangles": 792,
+     "slots": [
+      "Body",
+      "Accent",
+      "Dark",
+      "TaG"
+     ],
+     "material_instances": [
+      "/Game/Art/Heroes/Hayate/MI_Hayate_Body",
+      "/Game/Art/Heroes/Hayate/MI_Hayate_Accent",
+      "/Game/Art/Heroes/Hayate/MI_Hayate_Dark",
+      "/Game/Art/Heroes/Hayate/MI_Hayate_TaG"
+     ],
+     "bounds_min": [
+      -4.3,
+      -4.3,
+      -46.57
+     ],
+     "bounds_max": [
+      6.02,
+      4.3,
+      4.2
+     ]
+    },
+    "LowerArm_R": {
+     "path": "/Game/Art/Heroes/Hayate/SM_Hayate_LowerArm_R",
+     "sockets": {
+      "hand": [
+       0.33,
+       -1.865,
+       -33.445
+      ]
+     },
+     "rest_pivot": [
+      -1.0,
+      18.5,
+      127.0
+     ],
+     "triangles": 792,
+     "slots": [
+      "Body",
+      "Accent",
+      "Dark",
+      "TaG"
+     ],
+     "material_instances": [
+      "/Game/Art/Heroes/Hayate/MI_Hayate_Body",
+      "/Game/Art/Heroes/Hayate/MI_Hayate_Accent",
+      "/Game/Art/Heroes/Hayate/MI_Hayate_Dark",
+      "/Game/Art/Heroes/Hayate/MI_Hayate_TaG"
+     ],
+     "bounds_min": [
+      -4.3,
+      -4.3,
+      -46.57
+     ],
+     "bounds_max": [
+      6.02,
+      4.3,
+      4.2
+     ]
+    },
+    "Thigh_L": {
+     "path": "/Game/Art/Heroes/Hayate/SM_Hayate_Thigh_L",
+     "sockets": {
+      "knee": [
+       0.0,
+       0.0,
+       -46.5
+      ]
+     },
+     "rest_pivot": [
+      0.0,
+      -9.2,
+      101.5
+     ],
+     "triangles": 184,
+     "slots": [
+      "Body",
+      "Accent"
+     ],
+     "material_instances": [
+      "/Game/Art/Heroes/Hayate/MI_Hayate_Body",
+      "/Game/Art/Heroes/Hayate/MI_Hayate_Accent"
+     ],
+     "bounds_min": [
+      -7.4,
+      -7.4,
+      -52.1
+     ],
+     "bounds_max": [
+      7.4,
+      7.4,
+      7.4
+     ]
+    },
+    "Thigh_R": {
+     "path": "/Game/Art/Heroes/Hayate/SM_Hayate_Thigh_R",
+     "sockets": {
+      "knee": [
+       0.0,
+       0.0,
+       -46.5
+      ]
+     },
+     "rest_pivot": [
+      0.0,
+      9.2,
+      101.5
+     ],
+     "triangles": 184,
+     "slots": [
+      "Body",
+      "Accent"
+     ],
+     "material_instances": [
+      "/Game/Art/Heroes/Hayate/MI_Hayate_Body",
+      "/Game/Art/Heroes/Hayate/MI_Hayate_Accent"
+     ],
+     "bounds_min": [
+      -7.4,
+      -7.4,
+      -52.1
+     ],
+     "bounds_max": [
+      7.4,
+      7.4,
+      7.4
+     ]
+    },
+    "Shin_L": {
+     "path": "/Game/Art/Heroes/Hayate/SM_Hayate_Shin_L",
+     "sockets": {
+      "sole": [
+       5.88,
+       0.0,
+       -55.0
+      ]
+     },
+     "rest_pivot": [
+      0.0,
+      -9.2,
+      55.0
+     ],
+     "triangles": 844,
+     "slots": [
+      "Body",
+      "Accent",
+      "Dark",
+      "TaG"
+     ],
+     "material_instances": [
+      "/Game/Art/Heroes/Hayate/MI_Hayate_Body",
+      "/Game/Art/Heroes/Hayate/MI_Hayate_Accent",
+      "/Game/Art/Heroes/Hayate/MI_Hayate_Dark",
+      "/Game/Art/Heroes/Hayate/MI_Hayate_TaG"
+     ],
+     "bounds_min": [
+      -8.19,
+      -5.6,
+      -55.0
+     ],
+     "bounds_max": [
+      19.95,
+      5.6,
+      5.6
+     ]
+    },
+    "Shin_R": {
+     "path": "/Game/Art/Heroes/Hayate/SM_Hayate_Shin_R",
+     "sockets": {
+      "sole": [
+       5.88,
+       0.0,
+       -55.0
+      ]
+     },
+     "rest_pivot": [
+      0.0,
+      9.2,
+      55.0
+     ],
+     "triangles": 844,
+     "slots": [
+      "Body",
+      "Accent",
+      "Dark",
+      "TaG"
+     ],
+     "material_instances": [
+      "/Game/Art/Heroes/Hayate/MI_Hayate_Body",
+      "/Game/Art/Heroes/Hayate/MI_Hayate_Accent",
+      "/Game/Art/Heroes/Hayate/MI_Hayate_Dark",
+      "/Game/Art/Heroes/Hayate/MI_Hayate_TaG"
+     ],
+     "bounds_min": [
+      -8.19,
+      -5.6,
+      -55.0
+     ],
+     "bounds_max": [
+      19.95,
+      5.6,
+      5.6
+     ]
+    }
+   }
+  },
+  "Tsumugi": {
+   "class": "S",
+   "target_eye_height": 145.0,
+   "eye_height": 145.0,
+   "target_width": 40.0,
+   "width": 41.39,
+   "height": 154.6,
+   "depth": 55.92,
+   "triangles": 7614,
+   "pelvis_height": 80.0,
+   "eyes_in_rest_pose": [
+    8.7,
+    0.0,
+    145.0
+   ],
+   "hand_l_in_rest_pose": [
+    -0.25,
+    -13.1,
+    72.94
+   ],
+   "hand_r_in_rest_pose": [
+    -0.25,
+    13.1,
+    72.94
+   ],
+   "palm_normal_rest": {
+    "hand_l": [
+     0,
+     1,
+     0
+    ],
+    "hand_r": [
+     0,
+     -1,
+     0
+    ]
+   },
+   "parts": {
+    "Pelvis": {
+     "path": "/Game/Art/Heroes/Tsumugi/SM_Tsumugi_Pelvis",
+     "sockets": {
+      "spine": [
+       0.0,
+       -0.0,
+       7.5
+      ],
+      "hip_l": [
+       0.0,
+       -7.5,
+       -5.0
+      ],
+      "hip_r": [
+       0.0,
+       7.5,
+       -5.0
+      ]
+     },
+     "rest_pivot": [
+      0.0,
+      0.0,
+      80.0
+     ],
+     "triangles": 264,
+     "slots": [
+      "Dark",
+      "Team"
+     ],
+     "material_instances": [
+      "/Game/Art/Heroes/Tsumugi/MI_Tsumugi_Dark",
+      "/Game/Art/Heroes/Tsumugi/MI_Tsumugi_Team"
+     ],
+     "bounds_min": [
+      -9.6,
+      -12.25,
+      -12.0
+     ],
+     "bounds_max": [
+      8.45,
+      12.25,
+      10.0
+     ]
+    },
+    "Torso": {
+     "path": "/Game/Art/Heroes/Tsumugi/SM_Tsumugi_Torso",
+     "sockets": {
+      "neck": [
+       -0.5,
+       -0.0,
+       37.0
+      ],
+      "shoulder_l": [
+       -0.5,
+       -14.5,
+       32.5
+      ],
+      "shoulder_r": [
+       -0.5,
+       14.5,
+       32.5
+      ]
+     },
+     "rest_pivot": [
+      0.0,
+      0.0,
+      87.5
+     ],
+     "triangles": 956,
+     "slots": [
+      "Body",
+      "Accent",
+      "Dark",
+      "Team"
+     ],
+     "material_instances": [
+      "/Game/Art/Heroes/Tsumugi/MI_Tsumugi_Body",
+      "/Game/Art/Heroes/Tsumugi/MI_Tsumugi_Accent",
+      "/Game/Art/Heroes/Tsumugi/MI_Tsumugi_Dark",
+      "/Game/Art/Heroes/Tsumugi/MI_Tsumugi_Team"
+     ],
+     "bounds_min": [
+      -15.177,
+      -20.696,
+      -5.097
+     ],
+     "bounds_max": [
+      15.794,
+      20.696,
+      37.5
+     ]
+    },
+    "Head": {
+     "path": "/Game/Art/Heroes/Tsumugi/SM_Tsumugi_Head",
+     "sockets": {
+      "eyes": [
+       9.2,
+       -0.0,
+       20.5
+      ]
+     },
+     "rest_pivot": [
+      -0.5,
+      0.0,
+      124.5
+     ],
+     "triangles": 1678,
+     "slots": [
+      "Accent",
+      "Skin",
+      "Hair",
+      "Dark"
+     ],
+     "material_instances": [
+      "/Game/Art/Heroes/Tsumugi/MI_Tsumugi_Accent",
+      "/Game/Art/Heroes/Tsumugi/MI_Tsumugi_Skin",
+      "/Game/Art/Heroes/Tsumugi/MI_Tsumugi_Hair",
+      "/Game/Art/Heroes/Tsumugi/MI_Tsumugi_Dark"
+     ],
+     "bounds_min": [
+      -17.819,
+      -8.765,
+      -42.294
+     ],
+     "bounds_max": [
+      11.176,
+      8.765,
+      30.1
+     ]
+    },
+    "UpperArm_L": {
+     "path": "/Game/Art/Heroes/Tsumugi/SM_Tsumugi_UpperArm_L",
+     "sockets": {
+      "elbow": [
+       0.0,
+       0.0,
+       -22.5
+      ]
+     },
+     "rest_pivot": [
+      -0.5,
+      -14.5,
+      120.0
+     ],
+     "triangles": 120,
+     "slots": [
+      "Dark"
+     ],
+     "material_instances": [
+      "/Game/Art/Heroes/Tsumugi/MI_Tsumugi_Dark"
+     ],
+     "bounds_min": [
+      -4.2,
+      -3.994,
+      -25.9
+     ],
+     "bounds_max": [
+      4.2,
+      3.994,
+      4.2
+     ]
+    },
+    "UpperArm_R": {
+     "path": "/Game/Art/Heroes/Tsumugi/SM_Tsumugi_UpperArm_R",
+     "sockets": {
+      "elbow": [
+       0.0,
+       0.0,
+       -22.5
+      ]
+     },
+     "rest_pivot": [
+      -0.5,
+      14.5,
+      120.0
+     ],
+     "triangles": 120,
+     "slots": [
+      "Dark"
+     ],
+     "material_instances": [
+      "/Game/Art/Heroes/Tsumugi/MI_Tsumugi_Dark"
+     ],
+     "bounds_min": [
+      -4.2,
+      -3.994,
+      -25.9
+     ],
+     "bounds_max": [
+      4.2,
+      3.994,
+      4.2
+     ]
+    },
+    "LowerArm_L": {
+     "path": "/Game/Art/Heroes/Tsumugi/SM_Tsumugi_LowerArm_L",
+     "sockets": {
+      "hand": [
+       0.246,
+       1.403,
+       -24.559
+      ]
+     },
+     "rest_pivot": [
+      -0.5,
+      -14.5,
+      97.5
+     ],
+     "triangles": 1302,
+     "slots": [
+      "Skin",
+      "Dark",
+      "Metal",
+      "TaG",
+      "Glow"
+     ],
+     "material_instances": [
+      "/Game/Art/Heroes/Tsumugi/MI_Tsumugi_Skin",
+      "/Game/Art/Heroes/Tsumugi/MI_Tsumugi_Dark",
+      "/Game/Art/Heroes/Tsumugi/MI_Tsumugi_Metal",
+      "/Game/Art/Heroes/Tsumugi/MI_Tsumugi_TaG",
+      "/Game/Art/Heroes/Tsumugi/MI_Tsumugi_Glow"
+     ],
+     "bounds_min": [
+      -39.271,
+      -5.405,
+      -68.14
+     ],
+     "bounds_max": [
+      5.0,
+      5.0,
+      3.4
+     ]
+    },
+    "LowerArm_R": {
+     "path": "/Game/Art/Heroes/Tsumugi/SM_Tsumugi_LowerArm_R",
+     "sockets": {
+      "hand": [
+       0.246,
+       -1.403,
+       -24.559
+      ]
+     },
+     "rest_pivot": [
+      -0.5,
+      14.5,
+      97.5
+     ],
+     "triangles": 1302,
+     "slots": [
+      "Skin",
+      "Dark",
+      "Metal",
+      "TaG",
+      "Glow"
+     ],
+     "material_instances": [
+      "/Game/Art/Heroes/Tsumugi/MI_Tsumugi_Skin",
+      "/Game/Art/Heroes/Tsumugi/MI_Tsumugi_Dark",
+      "/Game/Art/Heroes/Tsumugi/MI_Tsumugi_Metal",
+      "/Game/Art/Heroes/Tsumugi/MI_Tsumugi_TaG",
+      "/Game/Art/Heroes/Tsumugi/MI_Tsumugi_Glow"
+     ],
+     "bounds_min": [
+      -39.271,
+      -5.0,
+      -68.14
+     ],
+     "bounds_max": [
+      5.0,
+      5.405,
+      3.4
+     ]
+    },
+    "Thigh_L": {
+     "path": "/Game/Art/Heroes/Tsumugi/SM_Tsumugi_Thigh_L",
+     "sockets": {
+      "knee": [
+       0.0,
+       0.0,
+       -34.0
+      ]
+     },
+     "rest_pivot": [
+      0.0,
+      -7.5,
+      75.0
+     ],
+     "triangles": 192,
+     "slots": [
+      "Dark",
+      "Team"
+     ],
+     "material_instances": [
+      "/Game/Art/Heroes/Tsumugi/MI_Tsumugi_Dark",
+      "/Game/Art/Heroes/Tsumugi/MI_Tsumugi_Team"
+     ],
+     "bounds_min": [
+      -6.3,
+      -6.678,
+      -39.0
+     ],
+     "bounds_max": [
+      6.3,
+      6.3,
+      6.3
+     ]
+    },
+    "Thigh_R": {
+     "path": "/Game/Art/Heroes/Tsumugi/SM_Tsumugi_Thigh_R",
+     "sockets": {
+      "knee": [
+       0.0,
+       0.0,
+       -34.0
+      ]
+     },
+     "rest_pivot": [
+      0.0,
+      7.5,
+      75.0
+     ],
+     "triangles": 192,
+     "slots": [
+      "Dark",
+      "Team"
+     ],
+     "material_instances": [
+      "/Game/Art/Heroes/Tsumugi/MI_Tsumugi_Dark",
+      "/Game/Art/Heroes/Tsumugi/MI_Tsumugi_Team"
+     ],
+     "bounds_min": [
+      -6.3,
+      -6.3,
+      -39.0
+     ],
+     "bounds_max": [
+      6.3,
+      6.678,
+      6.3
+     ]
+    },
+    "Shin_L": {
+     "path": "/Game/Art/Heroes/Tsumugi/SM_Tsumugi_Shin_L",
+     "sockets": {
+      "sole": [
+       4.76,
+       0.0,
+       -41.0
+      ]
+     },
+     "rest_pivot": [
+      0.0,
+      -7.5,
+      41.0
+     ],
+     "triangles": 744,
+     "slots": [
+      "Body",
+      "Accent",
+      "Dark",
+      "TaG"
+     ],
+     "material_instances": [
+      "/Game/Art/Heroes/Tsumugi/MI_Tsumugi_Body",
+      "/Game/Art/Heroes/Tsumugi/MI_Tsumugi_Accent",
+      "/Game/Art/Heroes/Tsumugi/MI_Tsumugi_Dark",
+      "/Game/Art/Heroes/Tsumugi/MI_Tsumugi_TaG"
+     ],
+     "bounds_min": [
+      -6.63,
+      -5.0,
+      -41.0
+     ],
+     "bounds_max": [
+      16.15,
+      5.0,
+      5.0
+     ]
+    },
+    "Shin_R": {
+     "path": "/Game/Art/Heroes/Tsumugi/SM_Tsumugi_Shin_R",
+     "sockets": {
+      "sole": [
+       4.76,
+       0.0,
+       -41.0
+      ]
+     },
+     "rest_pivot": [
+      0.0,
+      7.5,
+      41.0
+     ],
+     "triangles": 744,
+     "slots": [
+      "Body",
+      "Accent",
+      "Dark",
+      "TaG"
+     ],
+     "material_instances": [
+      "/Game/Art/Heroes/Tsumugi/MI_Tsumugi_Body",
+      "/Game/Art/Heroes/Tsumugi/MI_Tsumugi_Accent",
+      "/Game/Art/Heroes/Tsumugi/MI_Tsumugi_Dark",
+      "/Game/Art/Heroes/Tsumugi/MI_Tsumugi_TaG"
+     ],
+     "bounds_min": [
+      -6.63,
+      -5.0,
+      -41.0
+     ],
+     "bounds_max": [
+      16.15,
+      5.0,
+      5.0
+     ]
+    }
+   }
+  },
+  "Hibiki": {
+   "class": "M",
+   "target_eye_height": 175.0,
+   "eye_height": 175.0,
+   "target_width": 50.0,
+   "width": 50.42,
+   "height": 194.5,
+   "depth": 43.26,
+   "triangles": 7786,
+   "pelvis_height": 99.0,
+   "eyes_in_rest_pose": [
+    10.0,
+    0.0,
+    175.0
+   ],
+   "hand_l_in_rest_pose": [
+    -0.71,
+    -16.83,
+    86.15
+   ],
+   "hand_r_in_rest_pose": [
+    -0.71,
+    16.83,
+    86.15
+   ],
+   "palm_normal_rest": {
+    "hand_l": [
+     0,
+     1,
+     0
+    ],
+    "hand_r": [
+     0,
+     -1,
+     0
+    ]
+   },
+   "parts": {
+    "Pelvis": {
+     "path": "/Game/Art/Heroes/Hibiki/SM_Hibiki_Pelvis",
+     "sockets": {
+      "spine": [
+       0.0,
+       -0.0,
+       9.0
+      ],
+      "hip_l": [
+       0.0,
+       -9.0,
+       -6.0
+      ],
+      "hip_r": [
+       0.0,
+       9.0,
+       -6.0
+      ]
+     },
+     "rest_pivot": [
+      0.0,
+      0.0,
+      99.0
+     ],
+     "triangles": 1210,
+     "slots": [
+      "Team",
+      "TaG",
+      "Jelly"
+     ],
+     "material_instances": [
+      "/Game/Art/Heroes/Hibiki/MI_Hibiki_Team",
+      "/Game/Art/Heroes/Hibiki/MI_Hibiki_TaG",
+      "/Game/Art/Heroes/Hibiki/MI_Hibiki_Jelly"
+     ],
+     "bounds_min": [
+      -16.453,
+      -19.93,
+      -42.65
+     ],
+     "bounds_max": [
+      16.257,
+      19.684,
+      12.0
+     ]
+    },
+    "Torso": {
+     "path": "/Game/Art/Heroes/Hibiki/SM_Hibiki_Torso",
+     "sockets": {
+      "neck": [
+       -1.0,
+       -0.0,
+       42.0
+      ],
+      "shoulder_l": [
+       -1.0,
+       -18.5,
+       37.0
+      ],
+      "shoulder_r": [
+       -1.0,
+       18.5,
+       37.0
+      ]
+     },
+     "rest_pivot": [
+      0.0,
+      0.0,
+      108.0
+     ],
+     "triangles": 1008,
+     "slots": [
+      "Team",
+      "Glow",
+      "Jelly"
+     ],
+     "material_instances": [
+      "/Game/Art/Heroes/Hibiki/MI_Hibiki_Team",
+      "/Game/Art/Heroes/Hibiki/MI_Hibiki_Glow",
+      "/Game/Art/Heroes/Hibiki/MI_Hibiki_Jelly"
+     ],
+     "bounds_min": [
+      -11.0,
+      -16.596,
+      -5.0
+     ],
+     "bounds_max": [
+      11.988,
+      16.596,
+      43.5
+     ]
+    },
+    "Head": {
+     "path": "/Game/Art/Heroes/Hibiki/SM_Hibiki_Head",
+     "sockets": {
+      "eyes": [
+       11.0,
+       -0.0,
+       25.0
+      ]
+     },
+     "rest_pivot": [
+      -1.0,
+      0.0,
+      150.0
+     ],
+     "triangles": 2212,
+     "slots": [
+      "TaG",
+      "Glow",
+      "Jelly"
+     ],
+     "material_instances": [
+      "/Game/Art/Heroes/Hibiki/MI_Hibiki_TaG",
+      "/Game/Art/Heroes/Hibiki/MI_Hibiki_Glow",
+      "/Game/Art/Heroes/Hibiki/MI_Hibiki_Jelly"
+     ],
+     "bounds_min": [
+      -23.635,
+      -18.692,
+      -23.65
+     ],
+     "bounds_max": [
+      18.4,
+      19.644,
+      44.5
+     ]
+    },
+    "UpperArm_L": {
+     "path": "/Game/Art/Heroes/Hibiki/SM_Hibiki_UpperArm_L",
+     "sockets": {
+      "elbow": [
+       0.0,
+       0.0,
+       -29.0
+      ]
+     },
+     "rest_pivot": [
+      -1.0,
+      -18.5,
+      145.0
+     ],
+     "triangles": 480,
+     "slots": [
+      "Team",
+      "Glow",
+      "Jelly"
+     ],
+     "material_instances": [
+      "/Game/Art/Heroes/Hibiki/MI_Hibiki_Team",
+      "/Game/Art/Heroes/Hibiki/MI_Hibiki_Glow",
+      "/Game/Art/Heroes/Hibiki/MI_Hibiki_Jelly"
+     ],
+     "bounds_min": [
+      -5.752,
+      -6.712,
+      -33.0
+     ],
+     "bounds_max": [
+      5.752,
+      5.6,
+      5.016
+     ]
+    },
+    "UpperArm_R": {
+     "path": "/Game/Art/Heroes/Hibiki/SM_Hibiki_UpperArm_R",
+     "sockets": {
+      "elbow": [
+       0.0,
+       0.0,
+       -29.0
+      ]
+     },
+     "rest_pivot": [
+      -1.0,
+      18.5,
+      145.0
+     ],
+     "triangles": 480,
+     "slots": [
+      "Team",
+      "Glow",
+      "Jelly"
+     ],
+     "material_instances": [
+      "/Game/Art/Heroes/Hibiki/MI_Hibiki_Team",
+      "/Game/Art/Heroes/Hibiki/MI_Hibiki_Glow",
+      "/Game/Art/Heroes/Hibiki/MI_Hibiki_Jelly"
+     ],
+     "bounds_min": [
+      -5.752,
+      -5.6,
+      -33.0
+     ],
+     "bounds_max": [
+      5.752,
+      6.712,
+      5.016
+     ]
+    },
+    "LowerArm_L": {
+     "path": "/Game/Art/Heroes/Hibiki/SM_Hibiki_LowerArm_L",
+     "sockets": {
+      "hand": [
+       0.294,
+       1.667,
+       -29.851
+      ]
+     },
+     "rest_pivot": [
+      -1.0,
+      -18.5,
+      116.0
+     ],
+     "triangles": 458,
+     "slots": [
+      "Glow",
+      "Jelly"
+     ],
+     "material_instances": [
+      "/Game/Art/Heroes/Hibiki/MI_Hibiki_Glow",
+      "/Game/Art/Heroes/Hibiki/MI_Hibiki_Jelly"
+     ],
+     "bounds_min": [
+      -4.0,
+      -4.0,
+      -41.673
+     ],
+     "bounds_max": [
+      5.364,
+      4.0,
+      4.0
+     ]
+    },
+    "LowerArm_R": {
+     "path": "/Game/Art/Heroes/Hibiki/SM_Hibiki_LowerArm_R",
+     "sockets": {
+      "hand": [
+       0.294,
+       -1.667,
+       -29.851
+      ]
+     },
+     "rest_pivot": [
+      -1.0,
+      18.5,
+      116.0
+     ],
+     "triangles": 458,
+     "slots": [
+      "Glow",
+      "Jelly"
+     ],
+     "material_instances": [
+      "/Game/Art/Heroes/Hibiki/MI_Hibiki_Glow",
+      "/Game/Art/Heroes/Hibiki/MI_Hibiki_Jelly"
+     ],
+     "bounds_min": [
+      -4.0,
+      -4.0,
+      -41.673
+     ],
+     "bounds_max": [
+      5.364,
+      4.0,
+      4.0
+     ]
+    },
+    "Thigh_L": {
+     "path": "/Game/Art/Heroes/Hibiki/SM_Hibiki_Thigh_L",
+     "sockets": {
+      "knee": [
+       0.0,
+       0.0,
+       -43.0
+      ]
+     },
+     "rest_pivot": [
+      0.0,
+      -9.0,
+      93.0
+     ],
+     "triangles": 192,
+     "slots": [
+      "Glow",
+      "Jelly"
+     ],
+     "material_instances": [
+      "/Game/Art/Heroes/Hibiki/MI_Hibiki_Glow",
+      "/Game/Art/Heroes/Hibiki/MI_Hibiki_Jelly"
+     ],
+     "bounds_min": [
+      -7.0,
+      -7.0,
+      -48.2
+     ],
+     "bounds_max": [
+      7.0,
+      7.0,
+      7.0
+     ]
+    },
+    "Thigh_R": {
+     "path": "/Game/Art/Heroes/Hibiki/SM_Hibiki_Thigh_R",
+     "sockets": {
+      "knee": [
+       0.0,
+       0.0,
+       -43.0
+      ]
+     },
+     "rest_pivot": [
+      0.0,
+      9.0,
+      93.0
+     ],
+     "triangles": 192,
+     "slots": [
+      "Glow",
+      "Jelly"
+     ],
+     "material_instances": [
+      "/Game/Art/Heroes/Hibiki/MI_Hibiki_Glow",
+      "/Game/Art/Heroes/Hibiki/MI_Hibiki_Jelly"
+     ],
+     "bounds_min": [
+      -7.0,
+      -7.0,
+      -48.2
+     ],
+     "bounds_max": [
+      7.0,
+      7.0,
+      7.0
+     ]
+    },
+    "Shin_L": {
+     "path": "/Game/Art/Heroes/Hibiki/SM_Hibiki_Shin_L",
+     "sockets": {
+      "sole": [
+       5.488,
+       0.0,
+       -50.0
+      ]
+     },
+     "rest_pivot": [
+      0.0,
+      -9.0,
+      50.0
+     ],
+     "triangles": 548,
+     "slots": [
+      "Body",
+      "Glow",
+      "Jelly"
+     ],
+     "material_instances": [
+      "/Game/Art/Heroes/Hibiki/MI_Hibiki_Body",
+      "/Game/Art/Heroes/Hibiki/MI_Hibiki_Glow",
+      "/Game/Art/Heroes/Hibiki/MI_Hibiki_Jelly"
+     ],
+     "bounds_min": [
+      -7.644,
+      -5.2,
+      -50.0
+     ],
+     "bounds_max": [
+      18.62,
+      5.2,
+      5.2
+     ]
+    },
+    "Shin_R": {
+     "path": "/Game/Art/Heroes/Hibiki/SM_Hibiki_Shin_R",
+     "sockets": {
+      "sole": [
+       5.488,
+       0.0,
+       -50.0
+      ]
+     },
+     "rest_pivot": [
+      0.0,
+      9.0,
+      50.0
+     ],
+     "triangles": 548,
+     "slots": [
+      "Body",
+      "Glow",
+      "Jelly"
+     ],
+     "material_instances": [
+      "/Game/Art/Heroes/Hibiki/MI_Hibiki_Body",
+      "/Game/Art/Heroes/Hibiki/MI_Hibiki_Glow",
+      "/Game/Art/Heroes/Hibiki/MI_Hibiki_Jelly"
+     ],
+     "bounds_min": [
+      -7.644,
+      -5.2,
+      -50.0
+     ],
+     "bounds_max": [
+      18.62,
+      5.2,
+      5.2
+     ]
+    }
+   }
+  }
+ },
+ "ball": {
+  "path": "/Game/Art/Ball/SM_Ball",
+  "triangles": 3088,
+  "vertices": 2738,
+  "slots": [
+   "Body",
+   "Dark",
+   "Glow"
+  ],
+  "material_instances": [
+   "/Game/Art/Ball/MI_Ball_Body",
+   "/Game/Art/Ball/MI_Ball_Dark",
+   "/Game/Art/Ball/MI_Ball_Glow"
+  ],
+  "bounds_min": [
+   -12.0,
+   -11.98,
+   -12.0
+  ],
+  "bounds_max": [
+   12.0,
+   11.98,
+   12.0
+  ],
+  "diameter": 24.0
+ },
+ "court": {
+  "SM_Hoop": {
+   "path": "/Game/Art/Court/SM_Hoop",
+   "triangles": 1848,
+   "vertices": 2766,
+   "slots": [
+    "Accent",
+    "Dark",
+    "Metal",
+    "TaG",
+    "Glow",
+    "Net",
+    "Board"
+   ],
+   "material_instances": [
+    "/Game/Art/Court/MI_Hoop_Accent",
+    "/Game/Art/Court/MI_Hoop_Dark",
+    "/Game/Art/Court/MI_Hoop_Metal",
+    "/Game/Art/Court/MI_Hoop_TaG",
+    "/Game/Art/Court/MI_Hoop_Glow",
+    "/Game/Art/Court/MI_Hoop_Net",
+    "/Game/Art/Court/MI_Hoop_Board"
+   ],
+   "bounds_min": [
+    -134.0,
+    -90.0,
+    0.0
+   ],
+   "bounds_max": [
+    181.0,
+    90.0,
+    395.0
+   ],
+   "sockets": {
+    "rim": [
+     157.5,
+     -0.0,
+     305.0
+    ],
+    "net_bottom": [
+     157.5,
+     -0.0,
+     265.0
+    ]
+   },
+   "measured": {
+    "board_front_x": 120.0,
+    "board_back_x": 117.0,
+    "board_y": [
+     -90.0,
+     90.0
+    ],
+    "board_z": [
+     290.0,
+     395.0
+    ],
+    "rim_center": [
+     157.5,
+     0.0,
+     305.0
+    ],
+    "rim_tube_centerline_radius": 22.5,
+    "rim_tube_radius": 1.0,
+    "rim_inner_edge_radius": 21.5,
+    "net_length": 39.73,
+    "simple_collision_boxes": 2
+   }
+  },
+  "SM_Rooftop": {
+   "path": "/Game/Art/Court/SM_Rooftop",
+   "triangles": 94,
+   "vertices": 76,
+   "slots": [
+    "Dark",
+    "Court",
+    "Paint",
+    "Apron"
+   ],
+   "material_instances": [
+    "/Game/Art/Court/MI_Rooftop_Dark",
+    "/Game/Art/Court/MI_Rooftop_Court",
+    "/Game/Art/Court/MI_Rooftop_Paint",
+    "/Game/Art/Court/MI_Rooftop_Apron"
+   ],
+   "bounds_min": [
+    -600.0,
+    -1300.0,
+    -100.0
+   ],
+   "bounds_max": [
+    1700.0,
+    1300.0,
+    0.0
+   ],
+   "top_z": 0.0,
+   "simple_collision_boxes": 1
+  },
+  "SM_RooftopProps": {
+   "path": "/Game/Art/Court/SM_RooftopProps",
+   "triangles": 6454,
+   "vertices": 11360,
+   "slots": [
+    "Body",
+    "Accent",
+    "Dark",
+    "Metal",
+    "Glow",
+    "Window"
+   ],
+   "material_instances": [
+    "/Game/Art/Court/MI_RooftopProps_Body",
+    "/Game/Art/Court/MI_RooftopProps_Accent",
+    "/Game/Art/Court/MI_RooftopProps_Dark",
+    "/Game/Art/Court/MI_RooftopProps_Metal",
+    "/Game/Art/Court/MI_RooftopProps_Glow",
+    "/Game/Art/Court/MI_RooftopProps_Window"
+   ],
+   "bounds_min": [
+    -1170.779,
+    -1720.424,
+    -4000.0
+   ],
+   "bounds_max": [
+    1919.846,
+    1914.799,
+    1544.221
+   ]
+  },
+  "SM_RooftopProps_Furnace": {
+   "path": "/Game/Art/Court/SM_RooftopProps_Furnace",
+   "triangles": 7492,
+   "vertices": 7704,
+   "slots": [
+    "Body",
+    "Dark",
+    "Metal",
+    "Glow"
+   ],
+   "material_instances": [
+    "/Game/Art/Court/MI_RooftopProps_Furnace_Body",
+    "/Game/Art/Court/MI_RooftopProps_Furnace_Dark",
+    "/Game/Art/Court/MI_RooftopProps_Furnace_Metal",
+    "/Game/Art/Court/MI_RooftopProps_Furnace_Glow"
+   ],
+   "bounds_min": [
+    -3720.0,
+    -3204.867,
+    -2400.0
+   ],
+   "bounds_max": [
+    2660.0,
+    2540.0,
+    3685.0
+   ]
+  }
+ },
+ "city": {
+  "A": [
+   "/Game/Art/City/SM_CityA_01",
+   "/Game/Art/City/SM_CityA_02",
+   "/Game/Art/City/SM_CityA_03",
+   "/Game/Art/City/SM_CityA_04",
+   "/Game/Art/City/SM_CityA_05",
+   "/Game/Art/City/SM_CityA_06",
+   "/Game/Art/City/SM_CityA_07",
+   "/Game/Art/City/SM_CityA_08",
+   "/Game/Art/City/SM_CityA_09",
+   "/Game/Art/City/SM_CityA_10",
+   "/Game/Art/City/SM_CityA_11",
+   "/Game/Art/City/SM_CityA_12"
+  ],
+  "B": [
+   "/Game/Art/City/SM_CityB_01",
+   "/Game/Art/City/SM_CityB_02",
+   "/Game/Art/City/SM_CityB_03",
+   "/Game/Art/City/SM_CityB_04",
+   "/Game/Art/City/SM_CityB_05",
+   "/Game/Art/City/SM_CityB_06",
+   "/Game/Art/City/SM_CityB_07",
+   "/Game/Art/City/SM_CityB_08",
+   "/Game/Art/City/SM_CityB_09",
+   "/Game/Art/City/SM_CityB_10",
+   "/Game/Art/City/SM_CityB_11",
+   "/Game/Art/City/SM_CityB_12"
+  ],
+  "clusters": {
+   "SM_CityA_01": {
+    "path": "/Game/Art/City/SM_CityA_01",
+    "triangles": 2380,
+    "vertices": 2770,
+    "slots": [
+     "Body",
+     "Accent",
+     "Dark",
+     "Metal",
+     "Glow",
+     "Window"
+    ],
+    "material_instances": [
+     "/Game/Art/City/MI_CityA_Body",
+     "/Game/Art/City/MI_CityA_Accent",
+     "/Game/Art/City/MI_CityA_Dark",
+     "/Game/Art/City/MI_CityA_Metal",
+     "/Game/Art/City/MI_CityA_Glow",
+     "/Game/Art/City/MI_CityA_Window"
+    ],
+    "bounds_min": [
+     -9466.241,
+     -4001.031,
+     -4000.0
+    ],
+    "bounds_max": [
+     -2109.594,
+     2142.028,
+     1956.618
+    ],
+    "side": "A",
+    "kind": "industrial",
+    "azimuth_deg": 188,
+    "distance_m": 58
+   },
+   "SM_CityA_02": {
+    "path": "/Game/Art/City/SM_CityA_02",
+    "triangles": 1466,
+    "vertices": 2856,
+    "slots": [
+     "Body",
+     "Dark",
+     "Metal",
+     "Glow",
+     "Window"
+    ],
+    "material_instances": [
+     "/Game/Art/City/MI_CityA_Body",
+     "/Game/Art/City/MI_CityA_Dark",
+     "/Game/Art/City/MI_CityA_Metal",
+     "/Game/Art/City/MI_CityA_Glow",
+     "/Game/Art/City/MI_CityA_Window"
+    ],
+    "bounds_min": [
+     -11689.838,
+     -6675.86,
+     -4000.0
+    ],
+    "bounds_max": [
+     -4313.627,
+     -929.398,
+     2440.903
+    ],
+    "side": "A",
+    "kind": "mid",
+    "azimuth_deg": 200,
+    "distance_m": 92
+   },
+   "SM_CityA_03": {
+    "path": "/Game/Art/City/SM_CityA_03",
+    "triangles": 912,
+    "vertices": 1654,
+    "slots": [
+     "Body",
+     "Dark",
+     "Metal",
+     "Glow",
+     "Window"
+    ],
+    "material_instances": [
+     "/Game/Art/City/MI_CityA_Body",
+     "/Game/Art/City/MI_CityA_Dark",
+     "/Game/Art/City/MI_CityA_Metal",
+     "/Game/Art/City/MI_CityA_Glow",
+     "/Game/Art/City/MI_CityA_Window"
+    ],
+    "bounds_min": [
+     -17056.332,
+     -12381.539,
+     -4000.0
+    ],
+    "bounds_max": [
+     -10833.397,
+     -5055.969,
+     1861.202
+    ],
+    "side": "A",
+    "kind": "mid",
+    "azimuth_deg": 212,
+    "distance_m": 165
+   },
+   "SM_CityA_04": {
+    "path": "/Game/Art/City/SM_CityA_04",
+    "triangles": 1344,
+    "vertices": 2480,
+    "slots": [
+     "Body",
+     "Accent",
+     "Dark",
+     "Glow",
+     "Window"
+    ],
+    "material_instances": [
+     "/Game/Art/City/MI_CityA_Body",
+     "/Game/Art/City/MI_CityA_Accent",
+     "/Game/Art/City/MI_CityA_Dark",
+     "/Game/Art/City/MI_CityA_Glow",
+     "/Game/Art/City/MI_CityA_Window"
+    ],
+    "bounds_min": [
+     -6136.393,
+     -7499.972,
+     -4131.607
+    ],
+    "bounds_max": [
+     -2258.61,
+     -1554.668,
+     -1910.182
+    ],
+    "side": "A",
+    "kind": "lower",
+    "azimuth_deg": 223,
+    "distance_m": 64
+   },
+   "SM_CityA_05": {
+    "path": "/Game/Art/City/SM_CityA_05",
+    "triangles": 2300,
+    "vertices": 2648,
+    "slots": [
+     "Body",
+     "Accent",
+     "Dark",
+     "Metal",
+     "Glow",
+     "Window"
+    ],
+    "material_instances": [
+     "/Game/Art/City/MI_CityA_Body",
+     "/Game/Art/City/MI_CityA_Accent",
+     "/Game/Art/City/MI_CityA_Dark",
+     "/Game/Art/City/MI_CityA_Metal",
+     "/Game/Art/City/MI_CityA_Glow",
+     "/Game/Art/City/MI_CityA_Window"
+    ],
+    "bounds_min": [
+     -9723.275,
+     -13853.336,
+     -4000.0
+    ],
+    "bounds_max": [
+     -2887.97,
+     -7120.152,
+     1883.208
+    ],
+    "side": "A",
+    "kind": "industrial",
+    "azimuth_deg": 236,
+    "distance_m": 122
+   },
+   "SM_CityA_06": {
+    "path": "/Game/Art/City/SM_CityA_06",
+    "triangles": 1080,
+    "vertices": 2100,
+    "slots": [
+     "Body",
+     "Accent",
+     "Dark",
+     "Metal",
+     "Glow",
+     "Window"
+    ],
+    "material_instances": [
+     "/Game/Art/City/MI_CityA_Body",
+     "/Game/Art/City/MI_CityA_Accent",
+     "/Game/Art/City/MI_CityA_Dark",
+     "/Game/Art/City/MI_CityA_Metal",
+     "/Game/Art/City/MI_CityA_Glow",
+     "/Game/Art/City/MI_CityA_Window"
+    ],
+    "bounds_min": [
+     -26162.764,
+     -10246.498,
+     -4000.0
+    ],
+    "bounds_max": [
+     -16519.91,
+     -2668.664,
+     12167.231
+    ],
+    "side": "A",
+    "kind": "tower",
+    "azimuth_deg": 194,
+    "distance_m": 228
+   },
+   "SM_CityA_07": {
+    "path": "/Game/Art/City/SM_CityA_07",
+    "triangles": 1612,
+    "vertices": 2910,
+    "slots": [
+     "Body",
+     "Accent",
+     "Dark",
+     "Metal",
+     "Glow",
+     "Window"
+    ],
+    "material_instances": [
+     "/Game/Art/City/MI_CityA_Body",
+     "/Game/Art/City/MI_CityA_Accent",
+     "/Game/Art/City/MI_CityA_Dark",
+     "/Game/Art/City/MI_CityA_Metal",
+     "/Game/Art/City/MI_CityA_Glow",
+     "/Game/Art/City/MI_CityA_Window"
+    ],
+    "bounds_min": [
+     -2072.835,
+     -9866.095,
+     -4000.0
+    ],
+    "bounds_max": [
+     1906.583,
+     -5152.25,
+     -1549.497
+    ],
+    "side": "A",
+    "kind": "lower",
+    "azimuth_deg": 263,
+    "distance_m": 76
+   },
+   "SM_CityA_08": {
+    "path": "/Game/Art/City/SM_CityA_08",
+    "triangles": 2136,
+    "vertices": 4094,
+    "slots": [
+     "Body",
+     "Dark",
+     "Metal",
+     "Glow",
+     "Window"
+    ],
+    "material_instances": [
+     "/Game/Art/City/MI_CityA_Body",
+     "/Game/Art/City/MI_CityA_Dark",
+     "/Game/Art/City/MI_CityA_Metal",
+     "/Game/Art/City/MI_CityA_Glow",
+     "/Game/Art/City/MI_CityA_Window"
+    ],
+    "bounds_min": [
+     -496.981,
+     -18994.594,
+     -4000.0
+    ],
+    "bounds_max": [
+     6359.562,
+     -11566.405,
+     1234.268
+    ],
+    "side": "A",
+    "kind": "mid",
+    "azimuth_deg": 278,
+    "distance_m": 152
+   },
+   "SM_CityA_09": {
+    "path": "/Game/Art/City/SM_CityA_09",
+    "triangles": 2432,
+    "vertices": 2824,
+    "slots": [
+     "Body",
+     "Accent",
+     "Dark",
+     "Metal",
+     "Glow",
+     "Window"
+    ],
+    "material_instances": [
+     "/Game/Art/City/MI_CityA_Body",
+     "/Game/Art/City/MI_CityA_Accent",
+     "/Game/Art/City/MI_CityA_Dark",
+     "/Game/Art/City/MI_CityA_Metal",
+     "/Game/Art/City/MI_CityA_Glow",
+     "/Game/Art/City/MI_CityA_Window"
+    ],
+    "bounds_min": [
+     2926.646,
+     -12899.198,
+     -4000.0
+    ],
+    "bounds_max": [
+     8010.289,
+     -5543.688,
+     1976.461
+    ],
+    "side": "A",
+    "kind": "industrial",
+    "azimuth_deg": 296,
+    "distance_m": 96
+   },
+   "SM_CityA_10": {
+    "path": "/Game/Art/City/SM_CityA_10",
+    "triangles": 1264,
+    "vertices": 2412,
+    "slots": [
+     "Body",
+     "Accent",
+     "Dark",
+     "Metal",
+     "Glow",
+     "Window"
+    ],
+    "material_instances": [
+     "/Game/Art/City/MI_CityA_Body",
+     "/Game/Art/City/MI_CityA_Accent",
+     "/Game/Art/City/MI_CityA_Dark",
+     "/Game/Art/City/MI_CityA_Metal",
+     "/Game/Art/City/MI_CityA_Glow",
+     "/Game/Art/City/MI_CityA_Window"
+    ],
+    "bounds_min": [
+     11777.817,
+     -18605.506,
+     -4000.0
+    ],
+    "bounds_max": [
+     21958.242,
+     -8340.639,
+     16188.604
+    ],
+    "side": "A",
+    "kind": "tower",
+    "azimuth_deg": 318,
+    "distance_m": 212
+   },
+   "SM_CityA_11": {
+    "path": "/Game/Art/City/SM_CityA_11",
+    "triangles": 1656,
+    "vertices": 3104,
+    "slots": [
+     "Body",
+     "Accent",
+     "Dark",
+     "Metal",
+     "Glow",
+     "Window"
+    ],
+    "material_instances": [
+     "/Game/Art/City/MI_CityA_Body",
+     "/Game/Art/City/MI_CityA_Accent",
+     "/Game/Art/City/MI_CityA_Dark",
+     "/Game/Art/City/MI_CityA_Metal",
+     "/Game/Art/City/MI_CityA_Glow",
+     "/Game/Art/City/MI_CityA_Window"
+    ],
+    "bounds_min": [
+     3372.352,
+     -5209.932,
+     -4000.0
+    ],
+    "bounds_max": [
+     8397.322,
+     835.139,
+     -1440.296
+    ],
+    "side": "A",
+    "kind": "lower",
+    "azimuth_deg": 338,
+    "distance_m": 62
+   },
+   "SM_CityA_12": {
+    "path": "/Game/Art/City/SM_CityA_12",
+    "triangles": 728,
+    "vertices": 1428,
+    "slots": [
+     "Body",
+     "Dark",
+     "Metal",
+     "Glow",
+     "Window"
+    ],
+    "material_instances": [
+     "/Game/Art/City/MI_CityA_Body",
+     "/Game/Art/City/MI_CityA_Dark",
+     "/Game/Art/City/MI_CityA_Metal",
+     "/Game/Art/City/MI_CityA_Glow",
+     "/Game/Art/City/MI_CityA_Window"
+    ],
+    "bounds_min": [
+     11111.606,
+     -4671.951,
+     -4000.0
+    ],
+    "bounds_max": [
+     17135.875,
+     431.92,
+     1838.114
+    ],
+    "side": "A",
+    "kind": "mid",
+    "azimuth_deg": 352,
+    "distance_m": 142
+   },
+   "SM_CityB_01": {
+    "path": "/Game/Art/City/SM_CityB_01",
+    "triangles": 1676,
+    "vertices": 3132,
+    "slots": [
+     "Body",
+     "Accent",
+     "Dark",
+     "Glow",
+     "Window"
+    ],
+    "material_instances": [
+     "/Game/Art/City/MI_CityB_Body",
+     "/Game/Art/City/MI_CityB_Accent",
+     "/Game/Art/City/MI_CityB_Dark",
+     "/Game/Art/City/MI_CityB_Glow",
+     "/Game/Art/City/MI_CityB_Window"
+    ],
+    "bounds_min": [
+     -7994.246,
+     -2157.847,
+     -4037.704
+    ],
+    "bounds_max": [
+     -3047.779,
+     3676.037,
+     -1783.677
+    ],
+    "side": "B",
+    "kind": "lower",
+    "azimuth_deg": 172,
+    "distance_m": 62
+   },
+   "SM_CityB_02": {
+    "path": "/Game/Art/City/SM_CityB_02",
+    "triangles": 736,
+    "vertices": 1400,
+    "slots": [
+     "Body",
+     "Dark",
+     "Metal",
+     "Glow",
+     "Window"
+    ],
+    "material_instances": [
+     "/Game/Art/City/MI_CityB_Body",
+     "/Game/Art/City/MI_CityB_Dark",
+     "/Game/Art/City/MI_CityB_Metal",
+     "/Game/Art/City/MI_CityB_Glow",
+     "/Game/Art/City/MI_CityB_Window"
+    ],
+    "bounds_min": [
+     -12457.725,
+     -276.794,
+     -4000.0
+    ],
+    "bounds_max": [
+     -4572.78,
+     7623.02,
+     613.333
+    ],
+    "side": "B",
+    "kind": "mid",
+    "azimuth_deg": 158,
+    "distance_m": 100
+   },
+   "SM_CityB_03": {
+    "path": "/Game/Art/City/SM_CityB_03",
+    "triangles": 1672,
+    "vertices": 3101,
+    "slots": [
+     "Body",
+     "Accent",
+     "Dark",
+     "Metal",
+     "Glow",
+     "Window"
+    ],
+    "material_instances": [
+     "/Game/Art/City/MI_CityB_Body",
+     "/Game/Art/City/MI_CityB_Accent",
+     "/Game/Art/City/MI_CityB_Dark",
+     "/Game/Art/City/MI_CityB_Metal",
+     "/Game/Art/City/MI_CityB_Glow",
+     "/Game/Art/City/MI_CityB_Window"
+    ],
+    "bounds_min": [
+     -23587.939,
+     -2107.784,
+     -4000.0
+    ],
+    "bounds_max": [
+     -12555.236,
+     9737.233,
+     15193.121
+    ],
+    "side": "B",
+    "kind": "tower",
+    "azimuth_deg": 168,
+    "distance_m": 195
+   },
+   "SM_CityB_04": {
+    "path": "/Game/Art/City/SM_CityB_04",
+    "triangles": 1892,
+    "vertices": 3502,
+    "slots": [
+     "Body",
+     "Accent",
+     "Dark",
+     "Metal",
+     "Glow",
+     "Window"
+    ],
+    "material_instances": [
+     "/Game/Art/City/MI_CityB_Body",
+     "/Game/Art/City/MI_CityB_Accent",
+     "/Game/Art/City/MI_CityB_Dark",
+     "/Game/Art/City/MI_CityB_Metal",
+     "/Game/Art/City/MI_CityB_Glow",
+     "/Game/Art/City/MI_CityB_Window"
+    ],
+    "bounds_min": [
+     -6644.248,
+     1627.411,
+     -4289.938
+    ],
+    "bounds_max": [
+     -710.794,
+     7021.98,
+     -1448.073
+    ],
+    "side": "B",
+    "kind": "lower",
+    "azimuth_deg": 137,
+    "distance_m": 58
+   },
+   "SM_CityB_05": {
+    "path": "/Game/Art/City/SM_CityB_05",
+    "triangles": 1218,
+    "vertices": 2252,
+    "slots": [
+     "Body",
+     "Dark",
+     "Metal",
+     "Glow",
+     "Window"
+    ],
+    "material_instances": [
+     "/Game/Art/City/MI_CityB_Body",
+     "/Game/Art/City/MI_CityB_Dark",
+     "/Game/Art/City/MI_CityB_Metal",
+     "/Game/Art/City/MI_CityB_Glow",
+     "/Game/Art/City/MI_CityB_Window"
+    ],
+    "bounds_min": [
+     -9830.353,
+     6463.106,
+     -4000.0
+    ],
+    "bounds_max": [
+     -2639.469,
+     14868.806,
+     1614.67
+    ],
+    "side": "B",
+    "kind": "mid",
+    "azimuth_deg": 124,
+    "distance_m": 125
+   },
+   "SM_CityB_06": {
+    "path": "/Game/Art/City/SM_CityB_06",
+    "triangles": 1612,
+    "vertices": 3055,
+    "slots": [
+     "Body",
+     "Accent",
+     "Dark",
+     "Metal",
+     "Glow",
+     "Window"
+    ],
+    "material_instances": [
+     "/Game/Art/City/MI_CityB_Body",
+     "/Game/Art/City/MI_CityB_Accent",
+     "/Game/Art/City/MI_CityB_Dark",
+     "/Game/Art/City/MI_CityB_Metal",
+     "/Game/Art/City/MI_CityB_Glow",
+     "/Game/Art/City/MI_CityB_Window"
+    ],
+    "bounds_min": [
+     -12964.382,
+     14215.564,
+     -4000.0
+    ],
+    "bounds_max": [
+     -1278.448,
+     23687.254,
+     16342.166
+    ],
+    "side": "B",
+    "kind": "tower",
+    "azimuth_deg": 111,
+    "distance_m": 215
+   },
+   "SM_CityB_07": {
+    "path": "/Game/Art/City/SM_CityB_07",
+    "triangles": 2404,
+    "vertices": 2816,
+    "slots": [
+     "Body",
+     "Accent",
+     "Dark",
+     "Metal",
+     "Glow",
+     "Window"
+    ],
+    "material_instances": [
+     "/Game/Art/City/MI_CityB_Body",
+     "/Game/Art/City/MI_CityB_Accent",
+     "/Game/Art/City/MI_CityB_Dark",
+     "/Game/Art/City/MI_CityB_Metal",
+     "/Game/Art/City/MI_CityB_Glow",
+     "/Game/Art/City/MI_CityB_Window"
+    ],
+    "bounds_min": [
+     -1625.913,
+     4172.878,
+     -4000.0
+    ],
+    "bounds_max": [
+     2496.367,
+     11508.048,
+     883.33
+    ],
+    "side": "B",
+    "kind": "industrial",
+    "azimuth_deg": 98,
+    "distance_m": 72
+   },
+   "SM_CityB_08": {
+    "path": "/Game/Art/City/SM_CityB_08",
+    "triangles": 336,
+    "vertices": 653,
+    "slots": [
+     "Body",
+     "Accent",
+     "Dark",
+     "Metal",
+     "Glow",
+     "Window"
+    ],
+    "material_instances": [
+     "/Game/Art/City/MI_CityB_Body",
+     "/Game/Art/City/MI_CityB_Accent",
+     "/Game/Art/City/MI_CityB_Dark",
+     "/Game/Art/City/MI_CityB_Metal",
+     "/Game/Art/City/MI_CityB_Glow",
+     "/Game/Art/City/MI_CityB_Window"
+    ],
+    "bounds_min": [
+     379.391,
+     14089.08,
+     -4000.0
+    ],
+    "bounds_max": [
+     3666.193,
+     17508.834,
+     8194.855
+    ],
+    "side": "B",
+    "kind": "tower",
+    "azimuth_deg": 84,
+    "distance_m": 160
+   },
+   "SM_CityB_09": {
+    "path": "/Game/Art/City/SM_CityB_09",
+    "triangles": 964,
+    "vertices": 1742,
+    "slots": [
+     "Body",
+     "Dark",
+     "Metal",
+     "Glow",
+     "Window"
+    ],
+    "material_instances": [
+     "/Game/Art/City/MI_CityB_Body",
+     "/Game/Art/City/MI_CityB_Dark",
+     "/Game/Art/City/MI_CityB_Metal",
+     "/Game/Art/City/MI_CityB_Glow",
+     "/Game/Art/City/MI_CityB_Window"
+    ],
+    "bounds_min": [
+     2160.493,
+     4348.652,
+     -4000.0
+    ],
+    "bounds_max": [
+     8399.55,
+     12609.977,
+     1830.095
+    ],
+    "side": "B",
+    "kind": "mid",
+    "azimuth_deg": 64,
+    "distance_m": 92
+   },
+   "SM_CityB_10": {
+    "path": "/Game/Art/City/SM_CityB_10",
+    "triangles": 1352,
+    "vertices": 2528,
+    "slots": [
+     "Body",
+     "Accent",
+     "Dark",
+     "Metal",
+     "Glow",
+     "Window"
+    ],
+    "material_instances": [
+     "/Game/Art/City/MI_CityB_Body",
+     "/Game/Art/City/MI_CityB_Accent",
+     "/Game/Art/City/MI_CityB_Dark",
+     "/Game/Art/City/MI_CityB_Metal",
+     "/Game/Art/City/MI_CityB_Glow",
+     "/Game/Art/City/MI_CityB_Window"
+    ],
+    "bounds_min": [
+     10983.082,
+     10217.282,
+     -4000.0
+    ],
+    "bounds_max": [
+     21556.893,
+     18723.557,
+     16293.074
+    ],
+    "side": "B",
+    "kind": "tower",
+    "azimuth_deg": 44,
+    "distance_m": 205
+   },
+   "SM_CityB_11": {
+    "path": "/Game/Art/City/SM_CityB_11",
+    "triangles": 1752,
+    "vertices": 3340,
+    "slots": [
+     "Body",
+     "Accent",
+     "Dark",
+     "Metal",
+     "Glow",
+     "Window"
+    ],
+    "material_instances": [
+     "/Game/Art/City/MI_CityB_Body",
+     "/Game/Art/City/MI_CityB_Accent",
+     "/Game/Art/City/MI_CityB_Dark",
+     "/Game/Art/City/MI_CityB_Metal",
+     "/Game/Art/City/MI_CityB_Glow",
+     "/Game/Art/City/MI_CityB_Window"
+    ],
+    "bounds_min": [
+     3373.534,
+     -217.455,
+     -4000.0
+    ],
+    "bounds_max": [
+     8909.576,
+     5545.384,
+     -1916.008
+    ],
+    "side": "B",
+    "kind": "lower",
+    "azimuth_deg": 24,
+    "distance_m": 64
+   },
+   "SM_CityB_12": {
+    "path": "/Game/Art/City/SM_CityB_12",
+    "triangles": 1712,
+    "vertices": 3244,
+    "slots": [
+     "Body",
+     "Accent",
+     "Dark",
+     "Metal",
+     "Glow",
+     "Window"
+    ],
+    "material_instances": [
+     "/Game/Art/City/MI_CityB_Body",
+     "/Game/Art/City/MI_CityB_Accent",
+     "/Game/Art/City/MI_CityB_Dark",
+     "/Game/Art/City/MI_CityB_Metal",
+     "/Game/Art/City/MI_CityB_Glow",
+     "/Game/Art/City/MI_CityB_Window"
+    ],
+    "bounds_min": [
+     9509.235,
+     -2745.031,
+     -4000.0
+    ],
+    "bounds_max": [
+     20461.041,
+     7178.948,
+     13669.792
+    ],
+    "side": "B",
+    "kind": "tower",
+    "azimuth_deg": 9,
+    "distance_m": 145
+   }
+  }
+ },
+ "sea": {
+  "path": "/Game/Art/City/SM_Sea",
+  "triangles": 4376,
+  "vertices": 7706,
+  "slots": [
+   "Body",
+   "Dark",
+   "Glow",
+   "Water"
+  ],
+  "material_instances": [
+   "/Game/Art/City/MI_Sea_Body",
+   "/Game/Art/City/MI_Sea_Dark",
+   "/Game/Art/City/MI_Sea_Glow",
+   "/Game/Art/City/MI_Sea_Water"
+  ],
+  "bounds_min": [
+   -119450.0,
+   -120000.0,
+   -4020.0
+  ],
+  "bounds_max": [
+   120550.0,
+   120000.0,
+   -3622.6
+  ],
+  "water_z": -4000.0,
+  "boats": 22,
+  "piers": 6
+ },
+ "sfx": {
+  "Bounce": {
+   "path": "/Game/Audio/SFX/Bounce",
+   "duration_s": 0.38,
+   "looping": false,
+   "sample_rate": 44100,
+   "channels": 1
+  },
+  "Swish": {
+   "path": "/Game/Audio/SFX/Swish",
+   "duration_s": 0.6,
+   "looping": false,
+   "sample_rate": 44100,
+   "channels": 1
+  },
+  "Rim": {
+   "path": "/Game/Audio/SFX/Rim",
+   "duration_s": 1.0,
+   "looping": false,
+   "sample_rate": 44100,
+   "channels": 1
+  },
+  "Board": {
+   "path": "/Game/Audio/SFX/Board",
+   "duration_s": 0.5,
+   "looping": false,
+   "sample_rate": 44100,
+   "channels": 1
+  },
+  "ShotRelease": {
+   "path": "/Game/Audio/SFX/ShotRelease",
+   "duration_s": 0.32,
+   "looping": false,
+   "sample_rate": 44100,
+   "channels": 1
+  },
+  "Pass": {
+   "path": "/Game/Audio/SFX/Pass",
+   "duration_s": 0.28,
+   "looping": false,
+   "sample_rate": 44100,
+   "channels": 1
+  },
+  "Catch": {
+   "path": "/Game/Audio/SFX/Catch",
+   "duration_s": 0.22,
+   "looping": false,
+   "sample_rate": 44100,
+   "channels": 1
+  },
+  "Tackle": {
+   "path": "/Game/Audio/SFX/Tackle",
+   "duration_s": 0.55,
+   "looping": false,
+   "sample_rate": 44100,
+   "channels": 1
+  },
+  "Block": {
+   "path": "/Game/Audio/SFX/Block",
+   "duration_s": 0.42,
+   "looping": false,
+   "sample_rate": 44100,
+   "channels": 1
+  },
+  "Steal": {
+   "path": "/Game/Audio/SFX/Steal",
+   "duration_s": 0.36,
+   "looping": false,
+   "sample_rate": 44100,
+   "channels": 1
+  },
+  "ReadWin": {
+   "path": "/Game/Audio/SFX/ReadWin",
+   "duration_s": 0.9,
+   "looping": false,
+   "sample_rate": 44100,
+   "channels": 1
+  },
+  "ReadLose": {
+   "path": "/Game/Audio/SFX/ReadLose",
+   "duration_s": 0.65,
+   "looping": false,
+   "sample_rate": 44100,
+   "channels": 1
+  },
+  "Whistle": {
+   "path": "/Game/Audio/SFX/Whistle",
+   "duration_s": 0.75,
+   "looping": false,
+   "sample_rate": 44100,
+   "channels": 1
+  },
+  "Buzzer": {
+   "path": "/Game/Audio/SFX/Buzzer",
+   "duration_s": 1.25,
+   "looping": false,
+   "sample_rate": 44100,
+   "channels": 1
+  },
+  "Score": {
+   "path": "/Game/Audio/SFX/Score",
+   "duration_s": 1.7,
+   "looping": false,
+   "sample_rate": 44100,
+   "channels": 1
+  },
+  "Drive": {
+   "path": "/Game/Audio/SFX/Drive",
+   "duration_s": 0.75,
+   "looping": false,
+   "sample_rate": 44100,
+   "channels": 1
+  },
+  "Dodge": {
+   "path": "/Game/Audio/SFX/Dodge",
+   "duration_s": 0.55,
+   "looping": false,
+   "sample_rate": 44100,
+   "channels": 1
+  },
+  "ContestHum": {
+   "path": "/Game/Audio/SFX/ContestHum",
+   "duration_s": 1.2,
+   "looping": false,
+   "sample_rate": 44100,
+   "channels": 1
+  },
+  "TackleCue": {
+   "path": "/Game/Audio/SFX/TackleCue",
+   "duration_s": 0.25,
+   "looping": false,
+   "sample_rate": 44100,
+   "channels": 1
+  },
+  "Step": {
+   "path": "/Game/Audio/SFX/Step",
+   "duration_s": 0.16,
+   "looping": false,
+   "sample_rate": 44100,
+   "channels": 1
+  },
+  "Down": {
+   "path": "/Game/Audio/SFX/Down",
+   "duration_s": 1.0,
+   "looping": false,
+   "sample_rate": 44100,
+   "channels": 1
+  },
+  "Revive": {
+   "path": "/Game/Audio/SFX/Revive",
+   "duration_s": 0.95,
+   "looping": false,
+   "sample_rate": 44100,
+   "channels": 1
+  },
+  "ArtCue": {
+   "path": "/Game/Audio/SFX/ArtCue",
+   "duration_s": 0.85,
+   "looping": false,
+   "sample_rate": 44100,
+   "channels": 1
+  },
+  "UIMove": {
+   "path": "/Game/Audio/SFX/UIMove",
+   "duration_s": 0.06,
+   "looping": false,
+   "sample_rate": 44100,
+   "channels": 1
+  },
+  "UIConfirm": {
+   "path": "/Game/Audio/SFX/UIConfirm",
+   "duration_s": 0.2,
+   "looping": false,
+   "sample_rate": 44100,
+   "channels": 1
+  },
+  "CityPowerUp": {
+   "path": "/Game/Audio/SFX/CityPowerUp",
+   "duration_s": 2.6,
+   "looping": false,
+   "sample_rate": 44100,
+   "channels": 1
+  },
+  "AmbientLoop": {
+   "path": "/Game/Audio/SFX/AmbientLoop",
+   "duration_s": 24.0,
+   "looping": true,
+   "sample_rate": 44100,
+   "channels": 1
+  }
+ },
+ "all_assets": [
+  "/Game/Art/Ball/MI_Ball_Body",
+  "/Game/Art/Ball/MI_Ball_Dark",
+  "/Game/Art/Ball/MI_Ball_Glow",
+  "/Game/Art/Ball/SM_Ball",
+  "/Game/Art/City/MI_CityA_Accent",
+  "/Game/Art/City/MI_CityA_Body",
+  "/Game/Art/City/MI_CityA_Dark",
+  "/Game/Art/City/MI_CityA_Glow",
+  "/Game/Art/City/MI_CityA_Metal",
+  "/Game/Art/City/MI_CityA_Window",
+  "/Game/Art/City/MI_CityB_Accent",
+  "/Game/Art/City/MI_CityB_Body",
+  "/Game/Art/City/MI_CityB_Dark",
+  "/Game/Art/City/MI_CityB_Glow",
+  "/Game/Art/City/MI_CityB_Metal",
+  "/Game/Art/City/MI_CityB_Window",
+  "/Game/Art/City/MI_Sea_Body",
+  "/Game/Art/City/MI_Sea_Dark",
+  "/Game/Art/City/MI_Sea_Glow",
+  "/Game/Art/City/MI_Sea_Water",
+  "/Game/Art/City/SM_CityA_01",
+  "/Game/Art/City/SM_CityA_02",
+  "/Game/Art/City/SM_CityA_03",
+  "/Game/Art/City/SM_CityA_04",
+  "/Game/Art/City/SM_CityA_05",
+  "/Game/Art/City/SM_CityA_06",
+  "/Game/Art/City/SM_CityA_07",
+  "/Game/Art/City/SM_CityA_08",
+  "/Game/Art/City/SM_CityA_09",
+  "/Game/Art/City/SM_CityA_10",
+  "/Game/Art/City/SM_CityA_11",
+  "/Game/Art/City/SM_CityA_12",
+  "/Game/Art/City/SM_CityB_01",
+  "/Game/Art/City/SM_CityB_02",
+  "/Game/Art/City/SM_CityB_03",
+  "/Game/Art/City/SM_CityB_04",
+  "/Game/Art/City/SM_CityB_05",
+  "/Game/Art/City/SM_CityB_06",
+  "/Game/Art/City/SM_CityB_07",
+  "/Game/Art/City/SM_CityB_08",
+  "/Game/Art/City/SM_CityB_09",
+  "/Game/Art/City/SM_CityB_10",
+  "/Game/Art/City/SM_CityB_11",
+  "/Game/Art/City/SM_CityB_12",
+  "/Game/Art/City/SM_Sea",
+  "/Game/Art/Court/MI_Hoop_Accent",
+  "/Game/Art/Court/MI_Hoop_Board",
+  "/Game/Art/Court/MI_Hoop_Dark",
+  "/Game/Art/Court/MI_Hoop_Glow",
+  "/Game/Art/Court/MI_Hoop_Metal",
+  "/Game/Art/Court/MI_Hoop_Net",
+  "/Game/Art/Court/MI_Hoop_TaG",
+  "/Game/Art/Court/MI_RooftopProps_Accent",
+  "/Game/Art/Court/MI_RooftopProps_Body",
+  "/Game/Art/Court/MI_RooftopProps_Dark",
+  "/Game/Art/Court/MI_RooftopProps_Furnace_Body",
+  "/Game/Art/Court/MI_RooftopProps_Furnace_Dark",
+  "/Game/Art/Court/MI_RooftopProps_Furnace_Glow",
+  "/Game/Art/Court/MI_RooftopProps_Furnace_Metal",
+  "/Game/Art/Court/MI_RooftopProps_Glow",
+  "/Game/Art/Court/MI_RooftopProps_Metal",
+  "/Game/Art/Court/MI_RooftopProps_Window",
+  "/Game/Art/Court/MI_Rooftop_Apron",
+  "/Game/Art/Court/MI_Rooftop_Court",
+  "/Game/Art/Court/MI_Rooftop_Dark",
+  "/Game/Art/Court/MI_Rooftop_Paint",
+  "/Game/Art/Court/SM_Hoop",
+  "/Game/Art/Court/SM_Rooftop",
+  "/Game/Art/Court/SM_RooftopProps",
+  "/Game/Art/Court/SM_RooftopProps_Furnace",
+  "/Game/Art/Heroes/Gantetsu/MI_Gantetsu_Accent",
+  "/Game/Art/Heroes/Gantetsu/MI_Gantetsu_Body",
+  "/Game/Art/Heroes/Gantetsu/MI_Gantetsu_Dark",
+  "/Game/Art/Heroes/Gantetsu/MI_Gantetsu_Glow",
+  "/Game/Art/Heroes/Gantetsu/MI_Gantetsu_Metal",
+  "/Game/Art/Heroes/Gantetsu/MI_Gantetsu_TaG",
+  "/Game/Art/Heroes/Gantetsu/MI_Gantetsu_Team",
+  "/Game/Art/Heroes/Gantetsu/SM_Gantetsu_Head",
+  "/Game/Art/Heroes/Gantetsu/SM_Gantetsu_LowerArm_L",
+  "/Game/Art/Heroes/Gantetsu/SM_Gantetsu_LowerArm_R",
+  "/Game/Art/Heroes/Gantetsu/SM_Gantetsu_Pelvis",
+  "/Game/Art/Heroes/Gantetsu/SM_Gantetsu_Shin_L",
+  "/Game/Art/Heroes/Gantetsu/SM_Gantetsu_Shin_R",
+  "/Game/Art/Heroes/Gantetsu/SM_Gantetsu_Thigh_L",
+  "/Game/Art/Heroes/Gantetsu/SM_Gantetsu_Thigh_R",
+  "/Game/Art/Heroes/Gantetsu/SM_Gantetsu_Torso",
+  "/Game/Art/Heroes/Gantetsu/SM_Gantetsu_UpperArm_L",
+  "/Game/Art/Heroes/Gantetsu/SM_Gantetsu_UpperArm_R",
+  "/Game/Art/Heroes/Hayate/MI_Hayate_Accent",
+  "/Game/Art/Heroes/Hayate/MI_Hayate_Body",
+  "/Game/Art/Heroes/Hayate/MI_Hayate_Dark",
+  "/Game/Art/Heroes/Hayate/MI_Hayate_Glow",
+  "/Game/Art/Heroes/Hayate/MI_Hayate_Hair",
+  "/Game/Art/Heroes/Hayate/MI_Hayate_Metal",
+  "/Game/Art/Heroes/Hayate/MI_Hayate_Skin",
+  "/Game/Art/Heroes/Hayate/MI_Hayate_TaG",
+  "/Game/Art/Heroes/Hayate/MI_Hayate_Team",
+  "/Game/Art/Heroes/Hayate/SM_Hayate_Head",
+  "/Game/Art/Heroes/Hayate/SM_Hayate_LowerArm_L",
+  "/Game/Art/Heroes/Hayate/SM_Hayate_LowerArm_R",
+  "/Game/Art/Heroes/Hayate/SM_Hayate_Pelvis",
+  "/Game/Art/Heroes/Hayate/SM_Hayate_Shin_L",
+  "/Game/Art/Heroes/Hayate/SM_Hayate_Shin_R",
+  "/Game/Art/Heroes/Hayate/SM_Hayate_Thigh_L",
+  "/Game/Art/Heroes/Hayate/SM_Hayate_Thigh_R",
+  "/Game/Art/Heroes/Hayate/SM_Hayate_Torso",
+  "/Game/Art/Heroes/Hayate/SM_Hayate_UpperArm_L",
+  "/Game/Art/Heroes/Hayate/SM_Hayate_UpperArm_R",
+  "/Game/Art/Heroes/Hibiki/MI_Hibiki_Body",
+  "/Game/Art/Heroes/Hibiki/MI_Hibiki_Glow",
+  "/Game/Art/Heroes/Hibiki/MI_Hibiki_Jelly",
+  "/Game/Art/Heroes/Hibiki/MI_Hibiki_TaG",
+  "/Game/Art/Heroes/Hibiki/MI_Hibiki_Team",
+  "/Game/Art/Heroes/Hibiki/SM_Hibiki_Head",
+  "/Game/Art/Heroes/Hibiki/SM_Hibiki_LowerArm_L",
+  "/Game/Art/Heroes/Hibiki/SM_Hibiki_LowerArm_R",
+  "/Game/Art/Heroes/Hibiki/SM_Hibiki_Pelvis",
+  "/Game/Art/Heroes/Hibiki/SM_Hibiki_Shin_L",
+  "/Game/Art/Heroes/Hibiki/SM_Hibiki_Shin_R",
+  "/Game/Art/Heroes/Hibiki/SM_Hibiki_Thigh_L",
+  "/Game/Art/Heroes/Hibiki/SM_Hibiki_Thigh_R",
+  "/Game/Art/Heroes/Hibiki/SM_Hibiki_Torso",
+  "/Game/Art/Heroes/Hibiki/SM_Hibiki_UpperArm_L",
+  "/Game/Art/Heroes/Hibiki/SM_Hibiki_UpperArm_R",
+  "/Game/Art/Heroes/Minamo/MI_Minamo_Accent",
+  "/Game/Art/Heroes/Minamo/MI_Minamo_Body",
+  "/Game/Art/Heroes/Minamo/MI_Minamo_Dark",
+  "/Game/Art/Heroes/Minamo/MI_Minamo_Glow",
+  "/Game/Art/Heroes/Minamo/MI_Minamo_Hair",
+  "/Game/Art/Heroes/Minamo/MI_Minamo_Metal",
+  "/Game/Art/Heroes/Minamo/MI_Minamo_Skin",
+  "/Game/Art/Heroes/Minamo/MI_Minamo_TaG",
+  "/Game/Art/Heroes/Minamo/MI_Minamo_Team",
+  "/Game/Art/Heroes/Minamo/SM_Minamo_Head",
+  "/Game/Art/Heroes/Minamo/SM_Minamo_LowerArm_L",
+  "/Game/Art/Heroes/Minamo/SM_Minamo_LowerArm_R",
+  "/Game/Art/Heroes/Minamo/SM_Minamo_Pelvis",
+  "/Game/Art/Heroes/Minamo/SM_Minamo_Shin_L",
+  "/Game/Art/Heroes/Minamo/SM_Minamo_Shin_R",
+  "/Game/Art/Heroes/Minamo/SM_Minamo_Thigh_L",
+  "/Game/Art/Heroes/Minamo/SM_Minamo_Thigh_R",
+  "/Game/Art/Heroes/Minamo/SM_Minamo_Torso",
+  "/Game/Art/Heroes/Minamo/SM_Minamo_UpperArm_L",
+  "/Game/Art/Heroes/Minamo/SM_Minamo_UpperArm_R",
+  "/Game/Art/Heroes/Rei/MI_Rei_Accent",
+  "/Game/Art/Heroes/Rei/MI_Rei_Body",
+  "/Game/Art/Heroes/Rei/MI_Rei_Dark",
+  "/Game/Art/Heroes/Rei/MI_Rei_Glow",
+  "/Game/Art/Heroes/Rei/MI_Rei_Hair",
+  "/Game/Art/Heroes/Rei/MI_Rei_Skin",
+  "/Game/Art/Heroes/Rei/MI_Rei_TaG",
+  "/Game/Art/Heroes/Rei/MI_Rei_Team",
+  "/Game/Art/Heroes/Rei/SM_Rei_Head",
+  "/Game/Art/Heroes/Rei/SM_Rei_LowerArm_L",
+  "/Game/Art/Heroes/Rei/SM_Rei_LowerArm_R",
+  "/Game/Art/Heroes/Rei/SM_Rei_Pelvis",
+  "/Game/Art/Heroes/Rei/SM_Rei_Shin_L",
+  "/Game/Art/Heroes/Rei/SM_Rei_Shin_R",
+  "/Game/Art/Heroes/Rei/SM_Rei_Thigh_L",
+  "/Game/Art/Heroes/Rei/SM_Rei_Thigh_R",
+  "/Game/Art/Heroes/Rei/SM_Rei_Torso",
+  "/Game/Art/Heroes/Rei/SM_Rei_UpperArm_L",
+  "/Game/Art/Heroes/Rei/SM_Rei_UpperArm_R",
+  "/Game/Art/Heroes/Tsumugi/MI_Tsumugi_Accent",
+  "/Game/Art/Heroes/Tsumugi/MI_Tsumugi_Body",
+  "/Game/Art/Heroes/Tsumugi/MI_Tsumugi_Dark",
+  "/Game/Art/Heroes/Tsumugi/MI_Tsumugi_Glow",
+  "/Game/Art/Heroes/Tsumugi/MI_Tsumugi_Hair",
+  "/Game/Art/Heroes/Tsumugi/MI_Tsumugi_Metal",
+  "/Game/Art/Heroes/Tsumugi/MI_Tsumugi_Skin",
+  "/Game/Art/Heroes/Tsumugi/MI_Tsumugi_TaG",
+  "/Game/Art/Heroes/Tsumugi/MI_Tsumugi_Team",
+  "/Game/Art/Heroes/Tsumugi/SM_Tsumugi_Head",
+  "/Game/Art/Heroes/Tsumugi/SM_Tsumugi_LowerArm_L",
+  "/Game/Art/Heroes/Tsumugi/SM_Tsumugi_LowerArm_R",
+  "/Game/Art/Heroes/Tsumugi/SM_Tsumugi_Pelvis",
+  "/Game/Art/Heroes/Tsumugi/SM_Tsumugi_Shin_L",
+  "/Game/Art/Heroes/Tsumugi/SM_Tsumugi_Shin_R",
+  "/Game/Art/Heroes/Tsumugi/SM_Tsumugi_Thigh_L",
+  "/Game/Art/Heroes/Tsumugi/SM_Tsumugi_Thigh_R",
+  "/Game/Art/Heroes/Tsumugi/SM_Tsumugi_Torso",
+  "/Game/Art/Heroes/Tsumugi/SM_Tsumugi_UpperArm_L",
+  "/Game/Art/Heroes/Tsumugi/SM_Tsumugi_UpperArm_R",
+  "/Game/Art/Materials/M_TaGBase",
+  "/Game/Art/Materials/M_TaGTranslucent",
+  "/Game/Art/Materials/M_TaGWater",
+  "/Game/Audio/SFX/AmbientLoop",
+  "/Game/Audio/SFX/ArtCue",
+  "/Game/Audio/SFX/Block",
+  "/Game/Audio/SFX/Board",
+  "/Game/Audio/SFX/Bounce",
+  "/Game/Audio/SFX/Buzzer",
+  "/Game/Audio/SFX/Catch",
+  "/Game/Audio/SFX/CityPowerUp",
+  "/Game/Audio/SFX/ContestHum",
+  "/Game/Audio/SFX/Dodge",
+  "/Game/Audio/SFX/Down",
+  "/Game/Audio/SFX/Drive",
+  "/Game/Audio/SFX/Pass",
+  "/Game/Audio/SFX/ReadLose",
+  "/Game/Audio/SFX/ReadWin",
+  "/Game/Audio/SFX/Revive",
+  "/Game/Audio/SFX/Rim",
+  "/Game/Audio/SFX/Score",
+  "/Game/Audio/SFX/ShotRelease",
+  "/Game/Audio/SFX/Steal",
+  "/Game/Audio/SFX/Step",
+  "/Game/Audio/SFX/Swish",
+  "/Game/Audio/SFX/Tackle",
+  "/Game/Audio/SFX/TackleCue",
+  "/Game/Audio/SFX/UIConfirm",
+  "/Game/Audio/SFX/UIMove",
+  "/Game/Audio/SFX/Whistle"
+ ],
+ "triangles": {
+  "heroes": {
+   "Gantetsu": 7920,
+   "Minamo": 7972,
+   "Rei": 6522,
+   "Hayate": 6774,
+   "Tsumugi": 7614,
+   "Hibiki": 7786
+  },
+  "ball": 3088,
+  "court": {
+   "SM_Hoop": 1848,
+   "SM_Rooftop": 94,
+   "SM_RooftopProps": 6454,
+   "SM_RooftopProps_Furnace": 7492
+  },
+  "city_A": 19310,
+  "city_B": 17326,
+  "sea": 4376,
+  "court_city_total": 56900,
+  "heroes_total": 44588
+ }
+}

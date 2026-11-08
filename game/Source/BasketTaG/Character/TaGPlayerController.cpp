@@ -2,6 +2,7 @@
 #include "Character/TaGCharacter.h"
 #include "Core/TaGGameMode.h"
 #include "Core/TaGGameState.h"
+#include "Core/TaGRules.h"
 #include "Core/TaGTypes.h"
 #include "Camera/CameraActor.h"
 #include "Camera/CameraComponent.h"
@@ -113,6 +114,8 @@ void ATaGPlayerController::BeginPlay()
 	{
 		Sub->AddMappingContext(Mapping, 0);
 	}
+	// No engine debug text over the game (asset compile status, shadow warnings) in development builds.
+	ConsoleCommand(TEXT("DisableAllScreenMessages"));
 
 	FActorSpawnParameters Params;
 	Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
@@ -219,6 +222,10 @@ void ATaGPlayerController::Tick(float DeltaSeconds)
 			FPlatformMisc::RequestExit(false);
 		}
 	}
+	if (FParse::Param(FCommandLine::Get(), TEXT("TaGInputTest")))
+	{
+		TickInputTest(DeltaSeconds);
+	}
 	const bool bWantUI = !bPlaying || bPauseMenu || !GetPawn();
 	if (bWantUI != bUIMode)
 	{
@@ -250,6 +257,81 @@ void ATaGPlayerController::UpdateSpectatorCamera(float Dt)
 	if (GetViewTarget() != OrbitCamera)
 	{
 		SetViewTarget(OrbitCamera);
+	}
+}
+
+// ================================================================ Input test
+
+void ATaGPlayerController::TickInputTest(float Dt)
+{
+	// -TaGInputTest: feed the real input path (Enhanced Input -> ability -> character) with injected presses.
+	ATaGCharacter* Me = Cast<ATaGCharacter>(GetPawn());
+	const ATaGGameState* GS = GetWorld()->GetGameState<ATaGGameState>();
+	const ATaGGameMode* GM = GetWorld()->GetAuthGameMode<ATaGGameMode>();
+	if (!Me || !GS || GS->Phase != ETaGPhase::Playing || !GM || (!GM->IsLive() && InputTestStep == 0))
+	{
+		return;
+	}
+	UEnhancedInputLocalPlayerSubsystem* Sub = ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(GetLocalPlayer());
+	if (!Sub)
+	{
+		return;
+	}
+	InputTestT += FApp::GetDeltaTime();
+	auto ActionName = [Me]() { return StaticEnum<ETaGAction>()->GetNameStringByValue(static_cast<int64>(Me->GetAction())); };
+	struct FStep { float At; int32 Id; };
+	const FStep Steps[] = { { 0.5f, 0 }, { 0.75f, 1 }, { 2.0f, 2 }, { 2.75f, 3 }, { 3.2f, 4 }, { 4.0f, 5 }, { 4.3f, 6 }, { 5.0f, 7 }, { 5.3f, 8 }, { 6.0f, 9 }, { 6.3f, 10 }, { 7.0f, 11 } };
+	while (InputTestStep < UE_ARRAY_COUNT(Steps) && InputTestT >= Steps[InputTestStep].At)
+	{
+		switch (Steps[InputTestStep].Id)
+		{
+		case 0:
+			UE_LOG(LogTemp, Display, TEXT("INPUTTEST start: hero=%s hasball=%d action=%s"), Me->GetHeroDef().Key, Me->HasBall() ? 1 : 0, *ActionName());
+			Sub->InjectInputForAction(Actions.Primary, FInputActionValue(true), {}, {});
+			break;
+		case 1:
+			UE_LOG(LogTemp, Display, TEXT("INPUTTEST primary -> action=%s drive_cd=%.1f"), *ActionName(), Me->GetCooldownLeft(ETaGSlot::Drive));
+			break;
+		case 2:
+			UE_LOG(LogTemp, Display, TEXT("INPUTTEST before shot: hasball=%d action=%s"), Me->HasBall() ? 1 : 0, *ActionName());
+			Sub->StartContinuousInputInjectionForAction(Actions.Shoot, FInputActionValue(true), {}, {});
+			break;
+		case 3:
+			UE_LOG(LogTemp, Display, TEXT("INPUTTEST charging=%d charge=%.2f held=%.2f type=%s"), Me->IsChargingShot() ? 1 : 0, Me->GetShotCharge(), Me->GetActionTime(),
+				FTaGRules::ShotType(Me->GetShotType()).Name);
+			Sub->StopContinuousInputInjectionForAction(Actions.Shoot);
+			break;
+		case 4:
+			UE_LOG(LogTemp, Display, TEXT("INPUTTEST after release: shots=%d action=%s hasball=%d"), GS->Stats(Me->GetTeam()).Shots, *ActionName(), Me->HasBall() ? 1 : 0);
+			break;
+		case 5:
+			Sub->InjectInputForAction(Actions.Art1, FInputActionValue(true), {}, {});
+			break;
+		case 6:
+			UE_LOG(LogTemp, Display, TEXT("INPUTTEST art1 -> scoped=%d action=%s art1_cd=%.1f"), Me->IsScoped() ? 1 : 0, *ActionName(), Me->GetCooldownLeft(ETaGSlot::Art1));
+			break;
+		case 7:
+			Sub->InjectInputForAction(Actions.Pause, FInputActionValue(true), {}, {});
+			break;
+		case 8:
+			UE_LOG(LogTemp, Display, TEXT("INPUTTEST pause -> open=%d"), bPauseMenu ? 1 : 0);
+			if (bPauseMenu)
+			{
+				TogglePauseMenu();
+			}
+			break;
+		case 9:
+			Sub->InjectInputForAction(Actions.CameraToggle, FInputActionValue(true), {}, {});
+			break;
+		case 10:
+			UE_LOG(LogTemp, Display, TEXT("INPUTTEST camera -> third_person=%d"), Me->IsThirdPerson() ? 1 : 0);
+			break;
+		default:
+			UE_LOG(LogTemp, Display, TEXT("INPUTTEST done"));
+			FPlatformMisc::RequestExit(false);
+			break;
+		}
+		InputTestStep++;
 	}
 }
 

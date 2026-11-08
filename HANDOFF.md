@@ -1,10 +1,10 @@
 # 引き継ぎ書 — Basket Team-play TaG
 
-- 作成日：2026-11-07
+- 作成日：2026-11-07（2026-11-08 更新：UE5版 v1）
 - リポジトリ：`S70RM3892/Basket-team-play-TaG`
 - 作業ブランチ：`ccr-1c57bb78-u39iz8`（プルリクエストは未作成）
-- 最新のコミット：`2927987`（プロトタイプ v0.4）
-- **最初に読む順番**：この文書 → [docs/RULES_V1.md](docs/RULES_V1.md) → [prototype/README.md](prototype/README.md) → [docs/STRATEGY.md](docs/STRATEGY.md)
+- 最新の成果：**UE5版 v1**（`game/`）。Godotのプロトタイプv0.4（`prototype/`）は手触りの参考として残している
+- **最初に読む順番**：この文書 → [game/README.md](game/README.md) → [docs/RULES_V1.md](docs/RULES_V1.md) → [docs/STRATEGY.md](docs/STRATEGY.md) → [tools/README.md](tools/README.md)
 
 ---
 
@@ -25,7 +25,17 @@
 | 世界観 | 発電都市ナギサ。TaG＝Tandem-amplified Gear（同期で増幅するギア）。人間・自我機（機械）・義体者・発電生物・群体機が選手になる | [WORLD.md](docs/WORLD.md) |
 | キャラ | ロール3種（ウォール・スコアラー・プレイメーカー）。体の大きさがそのまま性能になる（当たり判定は見た目どおり）。構想は24体 | [ROSTER.md](docs/ROSTER.md) |
 | 市場の戦略 | 「ヒーローシューター」とは名乗らず、「一人称スポーツ」と名乗る。発売時は3on3（＋1on1・2on2・bot）。規模は絞る | [STRATEGY.md](docs/STRATEGY.md) |
-| 本番のエンジン | **Unreal Engine 5.8の予定**（まだ着手していない）。今のプロトタイプはGodot 4.7.2 | [TECH.md](docs/TECH.md) |
+| 本番のエンジン | **Unreal Engine 5.8.4**（C++・GAS・Enhanced Input）。v1を実装済み。Godot 4.7.2のプロトタイプは参考 | [game/README.md](game/README.md) |
+
+---
+
+## 2.5 UE5版 v1の現状（2026-11-08）
+- **遊べるもの**：1on1／2on2／3on3、アビリティじゃんけん（6つの手と読み勝ちの演出）、シュート7種類、パス、ギャザー制、ダウンと味方による復帰、ヒーロー6体（固有技2つずつ）、チームのBOT、プライベートロビー（ホスト／IPで参加）、屋上コートと「点を取ると地区に明かりが灯る」街、効果音、タイトル・ヒーロー選択・結果の画面
+- **見た目**：Blenderのスクリプトで作ったヒーロー・ボール・コート・街（`tools/blender`）を、関節ごとの硬いパーツとして手続き的に動かしている（Godot版 `rig.gd` の移植）。素材が無い場合はエンジンの図形で動く
+- **確かめたこと**：シュートの物理（400/400）、人間の入力経路（入力を流し込むテスト）、BOT同士の全モード、同じPCでのホスト／クライアント接続、各画面のスクリーンショット、素材込みのAndroid APK（164MB）
+- **まだ確かめていないこと**：**人が実際に遊んだ手触り**、実機（Android）、インターネット越しの対戦
+- **開発環境（このPC）**：UE 5.8.4は `C:\Epic Games\UE_5.8`（Android対応込み）。古い `C:\Program Files\Epic Games\UE_5.8` はAndroid非対応のまま残している。Visual Studio 2026（MSVC 14.50、Windows SDK 22621）、Android SDK（`%LOCALAPPDATA%\Android\Sdk`、NDK r27c、`ANDROID_HOME`/`NDKROOT` 設定済み）、JDK 21、Blender 5.2、GitHub CLI（`gh`、ログイン済み）
+- **検証用のモード**：`-TaGShotTest`、`-TaGAutoTest=1|2|3`、`-TaGInputTest`、`-TaGNetHost`/`-TaGNetClient`、`-TaGSnap=<画面>`（詳細は game/README.md）
 
 ---
 
@@ -150,13 +160,13 @@ godot --headless --path prototype --export-release "Android" ../build/TaG-protot
 
 ---
 
-## 7. 次にやること（優先順）
-1. **v0.4の感想をもらう**：テンポは「リアル」と「速い」のどちらがいいか、体の動きを見て技を読めるか、狙ったシュートの種類が出るか
-2. 感想に合わせて、シュートの種類の判定のしきい値とテンポを調整する
-3. **2on2を作る**：パスと味方のAIを入れて、「連携の期待値 ＞ 1対1の期待値」になるかを確かめる（RULES_V1 §2.4、§7）
-4. ロール別のヒーロー（ウォール・スコアラー・プレイメーカーを各1体）を、体格の違い付きで入れる（ROSTER.md）
-5. 一人称と三人称のどちらを主にするかを決める
-6. 核が面白いと確信できたら、本番（UE5.8）に移るかを判断する（TECH.md）
+## 7. 次にやること（優先順、2026-11-08 更新）
+1. **UE5版 v1を人が遊んで感想をもらう**：ロックオンとシュートのタイミング、視点の感度、技の読み合いが体の動きとTaGの光で読めるか、ヒーローごとの差が分かるか。STRATEGY §6の基準「友達が『もう1回』と言うか」
+2. 感想に合わせて数値を調整する（`Core/TaGTypes.h`、`Core/TaGHeroData.cpp`、`Core/TaGRules.cpp`）。特に **連携と1対1の得点効率の差がまだ小さい**（3on3でおよそ0.61対0.58）ので、RULES_V1 §2.4の狙いに向けて広げる
+3. Android実機でAPKを動かす（コントローラーの割り当て、性能）
+4. インターネット越しの対戦（Steam／EOSのマッチング、または招待コード）
+5. 見た目の仕上げ：スキンメッシュとアニメーション、ネットとツムギの糸・ヒビキの触手の揺れ、ゴールの「ゴール炉」の演出
+6. 配布の準備：Shippingビルド、署名鍵、ストアのページ（STRATEGY §3.5の価格の方針）
 
 ---
 
