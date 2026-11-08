@@ -1,6 +1,6 @@
 # Basket Team-play TaG
 
-**普通のバスケ ＋ アビリティじゃんけん**。PC・一人称視点・Unreal Engine 5.8.4。**v1（1on1／2on2／3on3、ヒーロー6体、BOT、友達とのホスト／参加）が遊べる。**
+**普通のバスケ ＋ アビリティじゃんけん**。PC・一人称視点・Unreal Engine 5.8.4。**v1.2（1on1／2on2／3on3、ヒーロー30体と技60種、BOT、友達とのホスト／参加、チュートリアル）が遊べる。** 見た目はファンタジーのトゥーン調
 
 > 海に沈みかけた積層都市「ナギサ」では、バスケで電気をつくる。勝った地区に明かりが灯る。
 
@@ -13,13 +13,13 @@
 | ドキュメント | 中身 |
 |---|---|
 | [HANDOFF.md](HANDOFF.md) | **引き継ぎ書**（現状・確定事項・廃案・ビルド手順・次の作業）。別の環境で続けるときは最初に読む |
-| [game/](game/README.md) | **本番：UE5版 v1**（C++・GAS）。操作、ヒーロー、ビルド、検証用のモード |
-| [tools/](tools/README.md) | 素材の作り方：Blenderのスクリプトでモデル、Pythonで効果音を作り、UEに取り込む |
+| [game/](game/README.md) | **本番：UE5版 v1.2**（C++・GAS）。操作、ヒーロー、ビルド、検証用のモード |
+| [tools/](tools/README.md) | 素材の作り方：Blenderのスクリプト（距離関数の造形）で30体と舞台、Pythonで効果音とBGMを作り、UEに取り込む |
 | [prototype/](prototype/README.md) | **Godotのプロトタイプ v0.4**：1on1アビリティじゃんけん（UE版の手触りの元になった版） |
 | [docs/RULES_V1.md](docs/RULES_V1.md) | **最新の競技ルール**：攻守バランスの理論、アビリティじゃんけん、コートの決定 |
 | [docs/STRATEGY.md](docs/STRATEGY.md) | 勝ち筋の戦略：市場の現実、核を1つに絞る、規模の棚卸し |
 | [docs/ABILITY_DESIGN.md](docs/ABILITY_DESIGN.md) | アビリティ設計の原則（ズレ／ギャザー制／バスケの動作で対抗できる） |
-| [docs/ROSTER.md](docs/ROSTER.md) | 体格システムとヒーロー一覧（構想24体） |
+| [docs/ROSTER.md](docs/ROSTER.md) | 体格システムと、実装済みのヒーロー30体・技60種の一覧 |
 | [docs/CONCEPT.md](docs/CONCEPT.md) | ゲームデザインの全体（古い記述はRULES_V1.mdが優先） |
 | [docs/WORLD.md](docs/WORLD.md) | 世界観（都市・TaG・住人の種類・ヒーロー・アート） |
 | [docs/TECH.md](docs/TECH.md) | UE5の技術設計 |

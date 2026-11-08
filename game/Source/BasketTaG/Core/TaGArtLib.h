@@ -2,7 +2,9 @@
 
 #include "CoreMinimal.h"
 
+class AActor;
 class UStaticMesh;
+class UStaticMeshComponent;
 class UMaterialInterface;
 class UMaterialInstanceDynamic;
 class UMeshComponent;
@@ -26,4 +28,10 @@ namespace TaGArt
 
 	/** Sets the emissive glow of a dynamic material created by PaintSlot. */
 	void SetGlow(UMaterialInstanceDynamic* M, const FLinearColor& Color, float Strength);
+
+	/** A dark translucent disc on the court floor (z = 0) that follows an actor: the toon materials receive no real shadows. */
+	UStaticMeshComponent* MakeBlobShadow(AActor* Owner);
+
+	/** Puts the disc under At. It shrinks and fades as Height (cm above the floor) grows. */
+	void PlaceBlobShadow(UStaticMeshComponent* Shadow, const FVector& At, float Diameter, float Height, float Opacity);
 }

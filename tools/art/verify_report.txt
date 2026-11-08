@@ -1,155 +1,822 @@
 Basket Team-play TaG - asset verification report
-generated 2026-11-08 12:59:47 by tools/import/verify.py inside 5.8.4-58902052+++UE5+Release-5.8
+generated 2026-11-08 17:20:43 by tools/import/verify.py inside 5.8.4-58902052+++UE5+Release-5.8
 source: tools/build/fbx/assets.json (expected values), game\Source\BasketTaG\Core\TaGTypes.h
-SUMMARY: 449 checks, 449 passed, 0 failed, 0 warnings  (0.5s)
+SUMMARY: 1938 checks, 1938 passed, 0 failed, 0 warnings  (1.6s)
 
 
-== Base materials (/Game/Art/Materials) ==
+== Toon materials (/Game/Art/Materials) ==
   [PASS] /Game/Art/Materials/M_TaGBase loads
-  [PASS] M_TaGBase parameters Color, Emissive, EmissiveStrength, Roughness, Metallic (got ['Color', 'Emissive'] ['EmissiveStrength', 'Metallic', 'Roughness'])
-  [PASS] M_TaGBase defaults Roughness 0.6, Metallic 0, EmissiveStrength 0
-  [PASS] M_TaGBase is opaque
+  [PASS] M_TaGBase parameters vectors ['Color', 'Emissive'] scalars ['EmissiveStrength', 'Metallic', 'Roughness'] (got ['Color', 'Emissive'] ['EmissiveStrength', 'Metallic', 'Roughness'])
+  [PASS] M_TaGBase scalar defaults {'EmissiveStrength': 0.0, 'Metallic': 0.0, 'Roughness': 0.6} (got {'EmissiveStrength': 0.0, 'Metallic': 0.0, 'Roughness': 0.6})
+  [PASS] M_TaGBase BLEND_OPAQUE, unlit (toon lighting from MPC_TaG) (got BLEND_OPAQUE MSM_UNLIT)
   [PASS] /Game/Art/Materials/M_TaGTranslucent loads
-  [PASS] M_TaGTranslucent parameters Color, Emissive, EmissiveStrength, Roughness, Metallic, Opacity (got ['Color', 'Emissive'] ['EmissiveStrength', 'Metallic', 'Opacity', 'Roughness'])
-  [PASS] M_TaGTranslucent defaults Roughness 0.6, Metallic 0, EmissiveStrength 0
-  [PASS] M_TaGTranslucent Opacity default 0.5
-  [PASS] M_TaGTranslucent is translucent with lighting mode Surface Translucency Volume (Lumen)
+  [PASS] M_TaGTranslucent parameters vectors ['Color', 'Emissive'] scalars ['EmissiveStrength', 'Metallic', 'Opacity', 'Roughness'] (got ['Color', 'Emissive'] ['EmissiveStrength', 'Metallic', 'Opacity', 'Roughness'])
+  [PASS] M_TaGTranslucent scalar defaults {'EmissiveStrength': 0.0, 'Metallic': 0.0, 'Opacity': 0.5, 'Roughness': 0.6} (got {'EmissiveStrength': 0.0, 'Metallic': 0.0, 'Opacity': 0.5, 'Roughness': 0.6})
+  [PASS] M_TaGTranslucent BLEND_TRANSLUCENT, unlit (toon lighting from MPC_TaG) (got BLEND_TRANSLUCENT MSM_UNLIT)
   [PASS] /Game/Art/Materials/M_TaGWater loads
-  [PASS] M_TaGWater parameters Color, Roughness (got ['Color'] ['Roughness'])
+  [PASS] M_TaGWater parameters vectors ['Color'] scalars ['Roughness'] (got ['Color'] ['Roughness'])
+  [PASS] M_TaGWater scalar defaults {'Roughness': 0.06} (got {'Roughness': 0.06})
+  [PASS] M_TaGWater BLEND_OPAQUE, unlit (toon lighting from MPC_TaG) (got BLEND_OPAQUE MSM_UNLIT)
+  [PASS] /Game/Art/Materials/M_TaGOutline loads
+  [PASS] M_TaGOutline parameters vectors ['Color'] scalars [] (got ['Color'] [])
+  [PASS] M_TaGOutline scalar defaults {} (got {})
+  [PASS] M_TaGOutline BLEND_OPAQUE, unlit (toon lighting from MPC_TaG) (got BLEND_OPAQUE MSM_UNLIT)
+  [PASS] /Game/Art/Materials/M_TaGSky loads
+  [PASS] M_TaGSky parameters vectors [] scalars [] (got [] [])
+  [PASS] M_TaGSky scalar defaults {} (got {})
+  [PASS] M_TaGSky BLEND_OPAQUE, unlit (toon lighting from MPC_TaG) (got BLEND_OPAQUE MSM_UNLIT)
+  [PASS] /Game/Art/Materials/M_TaGParticle loads
+  [PASS] M_TaGParticle parameters vectors [] scalars ['Falloff', 'Intensity'] (got [] ['Falloff', 'Intensity'])
+  [PASS] M_TaGParticle scalar defaults {'Falloff': 1.6, 'Intensity': 2.0} (got {'Falloff': 1.6, 'Intensity': 2.0})
+  [PASS] M_TaGParticle BLEND_ADDITIVE, unlit (toon lighting from MPC_TaG) (got BLEND_ADDITIVE MSM_UNLIT)
+  [PASS] /Game/Art/Materials/M_TaGParticleAlpha loads
+  [PASS] M_TaGParticleAlpha parameters vectors [] scalars ['Falloff', 'Intensity'] (got [] ['Falloff', 'Intensity'])
+  [PASS] M_TaGParticleAlpha scalar defaults {'Falloff': 0.8, 'Intensity': 1.0} (got {'Falloff': 0.8, 'Intensity': 1.0})
+  [PASS] M_TaGParticleAlpha BLEND_TRANSLUCENT, unlit (toon lighting from MPC_TaG) (got BLEND_TRANSLUCENT MSM_UNLIT)
+  [PASS] /Game/Art/Materials/MPC_TaG loads
+  [PASS] MPC_TaG vectors ['Ambient', 'RimColor', 'ShadeColor', 'SkyGround', 'SkyHorizon', 'SkyZenith', 'SunColor', 'SunDir'] scalars ['BandOffset', 'BandSharpness', 'RimPower', 'RimStrength']
 
 == Static meshes: load, slots, material instances ==
   [PASS] /Game/Art/Heroes/Gantetsu/SM_Gantetsu_Pelvis loads
-  [PASS] SM_Gantetsu_Pelvis slots ['Body', 'Accent', 'Dark'] each with MI_Gantetsu_<Slot>
+  [PASS] SM_Gantetsu_Pelvis slots ['Body', 'Dark', 'Outline'] each with MI_Gantetsu_<Slot>
   [PASS] /Game/Art/Heroes/Gantetsu/SM_Gantetsu_Torso loads
-  [PASS] SM_Gantetsu_Torso slots ['Body', 'Accent', 'Dark', 'Metal', 'Team', 'Glow'] each with MI_Gantetsu_<Slot>
+  [PASS] SM_Gantetsu_Torso slots ['Body', 'Accent', 'Dark', 'Metal', 'Glow', 'Outline'] each with MI_Gantetsu_<Slot>
   [PASS] /Game/Art/Heroes/Gantetsu/SM_Gantetsu_Head loads
-  [PASS] SM_Gantetsu_Head slots ['Body', 'Accent', 'Dark', 'Metal', 'Glow'] each with MI_Gantetsu_<Slot>
+  [PASS] SM_Gantetsu_Head slots ['Body', 'Accent', 'Dark', 'Metal', 'Glow', 'Outline'] each with MI_Gantetsu_<Slot>
   [PASS] /Game/Art/Heroes/Gantetsu/SM_Gantetsu_UpperArm_L loads
-  [PASS] SM_Gantetsu_UpperArm_L slots ['Body', 'Dark', 'Metal', 'Team'] each with MI_Gantetsu_<Slot>
+  [PASS] SM_Gantetsu_UpperArm_L slots ['Body', 'Accent', 'Metal', 'Outline'] each with MI_Gantetsu_<Slot>
   [PASS] /Game/Art/Heroes/Gantetsu/SM_Gantetsu_UpperArm_R loads
-  [PASS] SM_Gantetsu_UpperArm_R slots ['Body', 'Dark', 'Metal', 'Team'] each with MI_Gantetsu_<Slot>
+  [PASS] SM_Gantetsu_UpperArm_R slots ['Body', 'Accent', 'Metal', 'Outline'] each with MI_Gantetsu_<Slot>
   [PASS] /Game/Art/Heroes/Gantetsu/SM_Gantetsu_LowerArm_L loads
-  [PASS] SM_Gantetsu_LowerArm_L slots ['Body', 'Accent', 'Dark', 'Metal', 'TaG'] each with MI_Gantetsu_<Slot>
+  [PASS] SM_Gantetsu_LowerArm_L slots ['Body', 'Dark', 'TaG', 'Outline'] each with MI_Gantetsu_<Slot>
   [PASS] /Game/Art/Heroes/Gantetsu/SM_Gantetsu_LowerArm_R loads
-  [PASS] SM_Gantetsu_LowerArm_R slots ['Body', 'Accent', 'Dark', 'Metal', 'TaG'] each with MI_Gantetsu_<Slot>
+  [PASS] SM_Gantetsu_LowerArm_R slots ['Body', 'Dark', 'TaG', 'Outline'] each with MI_Gantetsu_<Slot>
   [PASS] /Game/Art/Heroes/Gantetsu/SM_Gantetsu_Thigh_L loads
-  [PASS] SM_Gantetsu_Thigh_L slots ['Body', 'Dark', 'Metal', 'Team'] each with MI_Gantetsu_<Slot>
+  [PASS] SM_Gantetsu_Thigh_L slots ['Metal', 'Outline'] each with MI_Gantetsu_<Slot>
   [PASS] /Game/Art/Heroes/Gantetsu/SM_Gantetsu_Thigh_R loads
-  [PASS] SM_Gantetsu_Thigh_R slots ['Body', 'Dark', 'Metal', 'Team'] each with MI_Gantetsu_<Slot>
+  [PASS] SM_Gantetsu_Thigh_R slots ['Metal', 'Outline'] each with MI_Gantetsu_<Slot>
   [PASS] /Game/Art/Heroes/Gantetsu/SM_Gantetsu_Shin_L loads
-  [PASS] SM_Gantetsu_Shin_L slots ['Body', 'Dark', 'Metal', 'TaG'] each with MI_Gantetsu_<Slot>
+  [PASS] SM_Gantetsu_Shin_L slots ['Body', 'Accent', 'TaG', 'Outline'] each with MI_Gantetsu_<Slot>
   [PASS] /Game/Art/Heroes/Gantetsu/SM_Gantetsu_Shin_R loads
-  [PASS] SM_Gantetsu_Shin_R slots ['Body', 'Dark', 'Metal', 'TaG'] each with MI_Gantetsu_<Slot>
+  [PASS] SM_Gantetsu_Shin_R slots ['Body', 'Accent', 'TaG', 'Outline'] each with MI_Gantetsu_<Slot>
+  [PASS] /Game/Art/Heroes/Gantetsu/SM_Gantetsu_Foot_L loads
+  [PASS] SM_Gantetsu_Foot_L slots ['Accent', 'Dark', 'Metal', 'Outline'] each with MI_Gantetsu_<Slot>
+  [PASS] /Game/Art/Heroes/Gantetsu/SM_Gantetsu_Foot_R loads
+  [PASS] SM_Gantetsu_Foot_R slots ['Accent', 'Dark', 'Metal', 'Outline'] each with MI_Gantetsu_<Slot>
   [PASS] /Game/Art/Heroes/Minamo/SM_Minamo_Pelvis loads
-  [PASS] SM_Minamo_Pelvis slots ['Body', 'Accent', 'Dark'] each with MI_Minamo_<Slot>
+  [PASS] SM_Minamo_Pelvis slots ['Body', 'Accent', 'Extra', 'Outline'] each with MI_Minamo_<Slot>
   [PASS] /Game/Art/Heroes/Minamo/SM_Minamo_Torso loads
-  [PASS] SM_Minamo_Torso slots ['Body', 'Accent', 'Dark', 'Team'] each with MI_Minamo_<Slot>
+  [PASS] SM_Minamo_Torso slots ['Body', 'Accent', 'Extra', 'Outline'] each with MI_Minamo_<Slot>
   [PASS] /Game/Art/Heroes/Minamo/SM_Minamo_Head loads
-  [PASS] SM_Minamo_Head slots ['Skin', 'Hair', 'Dark', 'Metal'] each with MI_Minamo_<Slot>
+  [PASS] SM_Minamo_Head slots ['Accent', 'Skin', 'Hair', 'Dark', 'White', 'Outline'] each with MI_Minamo_<Slot>
   [PASS] /Game/Art/Heroes/Minamo/SM_Minamo_UpperArm_L loads
-  [PASS] SM_Minamo_UpperArm_L slots ['Body', 'Team'] each with MI_Minamo_<Slot>
+  [PASS] SM_Minamo_UpperArm_L slots ['Extra', 'Outline'] each with MI_Minamo_<Slot>
   [PASS] /Game/Art/Heroes/Minamo/SM_Minamo_UpperArm_R loads
-  [PASS] SM_Minamo_UpperArm_R slots ['Dark', 'Metal', 'Team'] each with MI_Minamo_<Slot>
+  [PASS] SM_Minamo_UpperArm_R slots ['Body', 'Metal', 'Outline'] each with MI_Minamo_<Slot>
   [PASS] /Game/Art/Heroes/Minamo/SM_Minamo_LowerArm_L loads
-  [PASS] SM_Minamo_LowerArm_L slots ['Body', 'Skin', 'Dark', 'TaG'] each with MI_Minamo_<Slot>
+  [PASS] SM_Minamo_LowerArm_L slots ['Skin', 'TaG', 'Outline'] each with MI_Minamo_<Slot>
   [PASS] /Game/Art/Heroes/Minamo/SM_Minamo_LowerArm_R loads
-  [PASS] SM_Minamo_LowerArm_R slots ['Dark', 'Metal', 'TaG'] each with MI_Minamo_<Slot>
+  [PASS] SM_Minamo_LowerArm_R slots ['Body', 'Metal', 'TaG', 'Glow', 'Outline'] each with MI_Minamo_<Slot>
   [PASS] /Game/Art/Heroes/Minamo/SM_Minamo_Thigh_L loads
-  [PASS] SM_Minamo_Thigh_L slots ['Dark', 'Metal', 'Team'] each with MI_Minamo_<Slot>
+  [PASS] SM_Minamo_Thigh_L slots ['Body', 'Metal', 'Outline'] each with MI_Minamo_<Slot>
   [PASS] /Game/Art/Heroes/Minamo/SM_Minamo_Thigh_R loads
-  [PASS] SM_Minamo_Thigh_R slots ['Dark', 'Metal', 'Team'] each with MI_Minamo_<Slot>
+  [PASS] SM_Minamo_Thigh_R slots ['Body', 'Metal', 'Outline'] each with MI_Minamo_<Slot>
   [PASS] /Game/Art/Heroes/Minamo/SM_Minamo_Shin_L loads
-  [PASS] SM_Minamo_Shin_L slots ['Dark', 'Metal', 'TaG', 'Glow'] each with MI_Minamo_<Slot>
+  [PASS] SM_Minamo_Shin_L slots ['Body', 'Accent', 'Extra', 'TaG', 'Glow', 'Outline'] each with MI_Minamo_<Slot>
   [PASS] /Game/Art/Heroes/Minamo/SM_Minamo_Shin_R loads
-  [PASS] SM_Minamo_Shin_R slots ['Dark', 'Metal', 'TaG', 'Glow'] each with MI_Minamo_<Slot>
+  [PASS] SM_Minamo_Shin_R slots ['Body', 'Accent', 'Extra', 'TaG', 'Glow', 'Outline'] each with MI_Minamo_<Slot>
+  [PASS] /Game/Art/Heroes/Minamo/SM_Minamo_Foot_L loads
+  [PASS] SM_Minamo_Foot_L slots ['Dark', 'Metal', 'Glow', 'Outline'] each with MI_Minamo_<Slot>
+  [PASS] /Game/Art/Heroes/Minamo/SM_Minamo_Foot_R loads
+  [PASS] SM_Minamo_Foot_R slots ['Dark', 'Metal', 'Glow', 'Outline'] each with MI_Minamo_<Slot>
   [PASS] /Game/Art/Heroes/Rei/SM_Rei_Pelvis loads
-  [PASS] SM_Rei_Pelvis slots ['Accent', 'Dark'] each with MI_Rei_<Slot>
+  [PASS] SM_Rei_Pelvis slots ['Body', 'Extra', 'Glow', 'Outline'] each with MI_Rei_<Slot>
   [PASS] /Game/Art/Heroes/Rei/SM_Rei_Torso loads
-  [PASS] SM_Rei_Torso slots ['Body', 'Accent', 'Dark', 'Team', 'Glow'] each with MI_Rei_<Slot>
+  [PASS] SM_Rei_Torso slots ['Body', 'Glow', 'Outline'] each with MI_Rei_<Slot>
   [PASS] /Game/Art/Heroes/Rei/SM_Rei_Head loads
-  [PASS] SM_Rei_Head slots ['Body', 'Skin', 'Hair', 'Dark', 'Glow'] each with MI_Rei_<Slot>
+  [PASS] SM_Rei_Head slots ['Body', 'Skin', 'Hair', 'Dark', 'White', 'Glow', 'Outline'] each with MI_Rei_<Slot>
   [PASS] /Game/Art/Heroes/Rei/SM_Rei_UpperArm_L loads
-  [PASS] SM_Rei_UpperArm_L slots ['Body', 'Team', 'Glow'] each with MI_Rei_<Slot>
+  [PASS] SM_Rei_UpperArm_L slots ['Body', 'Glow', 'Outline'] each with MI_Rei_<Slot>
   [PASS] /Game/Art/Heroes/Rei/SM_Rei_UpperArm_R loads
-  [PASS] SM_Rei_UpperArm_R slots ['Body', 'Team'] each with MI_Rei_<Slot>
+  [PASS] SM_Rei_UpperArm_R slots ['Body', 'Glow', 'Outline'] each with MI_Rei_<Slot>
   [PASS] /Game/Art/Heroes/Rei/SM_Rei_LowerArm_L loads
-  [PASS] SM_Rei_LowerArm_L slots ['Body', 'Skin', 'TaG'] each with MI_Rei_<Slot>
+  [PASS] SM_Rei_LowerArm_L slots ['Body', 'Skin', 'TaG', 'Outline'] each with MI_Rei_<Slot>
   [PASS] /Game/Art/Heroes/Rei/SM_Rei_LowerArm_R loads
-  [PASS] SM_Rei_LowerArm_R slots ['Body', 'Skin', 'TaG'] each with MI_Rei_<Slot>
+  [PASS] SM_Rei_LowerArm_R slots ['Body', 'Skin', 'TaG', 'Outline'] each with MI_Rei_<Slot>
   [PASS] /Game/Art/Heroes/Rei/SM_Rei_Thigh_L loads
-  [PASS] SM_Rei_Thigh_L slots ['Dark', 'Team'] each with MI_Rei_<Slot>
+  [PASS] SM_Rei_Thigh_L slots ['Extra', 'Outline'] each with MI_Rei_<Slot>
   [PASS] /Game/Art/Heroes/Rei/SM_Rei_Thigh_R loads
-  [PASS] SM_Rei_Thigh_R slots ['Dark', 'Team'] each with MI_Rei_<Slot>
+  [PASS] SM_Rei_Thigh_R slots ['Extra', 'Outline'] each with MI_Rei_<Slot>
   [PASS] /Game/Art/Heroes/Rei/SM_Rei_Shin_L loads
-  [PASS] SM_Rei_Shin_L slots ['Body', 'Accent', 'Dark', 'TaG'] each with MI_Rei_<Slot>
+  [PASS] SM_Rei_Shin_L slots ['Extra', 'TaG', 'Outline'] each with MI_Rei_<Slot>
   [PASS] /Game/Art/Heroes/Rei/SM_Rei_Shin_R loads
-  [PASS] SM_Rei_Shin_R slots ['Body', 'Accent', 'Dark', 'TaG'] each with MI_Rei_<Slot>
+  [PASS] SM_Rei_Shin_R slots ['Extra', 'TaG', 'Outline'] each with MI_Rei_<Slot>
+  [PASS] /Game/Art/Heroes/Rei/SM_Rei_Foot_L loads
+  [PASS] SM_Rei_Foot_L slots ['Body', 'Dark', 'Glow', 'Outline'] each with MI_Rei_<Slot>
+  [PASS] /Game/Art/Heroes/Rei/SM_Rei_Foot_R loads
+  [PASS] SM_Rei_Foot_R slots ['Body', 'Dark', 'Glow', 'Outline'] each with MI_Rei_<Slot>
   [PASS] /Game/Art/Heroes/Hayate/SM_Hayate_Pelvis loads
-  [PASS] SM_Hayate_Pelvis slots ['Body', 'Dark', 'Metal'] each with MI_Hayate_<Slot>
+  [PASS] SM_Hayate_Pelvis slots ['Accent', 'Extra', 'Outline'] each with MI_Hayate_<Slot>
   [PASS] /Game/Art/Heroes/Hayate/SM_Hayate_Torso loads
-  [PASS] SM_Hayate_Torso slots ['Body', 'Accent', 'Team', 'Glow'] each with MI_Hayate_<Slot>
+  [PASS] SM_Hayate_Torso slots ['Body', 'Accent', 'Glow', 'Outline'] each with MI_Hayate_<Slot>
   [PASS] /Game/Art/Heroes/Hayate/SM_Hayate_Head loads
-  [PASS] SM_Hayate_Head slots ['Skin', 'Hair', 'Dark', 'Metal', 'Glow'] each with MI_Hayate_<Slot>
+  [PASS] SM_Hayate_Head slots ['Accent', 'Skin', 'Hair', 'Dark', 'White', 'Glow', 'Outline'] each with MI_Hayate_<Slot>
   [PASS] /Game/Art/Heroes/Hayate/SM_Hayate_UpperArm_L loads
-  [PASS] SM_Hayate_UpperArm_L slots ['Body', 'Accent', 'Team'] each with MI_Hayate_<Slot>
+  [PASS] SM_Hayate_UpperArm_L slots ['Body', 'Accent', 'Outline'] each with MI_Hayate_<Slot>
   [PASS] /Game/Art/Heroes/Hayate/SM_Hayate_UpperArm_R loads
-  [PASS] SM_Hayate_UpperArm_R slots ['Body', 'Accent', 'Team'] each with MI_Hayate_<Slot>
+  [PASS] SM_Hayate_UpperArm_R slots ['Body', 'Accent', 'Outline'] each with MI_Hayate_<Slot>
   [PASS] /Game/Art/Heroes/Hayate/SM_Hayate_LowerArm_L loads
-  [PASS] SM_Hayate_LowerArm_L slots ['Body', 'Accent', 'Dark', 'TaG'] each with MI_Hayate_<Slot>
+  [PASS] SM_Hayate_LowerArm_L slots ['Body', 'Extra', 'TaG', 'Outline'] each with MI_Hayate_<Slot>
   [PASS] /Game/Art/Heroes/Hayate/SM_Hayate_LowerArm_R loads
-  [PASS] SM_Hayate_LowerArm_R slots ['Body', 'Accent', 'Dark', 'TaG'] each with MI_Hayate_<Slot>
+  [PASS] SM_Hayate_LowerArm_R slots ['Body', 'Extra', 'TaG', 'Outline'] each with MI_Hayate_<Slot>
   [PASS] /Game/Art/Heroes/Hayate/SM_Hayate_Thigh_L loads
-  [PASS] SM_Hayate_Thigh_L slots ['Body', 'Accent'] each with MI_Hayate_<Slot>
+  [PASS] SM_Hayate_Thigh_L slots ['Extra', 'Outline'] each with MI_Hayate_<Slot>
   [PASS] /Game/Art/Heroes/Hayate/SM_Hayate_Thigh_R loads
-  [PASS] SM_Hayate_Thigh_R slots ['Body', 'Accent'] each with MI_Hayate_<Slot>
+  [PASS] SM_Hayate_Thigh_R slots ['Extra', 'Outline'] each with MI_Hayate_<Slot>
   [PASS] /Game/Art/Heroes/Hayate/SM_Hayate_Shin_L loads
-  [PASS] SM_Hayate_Shin_L slots ['Body', 'Accent', 'Dark', 'TaG'] each with MI_Hayate_<Slot>
+  [PASS] SM_Hayate_Shin_L slots ['Body', 'Accent', 'TaG', 'Outline'] each with MI_Hayate_<Slot>
   [PASS] /Game/Art/Heroes/Hayate/SM_Hayate_Shin_R loads
-  [PASS] SM_Hayate_Shin_R slots ['Body', 'Accent', 'Dark', 'TaG'] each with MI_Hayate_<Slot>
+  [PASS] SM_Hayate_Shin_R slots ['Body', 'Accent', 'TaG', 'Outline'] each with MI_Hayate_<Slot>
+  [PASS] /Game/Art/Heroes/Hayate/SM_Hayate_Foot_L loads
+  [PASS] SM_Hayate_Foot_L slots ['Body', 'Accent', 'Extra', 'Glow', 'Outline'] each with MI_Hayate_<Slot>
+  [PASS] /Game/Art/Heroes/Hayate/SM_Hayate_Foot_R loads
+  [PASS] SM_Hayate_Foot_R slots ['Body', 'Accent', 'Extra', 'Glow', 'Outline'] each with MI_Hayate_<Slot>
   [PASS] /Game/Art/Heroes/Tsumugi/SM_Tsumugi_Pelvis loads
-  [PASS] SM_Tsumugi_Pelvis slots ['Dark', 'Team'] each with MI_Tsumugi_<Slot>
+  [PASS] SM_Tsumugi_Pelvis slots ['Accent', 'Extra', 'Outline'] each with MI_Tsumugi_<Slot>
   [PASS] /Game/Art/Heroes/Tsumugi/SM_Tsumugi_Torso loads
-  [PASS] SM_Tsumugi_Torso slots ['Body', 'Accent', 'Dark', 'Team'] each with MI_Tsumugi_<Slot>
+  [PASS] SM_Tsumugi_Torso slots ['Body', 'Accent', 'Extra', 'Dark', 'Outline'] each with MI_Tsumugi_<Slot>
   [PASS] /Game/Art/Heroes/Tsumugi/SM_Tsumugi_Head loads
-  [PASS] SM_Tsumugi_Head slots ['Accent', 'Skin', 'Hair', 'Dark'] each with MI_Tsumugi_<Slot>
+  [PASS] SM_Tsumugi_Head slots ['Accent', 'Skin', 'Hair', 'Dark', 'White', 'Outline'] each with MI_Tsumugi_<Slot>
   [PASS] /Game/Art/Heroes/Tsumugi/SM_Tsumugi_UpperArm_L loads
-  [PASS] SM_Tsumugi_UpperArm_L slots ['Dark'] each with MI_Tsumugi_<Slot>
+  [PASS] SM_Tsumugi_UpperArm_L slots ['Body', 'Accent', 'Outline'] each with MI_Tsumugi_<Slot>
   [PASS] /Game/Art/Heroes/Tsumugi/SM_Tsumugi_UpperArm_R loads
-  [PASS] SM_Tsumugi_UpperArm_R slots ['Dark'] each with MI_Tsumugi_<Slot>
+  [PASS] SM_Tsumugi_UpperArm_R slots ['Body', 'Accent', 'Outline'] each with MI_Tsumugi_<Slot>
   [PASS] /Game/Art/Heroes/Tsumugi/SM_Tsumugi_LowerArm_L loads
-  [PASS] SM_Tsumugi_LowerArm_L slots ['Skin', 'Dark', 'Metal', 'TaG', 'Glow'] each with MI_Tsumugi_<Slot>
+  [PASS] SM_Tsumugi_LowerArm_L slots ['Skin', 'TaG', 'Glow', 'Outline'] each with MI_Tsumugi_<Slot>
   [PASS] /Game/Art/Heroes/Tsumugi/SM_Tsumugi_LowerArm_R loads
-  [PASS] SM_Tsumugi_LowerArm_R slots ['Skin', 'Dark', 'Metal', 'TaG', 'Glow'] each with MI_Tsumugi_<Slot>
+  [PASS] SM_Tsumugi_LowerArm_R slots ['Skin', 'TaG', 'Glow', 'Outline'] each with MI_Tsumugi_<Slot>
   [PASS] /Game/Art/Heroes/Tsumugi/SM_Tsumugi_Thigh_L loads
-  [PASS] SM_Tsumugi_Thigh_L slots ['Dark', 'Team'] each with MI_Tsumugi_<Slot>
+  [PASS] SM_Tsumugi_Thigh_L slots ['Skin', 'Outline'] each with MI_Tsumugi_<Slot>
   [PASS] /Game/Art/Heroes/Tsumugi/SM_Tsumugi_Thigh_R loads
-  [PASS] SM_Tsumugi_Thigh_R slots ['Dark', 'Team'] each with MI_Tsumugi_<Slot>
+  [PASS] SM_Tsumugi_Thigh_R slots ['Skin', 'Outline'] each with MI_Tsumugi_<Slot>
   [PASS] /Game/Art/Heroes/Tsumugi/SM_Tsumugi_Shin_L loads
-  [PASS] SM_Tsumugi_Shin_L slots ['Body', 'Accent', 'Dark', 'TaG'] each with MI_Tsumugi_<Slot>
+  [PASS] SM_Tsumugi_Shin_L slots ['Extra', 'TaG', 'Outline'] each with MI_Tsumugi_<Slot>
   [PASS] /Game/Art/Heroes/Tsumugi/SM_Tsumugi_Shin_R loads
-  [PASS] SM_Tsumugi_Shin_R slots ['Body', 'Accent', 'Dark', 'TaG'] each with MI_Tsumugi_<Slot>
+  [PASS] SM_Tsumugi_Shin_R slots ['Extra', 'TaG', 'Outline'] each with MI_Tsumugi_<Slot>
+  [PASS] /Game/Art/Heroes/Tsumugi/SM_Tsumugi_Foot_L loads
+  [PASS] SM_Tsumugi_Foot_L slots ['Body', 'Accent', 'Dark', 'Outline'] each with MI_Tsumugi_<Slot>
+  [PASS] /Game/Art/Heroes/Tsumugi/SM_Tsumugi_Foot_R loads
+  [PASS] SM_Tsumugi_Foot_R slots ['Body', 'Accent', 'Dark', 'Outline'] each with MI_Tsumugi_<Slot>
   [PASS] /Game/Art/Heroes/Hibiki/SM_Hibiki_Pelvis loads
-  [PASS] SM_Hibiki_Pelvis slots ['Team', 'TaG', 'Jelly'] each with MI_Hibiki_<Slot>
+  [PASS] SM_Hibiki_Pelvis slots ['Accent', 'Extra', 'Jelly', 'Outline'] each with MI_Hibiki_<Slot>
   [PASS] /Game/Art/Heroes/Hibiki/SM_Hibiki_Torso loads
-  [PASS] SM_Hibiki_Torso slots ['Team', 'Glow', 'Jelly'] each with MI_Hibiki_<Slot>
+  [PASS] SM_Hibiki_Torso slots ['Body', 'Glow', 'Jelly', 'Outline'] each with MI_Hibiki_<Slot>
   [PASS] /Game/Art/Heroes/Hibiki/SM_Hibiki_Head loads
-  [PASS] SM_Hibiki_Head slots ['TaG', 'Glow', 'Jelly'] each with MI_Hibiki_<Slot>
+  [PASS] SM_Hibiki_Head slots ['Body', 'Accent', 'Extra', 'White', 'Glow', 'Jelly', 'Outline'] each with MI_Hibiki_<Slot>
   [PASS] /Game/Art/Heroes/Hibiki/SM_Hibiki_UpperArm_L loads
-  [PASS] SM_Hibiki_UpperArm_L slots ['Team', 'Glow', 'Jelly'] each with MI_Hibiki_<Slot>
+  [PASS] SM_Hibiki_UpperArm_L slots ['Body', 'Jelly', 'Outline'] each with MI_Hibiki_<Slot>
   [PASS] /Game/Art/Heroes/Hibiki/SM_Hibiki_UpperArm_R loads
-  [PASS] SM_Hibiki_UpperArm_R slots ['Team', 'Glow', 'Jelly'] each with MI_Hibiki_<Slot>
+  [PASS] SM_Hibiki_UpperArm_R slots ['Body', 'Jelly', 'Outline'] each with MI_Hibiki_<Slot>
   [PASS] /Game/Art/Heroes/Hibiki/SM_Hibiki_LowerArm_L loads
-  [PASS] SM_Hibiki_LowerArm_L slots ['Glow', 'Jelly'] each with MI_Hibiki_<Slot>
+  [PASS] SM_Hibiki_LowerArm_L slots ['Body', 'TaG', 'Outline'] each with MI_Hibiki_<Slot>
   [PASS] /Game/Art/Heroes/Hibiki/SM_Hibiki_LowerArm_R loads
-  [PASS] SM_Hibiki_LowerArm_R slots ['Glow', 'Jelly'] each with MI_Hibiki_<Slot>
+  [PASS] SM_Hibiki_LowerArm_R slots ['Body', 'TaG', 'Outline'] each with MI_Hibiki_<Slot>
   [PASS] /Game/Art/Heroes/Hibiki/SM_Hibiki_Thigh_L loads
-  [PASS] SM_Hibiki_Thigh_L slots ['Glow', 'Jelly'] each with MI_Hibiki_<Slot>
+  [PASS] SM_Hibiki_Thigh_L slots ['Body', 'Outline'] each with MI_Hibiki_<Slot>
   [PASS] /Game/Art/Heroes/Hibiki/SM_Hibiki_Thigh_R loads
-  [PASS] SM_Hibiki_Thigh_R slots ['Glow', 'Jelly'] each with MI_Hibiki_<Slot>
+  [PASS] SM_Hibiki_Thigh_R slots ['Body', 'Outline'] each with MI_Hibiki_<Slot>
   [PASS] /Game/Art/Heroes/Hibiki/SM_Hibiki_Shin_L loads
-  [PASS] SM_Hibiki_Shin_L slots ['Body', 'Glow', 'Jelly'] each with MI_Hibiki_<Slot>
+  [PASS] SM_Hibiki_Shin_L slots ['Body', 'TaG', 'Jelly', 'Outline'] each with MI_Hibiki_<Slot>
   [PASS] /Game/Art/Heroes/Hibiki/SM_Hibiki_Shin_R loads
-  [PASS] SM_Hibiki_Shin_R slots ['Body', 'Glow', 'Jelly'] each with MI_Hibiki_<Slot>
+  [PASS] SM_Hibiki_Shin_R slots ['Body', 'TaG', 'Jelly', 'Outline'] each with MI_Hibiki_<Slot>
+  [PASS] /Game/Art/Heroes/Hibiki/SM_Hibiki_Foot_L loads
+  [PASS] SM_Hibiki_Foot_L slots ['Accent', 'Extra', 'Glow', 'Outline'] each with MI_Hibiki_<Slot>
+  [PASS] /Game/Art/Heroes/Hibiki/SM_Hibiki_Foot_R loads
+  [PASS] SM_Hibiki_Foot_R slots ['Accent', 'Extra', 'Glow', 'Outline'] each with MI_Hibiki_<Slot>
+  [PASS] /Game/Art/Heroes/Kokemaru/SM_Kokemaru_Pelvis loads
+  [PASS] SM_Kokemaru_Pelvis slots ['Accent', 'Outline'] each with MI_Kokemaru_<Slot>
+  [PASS] /Game/Art/Heroes/Kokemaru/SM_Kokemaru_Torso loads
+  [PASS] SM_Kokemaru_Torso slots ['Body', 'Accent', 'Glow', 'Outline'] each with MI_Kokemaru_<Slot>
+  [PASS] /Game/Art/Heroes/Kokemaru/SM_Kokemaru_Head loads
+  [PASS] SM_Kokemaru_Head slots ['Accent', 'Extra', 'Dark', 'White', 'Glow', 'Outline'] each with MI_Kokemaru_<Slot>
+  [PASS] /Game/Art/Heroes/Kokemaru/SM_Kokemaru_UpperArm_L loads
+  [PASS] SM_Kokemaru_UpperArm_L slots ['Accent', 'Extra', 'Glow', 'Outline'] each with MI_Kokemaru_<Slot>
+  [PASS] /Game/Art/Heroes/Kokemaru/SM_Kokemaru_UpperArm_R loads
+  [PASS] SM_Kokemaru_UpperArm_R slots ['Accent', 'Extra', 'Glow', 'Outline'] each with MI_Kokemaru_<Slot>
+  [PASS] /Game/Art/Heroes/Kokemaru/SM_Kokemaru_LowerArm_L loads
+  [PASS] SM_Kokemaru_LowerArm_L slots ['Body', 'Accent', 'TaG', 'Outline'] each with MI_Kokemaru_<Slot>
+  [PASS] /Game/Art/Heroes/Kokemaru/SM_Kokemaru_LowerArm_R loads
+  [PASS] SM_Kokemaru_LowerArm_R slots ['Body', 'Accent', 'TaG', 'Outline'] each with MI_Kokemaru_<Slot>
+  [PASS] /Game/Art/Heroes/Kokemaru/SM_Kokemaru_Thigh_L loads
+  [PASS] SM_Kokemaru_Thigh_L slots ['Accent', 'Outline'] each with MI_Kokemaru_<Slot>
+  [PASS] /Game/Art/Heroes/Kokemaru/SM_Kokemaru_Thigh_R loads
+  [PASS] SM_Kokemaru_Thigh_R slots ['Accent', 'Outline'] each with MI_Kokemaru_<Slot>
+  [PASS] /Game/Art/Heroes/Kokemaru/SM_Kokemaru_Shin_L loads
+  [PASS] SM_Kokemaru_Shin_L slots ['Accent', 'TaG', 'Outline'] each with MI_Kokemaru_<Slot>
+  [PASS] /Game/Art/Heroes/Kokemaru/SM_Kokemaru_Shin_R loads
+  [PASS] SM_Kokemaru_Shin_R slots ['Accent', 'TaG', 'Outline'] each with MI_Kokemaru_<Slot>
+  [PASS] /Game/Art/Heroes/Kokemaru/SM_Kokemaru_Foot_L loads
+  [PASS] SM_Kokemaru_Foot_L slots ['Accent', 'Outline'] each with MI_Kokemaru_<Slot>
+  [PASS] /Game/Art/Heroes/Kokemaru/SM_Kokemaru_Foot_R loads
+  [PASS] SM_Kokemaru_Foot_R slots ['Accent', 'Outline'] each with MI_Kokemaru_<Slot>
+  [PASS] /Game/Art/Heroes/Keibi/SM_Keibi_Pelvis loads
+  [PASS] SM_Keibi_Pelvis slots ['Body', 'Dark', 'Outline'] each with MI_Keibi_<Slot>
+  [PASS] /Game/Art/Heroes/Keibi/SM_Keibi_Torso loads
+  [PASS] SM_Keibi_Torso slots ['Body', 'Accent', 'Extra', 'Metal', 'Outline'] each with MI_Keibi_<Slot>
+  [PASS] /Game/Art/Heroes/Keibi/SM_Keibi_Head loads
+  [PASS] SM_Keibi_Head slots ['Body', 'Accent', 'Extra', 'Dark', 'White', 'Glow', 'Outline'] each with MI_Keibi_<Slot>
+  [PASS] /Game/Art/Heroes/Keibi/SM_Keibi_UpperArm_L loads
+  [PASS] SM_Keibi_UpperArm_L slots ['Body', 'Outline'] each with MI_Keibi_<Slot>
+  [PASS] /Game/Art/Heroes/Keibi/SM_Keibi_UpperArm_R loads
+  [PASS] SM_Keibi_UpperArm_R slots ['Body', 'Outline'] each with MI_Keibi_<Slot>
+  [PASS] /Game/Art/Heroes/Keibi/SM_Keibi_LowerArm_L loads
+  [PASS] SM_Keibi_LowerArm_L slots ['Body', 'Accent', 'Dark', 'TaG', 'Outline'] each with MI_Keibi_<Slot>
+  [PASS] /Game/Art/Heroes/Keibi/SM_Keibi_LowerArm_R loads
+  [PASS] SM_Keibi_LowerArm_R slots ['Body', 'Accent', 'Dark', 'TaG', 'Outline'] each with MI_Keibi_<Slot>
+  [PASS] /Game/Art/Heroes/Keibi/SM_Keibi_Thigh_L loads
+  [PASS] SM_Keibi_Thigh_L slots ['Body', 'Outline'] each with MI_Keibi_<Slot>
+  [PASS] /Game/Art/Heroes/Keibi/SM_Keibi_Thigh_R loads
+  [PASS] SM_Keibi_Thigh_R slots ['Body', 'Outline'] each with MI_Keibi_<Slot>
+  [PASS] /Game/Art/Heroes/Keibi/SM_Keibi_Shin_L loads
+  [PASS] SM_Keibi_Shin_L slots ['Body', 'TaG', 'Outline'] each with MI_Keibi_<Slot>
+  [PASS] /Game/Art/Heroes/Keibi/SM_Keibi_Shin_R loads
+  [PASS] SM_Keibi_Shin_R slots ['Body', 'TaG', 'Outline'] each with MI_Keibi_<Slot>
+  [PASS] /Game/Art/Heroes/Keibi/SM_Keibi_Foot_L loads
+  [PASS] SM_Keibi_Foot_L slots ['Accent', 'Dark', 'Glow', 'Outline'] each with MI_Keibi_<Slot>
+  [PASS] /Game/Art/Heroes/Keibi/SM_Keibi_Foot_R loads
+  [PASS] SM_Keibi_Foot_R slots ['Accent', 'Dark', 'Glow', 'Outline'] each with MI_Keibi_<Slot>
+  [PASS] /Game/Art/Heroes/Yadori/SM_Yadori_Pelvis loads
+  [PASS] SM_Yadori_Pelvis slots ['Body', 'Outline'] each with MI_Yadori_<Slot>
+  [PASS] /Game/Art/Heroes/Yadori/SM_Yadori_Torso loads
+  [PASS] SM_Yadori_Torso slots ['Body', 'Accent', 'Extra', 'Glow', 'Outline'] each with MI_Yadori_<Slot>
+  [PASS] /Game/Art/Heroes/Yadori/SM_Yadori_Head loads
+  [PASS] SM_Yadori_Head slots ['Body', 'Extra', 'Dark', 'White', 'Outline'] each with MI_Yadori_<Slot>
+  [PASS] /Game/Art/Heroes/Yadori/SM_Yadori_UpperArm_L loads
+  [PASS] SM_Yadori_UpperArm_L slots ['Body', 'Outline'] each with MI_Yadori_<Slot>
+  [PASS] /Game/Art/Heroes/Yadori/SM_Yadori_UpperArm_R loads
+  [PASS] SM_Yadori_UpperArm_R slots ['Body', 'Outline'] each with MI_Yadori_<Slot>
+  [PASS] /Game/Art/Heroes/Yadori/SM_Yadori_LowerArm_L loads
+  [PASS] SM_Yadori_LowerArm_L slots ['Body', 'Extra', 'TaG', 'Outline'] each with MI_Yadori_<Slot>
+  [PASS] /Game/Art/Heroes/Yadori/SM_Yadori_LowerArm_R loads
+  [PASS] SM_Yadori_LowerArm_R slots ['Body', 'Extra', 'TaG', 'Outline'] each with MI_Yadori_<Slot>
+  [PASS] /Game/Art/Heroes/Yadori/SM_Yadori_Thigh_L loads
+  [PASS] SM_Yadori_Thigh_L slots ['Body', 'Outline'] each with MI_Yadori_<Slot>
+  [PASS] /Game/Art/Heroes/Yadori/SM_Yadori_Thigh_R loads
+  [PASS] SM_Yadori_Thigh_R slots ['Body', 'Outline'] each with MI_Yadori_<Slot>
+  [PASS] /Game/Art/Heroes/Yadori/SM_Yadori_Shin_L loads
+  [PASS] SM_Yadori_Shin_L slots ['Body', 'Extra', 'TaG', 'Outline'] each with MI_Yadori_<Slot>
+  [PASS] /Game/Art/Heroes/Yadori/SM_Yadori_Shin_R loads
+  [PASS] SM_Yadori_Shin_R slots ['Body', 'Extra', 'TaG', 'Outline'] each with MI_Yadori_<Slot>
+  [PASS] /Game/Art/Heroes/Yadori/SM_Yadori_Foot_L loads
+  [PASS] SM_Yadori_Foot_L slots ['Body', 'Accent', 'Glow', 'Outline'] each with MI_Yadori_<Slot>
+  [PASS] /Game/Art/Heroes/Yadori/SM_Yadori_Foot_R loads
+  [PASS] SM_Yadori_Foot_R slots ['Body', 'Accent', 'Glow', 'Outline'] each with MI_Yadori_<Slot>
+  [PASS] /Game/Art/Heroes/Iwakura/SM_Iwakura_Pelvis loads
+  [PASS] SM_Iwakura_Pelvis slots ['Accent', 'Extra', 'Outline'] each with MI_Iwakura_<Slot>
+  [PASS] /Game/Art/Heroes/Iwakura/SM_Iwakura_Torso loads
+  [PASS] SM_Iwakura_Torso slots ['Body', 'Accent', 'Extra', 'Glow', 'Outline'] each with MI_Iwakura_<Slot>
+  [PASS] /Game/Art/Heroes/Iwakura/SM_Iwakura_Head loads
+  [PASS] SM_Iwakura_Head slots ['Body', 'Accent', 'Skin', 'Dark', 'Metal', 'White', 'Glow', 'Outline'] each with MI_Iwakura_<Slot>
+  [PASS] /Game/Art/Heroes/Iwakura/SM_Iwakura_UpperArm_L loads
+  [PASS] SM_Iwakura_UpperArm_L slots ['Body', 'Accent', 'Outline'] each with MI_Iwakura_<Slot>
+  [PASS] /Game/Art/Heroes/Iwakura/SM_Iwakura_UpperArm_R loads
+  [PASS] SM_Iwakura_UpperArm_R slots ['Body', 'Accent', 'Outline'] each with MI_Iwakura_<Slot>
+  [PASS] /Game/Art/Heroes/Iwakura/SM_Iwakura_LowerArm_L loads
+  [PASS] SM_Iwakura_LowerArm_L slots ['Body', 'Accent', 'Extra', 'TaG', 'Glow', 'Outline'] each with MI_Iwakura_<Slot>
+  [PASS] /Game/Art/Heroes/Iwakura/SM_Iwakura_LowerArm_R loads
+  [PASS] SM_Iwakura_LowerArm_R slots ['Body', 'Extra', 'TaG', 'Outline'] each with MI_Iwakura_<Slot>
+  [PASS] /Game/Art/Heroes/Iwakura/SM_Iwakura_Thigh_L loads
+  [PASS] SM_Iwakura_Thigh_L slots ['Extra', 'Outline'] each with MI_Iwakura_<Slot>
+  [PASS] /Game/Art/Heroes/Iwakura/SM_Iwakura_Thigh_R loads
+  [PASS] SM_Iwakura_Thigh_R slots ['Extra', 'Outline'] each with MI_Iwakura_<Slot>
+  [PASS] /Game/Art/Heroes/Iwakura/SM_Iwakura_Shin_L loads
+  [PASS] SM_Iwakura_Shin_L slots ['Body', 'Accent', 'TaG', 'Outline'] each with MI_Iwakura_<Slot>
+  [PASS] /Game/Art/Heroes/Iwakura/SM_Iwakura_Shin_R loads
+  [PASS] SM_Iwakura_Shin_R slots ['Body', 'Accent', 'TaG', 'Outline'] each with MI_Iwakura_<Slot>
+  [PASS] /Game/Art/Heroes/Iwakura/SM_Iwakura_Foot_L loads
+  [PASS] SM_Iwakura_Foot_L slots ['Accent', 'Extra', 'Dark', 'Outline'] each with MI_Iwakura_<Slot>
+  [PASS] /Game/Art/Heroes/Iwakura/SM_Iwakura_Foot_R loads
+  [PASS] SM_Iwakura_Foot_R slots ['Accent', 'Extra', 'Dark', 'Outline'] each with MI_Iwakura_<Slot>
+  [PASS] /Game/Art/Heroes/Kotetsu/SM_Kotetsu_Pelvis loads
+  [PASS] SM_Kotetsu_Pelvis slots ['Accent', 'Outline'] each with MI_Kotetsu_<Slot>
+  [PASS] /Game/Art/Heroes/Kotetsu/SM_Kotetsu_Torso loads
+  [PASS] SM_Kotetsu_Torso slots ['Body', 'Accent', 'Extra', 'Glow', 'Outline'] each with MI_Kotetsu_<Slot>
+  [PASS] /Game/Art/Heroes/Kotetsu/SM_Kotetsu_Head loads
+  [PASS] SM_Kotetsu_Head slots ['Body', 'Accent', 'Extra', 'Dark', 'White', 'Glow', 'Outline'] each with MI_Kotetsu_<Slot>
+  [PASS] /Game/Art/Heroes/Kotetsu/SM_Kotetsu_UpperArm_L loads
+  [PASS] SM_Kotetsu_UpperArm_L slots ['Accent', 'Outline'] each with MI_Kotetsu_<Slot>
+  [PASS] /Game/Art/Heroes/Kotetsu/SM_Kotetsu_UpperArm_R loads
+  [PASS] SM_Kotetsu_UpperArm_R slots ['Accent', 'Outline'] each with MI_Kotetsu_<Slot>
+  [PASS] /Game/Art/Heroes/Kotetsu/SM_Kotetsu_LowerArm_L loads
+  [PASS] SM_Kotetsu_LowerArm_L slots ['Body', 'Accent', 'TaG', 'Outline'] each with MI_Kotetsu_<Slot>
+  [PASS] /Game/Art/Heroes/Kotetsu/SM_Kotetsu_LowerArm_R loads
+  [PASS] SM_Kotetsu_LowerArm_R slots ['Body', 'Extra', 'TaG', 'Glow', 'Outline'] each with MI_Kotetsu_<Slot>
+  [PASS] /Game/Art/Heroes/Kotetsu/SM_Kotetsu_Thigh_L loads
+  [PASS] SM_Kotetsu_Thigh_L slots ['Accent', 'Outline'] each with MI_Kotetsu_<Slot>
+  [PASS] /Game/Art/Heroes/Kotetsu/SM_Kotetsu_Thigh_R loads
+  [PASS] SM_Kotetsu_Thigh_R slots ['Accent', 'Outline'] each with MI_Kotetsu_<Slot>
+  [PASS] /Game/Art/Heroes/Kotetsu/SM_Kotetsu_Shin_L loads
+  [PASS] SM_Kotetsu_Shin_L slots ['Body', 'TaG', 'Outline'] each with MI_Kotetsu_<Slot>
+  [PASS] /Game/Art/Heroes/Kotetsu/SM_Kotetsu_Shin_R loads
+  [PASS] SM_Kotetsu_Shin_R slots ['Body', 'TaG', 'Outline'] each with MI_Kotetsu_<Slot>
+  [PASS] /Game/Art/Heroes/Kotetsu/SM_Kotetsu_Foot_L loads
+  [PASS] SM_Kotetsu_Foot_L slots ['Accent', 'Dark', 'Glow', 'Outline'] each with MI_Kotetsu_<Slot>
+  [PASS] /Game/Art/Heroes/Kotetsu/SM_Kotetsu_Foot_R loads
+  [PASS] SM_Kotetsu_Foot_R slots ['Accent', 'Dark', 'Glow', 'Outline'] each with MI_Kotetsu_<Slot>
+  [PASS] /Game/Art/Heroes/Mugura/SM_Mugura_Pelvis loads
+  [PASS] SM_Mugura_Pelvis slots ['Body', 'Accent', 'Outline'] each with MI_Mugura_<Slot>
+  [PASS] /Game/Art/Heroes/Mugura/SM_Mugura_Torso loads
+  [PASS] SM_Mugura_Torso slots ['Body', 'Accent', 'Extra', 'Glow', 'Outline'] each with MI_Mugura_<Slot>
+  [PASS] /Game/Art/Heroes/Mugura/SM_Mugura_Head loads
+  [PASS] SM_Mugura_Head slots ['Body', 'Accent', 'Extra', 'Dark', 'White', 'Outline'] each with MI_Mugura_<Slot>
+  [PASS] /Game/Art/Heroes/Mugura/SM_Mugura_UpperArm_L loads
+  [PASS] SM_Mugura_UpperArm_L slots ['Body', 'Outline'] each with MI_Mugura_<Slot>
+  [PASS] /Game/Art/Heroes/Mugura/SM_Mugura_UpperArm_R loads
+  [PASS] SM_Mugura_UpperArm_R slots ['Body', 'Outline'] each with MI_Mugura_<Slot>
+  [PASS] /Game/Art/Heroes/Mugura/SM_Mugura_LowerArm_L loads
+  [PASS] SM_Mugura_LowerArm_L slots ['Body', 'Accent', 'Extra', 'TaG', 'Outline'] each with MI_Mugura_<Slot>
+  [PASS] /Game/Art/Heroes/Mugura/SM_Mugura_LowerArm_R loads
+  [PASS] SM_Mugura_LowerArm_R slots ['Body', 'Accent', 'Extra', 'TaG', 'Outline'] each with MI_Mugura_<Slot>
+  [PASS] /Game/Art/Heroes/Mugura/SM_Mugura_Thigh_L loads
+  [PASS] SM_Mugura_Thigh_L slots ['Body', 'Outline'] each with MI_Mugura_<Slot>
+  [PASS] /Game/Art/Heroes/Mugura/SM_Mugura_Thigh_R loads
+  [PASS] SM_Mugura_Thigh_R slots ['Body', 'Outline'] each with MI_Mugura_<Slot>
+  [PASS] /Game/Art/Heroes/Mugura/SM_Mugura_Shin_L loads
+  [PASS] SM_Mugura_Shin_L slots ['Body', 'TaG', 'Outline'] each with MI_Mugura_<Slot>
+  [PASS] /Game/Art/Heroes/Mugura/SM_Mugura_Shin_R loads
+  [PASS] SM_Mugura_Shin_R slots ['Body', 'TaG', 'Outline'] each with MI_Mugura_<Slot>
+  [PASS] /Game/Art/Heroes/Mugura/SM_Mugura_Foot_L loads
+  [PASS] SM_Mugura_Foot_L slots ['Accent', 'Dark', 'Glow', 'Outline'] each with MI_Mugura_<Slot>
+  [PASS] /Game/Art/Heroes/Mugura/SM_Mugura_Foot_R loads
+  [PASS] SM_Mugura_Foot_R slots ['Accent', 'Dark', 'Glow', 'Outline'] each with MI_Mugura_<Slot>
+  [PASS] /Game/Art/Heroes/Amagi/SM_Amagi_Pelvis loads
+  [PASS] SM_Amagi_Pelvis slots ['Accent', 'Outline'] each with MI_Amagi_<Slot>
+  [PASS] /Game/Art/Heroes/Amagi/SM_Amagi_Torso loads
+  [PASS] SM_Amagi_Torso slots ['Body', 'Accent', 'Glow', 'Outline'] each with MI_Amagi_<Slot>
+  [PASS] /Game/Art/Heroes/Amagi/SM_Amagi_Head loads
+  [PASS] SM_Amagi_Head slots ['Body', 'Accent', 'Glow', 'Outline'] each with MI_Amagi_<Slot>
+  [PASS] /Game/Art/Heroes/Amagi/SM_Amagi_UpperArm_L loads
+  [PASS] SM_Amagi_UpperArm_L slots ['Body', 'Accent', 'Outline'] each with MI_Amagi_<Slot>
+  [PASS] /Game/Art/Heroes/Amagi/SM_Amagi_UpperArm_R loads
+  [PASS] SM_Amagi_UpperArm_R slots ['Body', 'Accent', 'Outline'] each with MI_Amagi_<Slot>
+  [PASS] /Game/Art/Heroes/Amagi/SM_Amagi_LowerArm_L loads
+  [PASS] SM_Amagi_LowerArm_L slots ['Body', 'Accent', 'TaG', 'Outline'] each with MI_Amagi_<Slot>
+  [PASS] /Game/Art/Heroes/Amagi/SM_Amagi_LowerArm_R loads
+  [PASS] SM_Amagi_LowerArm_R slots ['Body', 'Accent', 'TaG', 'Outline'] each with MI_Amagi_<Slot>
+  [PASS] /Game/Art/Heroes/Amagi/SM_Amagi_Thigh_L loads
+  [PASS] SM_Amagi_Thigh_L slots ['Body', 'Outline'] each with MI_Amagi_<Slot>
+  [PASS] /Game/Art/Heroes/Amagi/SM_Amagi_Thigh_R loads
+  [PASS] SM_Amagi_Thigh_R slots ['Body', 'Outline'] each with MI_Amagi_<Slot>
+  [PASS] /Game/Art/Heroes/Amagi/SM_Amagi_Shin_L loads
+  [PASS] SM_Amagi_Shin_L slots ['Body', 'Accent', 'TaG', 'Outline'] each with MI_Amagi_<Slot>
+  [PASS] /Game/Art/Heroes/Amagi/SM_Amagi_Shin_R loads
+  [PASS] SM_Amagi_Shin_R slots ['Body', 'Accent', 'TaG', 'Outline'] each with MI_Amagi_<Slot>
+  [PASS] /Game/Art/Heroes/Amagi/SM_Amagi_Foot_L loads
+  [PASS] SM_Amagi_Foot_L slots ['Body', 'Accent', 'Glow', 'Outline'] each with MI_Amagi_<Slot>
+  [PASS] /Game/Art/Heroes/Amagi/SM_Amagi_Foot_R loads
+  [PASS] SM_Amagi_Foot_R slots ['Body', 'Accent', 'Glow', 'Outline'] each with MI_Amagi_<Slot>
+  [PASS] /Game/Art/Heroes/Ushio/SM_Ushio_Pelvis loads
+  [PASS] SM_Ushio_Pelvis slots ['Body', 'Accent', 'Extra', 'Dark', 'Outline'] each with MI_Ushio_<Slot>
+  [PASS] /Game/Art/Heroes/Ushio/SM_Ushio_Torso loads
+  [PASS] SM_Ushio_Torso slots ['Body', 'Accent', 'Dark', 'Glow', 'Outline'] each with MI_Ushio_<Slot>
+  [PASS] /Game/Art/Heroes/Ushio/SM_Ushio_Head loads
+  [PASS] SM_Ushio_Head slots ['Body', 'Extra', 'Skin', 'Hair', 'Dark', 'White', 'Outline'] each with MI_Ushio_<Slot>
+  [PASS] /Game/Art/Heroes/Ushio/SM_Ushio_UpperArm_L loads
+  [PASS] SM_Ushio_UpperArm_L slots ['Body', 'Outline'] each with MI_Ushio_<Slot>
+  [PASS] /Game/Art/Heroes/Ushio/SM_Ushio_UpperArm_R loads
+  [PASS] SM_Ushio_UpperArm_R slots ['Body', 'Outline'] each with MI_Ushio_<Slot>
+  [PASS] /Game/Art/Heroes/Ushio/SM_Ushio_LowerArm_L loads
+  [PASS] SM_Ushio_LowerArm_L slots ['Body', 'Accent', 'Skin', 'TaG', 'Outline'] each with MI_Ushio_<Slot>
+  [PASS] /Game/Art/Heroes/Ushio/SM_Ushio_LowerArm_R loads
+  [PASS] SM_Ushio_LowerArm_R slots ['Body', 'Accent', 'Skin', 'TaG', 'Outline'] each with MI_Ushio_<Slot>
+  [PASS] /Game/Art/Heroes/Ushio/SM_Ushio_Thigh_L loads
+  [PASS] SM_Ushio_Thigh_L slots ['Extra', 'Outline'] each with MI_Ushio_<Slot>
+  [PASS] /Game/Art/Heroes/Ushio/SM_Ushio_Thigh_R loads
+  [PASS] SM_Ushio_Thigh_R slots ['Extra', 'Outline'] each with MI_Ushio_<Slot>
+  [PASS] /Game/Art/Heroes/Ushio/SM_Ushio_Shin_L loads
+  [PASS] SM_Ushio_Shin_L slots ['Accent', 'TaG', 'Outline'] each with MI_Ushio_<Slot>
+  [PASS] /Game/Art/Heroes/Ushio/SM_Ushio_Shin_R loads
+  [PASS] SM_Ushio_Shin_R slots ['Accent', 'TaG', 'Outline'] each with MI_Ushio_<Slot>
+  [PASS] /Game/Art/Heroes/Ushio/SM_Ushio_Foot_L loads
+  [PASS] SM_Ushio_Foot_L slots ['Accent', 'Dark', 'Outline'] each with MI_Ushio_<Slot>
+  [PASS] /Game/Art/Heroes/Ushio/SM_Ushio_Foot_R loads
+  [PASS] SM_Ushio_Foot_R slots ['Accent', 'Dark', 'Outline'] each with MI_Ushio_<Slot>
+  [PASS] /Game/Art/Heroes/Tsurube/SM_Tsurube_Pelvis loads
+  [PASS] SM_Tsurube_Pelvis slots ['Accent', 'Outline'] each with MI_Tsurube_<Slot>
+  [PASS] /Game/Art/Heroes/Tsurube/SM_Tsurube_Torso loads
+  [PASS] SM_Tsurube_Torso slots ['Body', 'Accent', 'Extra', 'Outline'] each with MI_Tsurube_<Slot>
+  [PASS] /Game/Art/Heroes/Tsurube/SM_Tsurube_Head loads
+  [PASS] SM_Tsurube_Head slots ['Body', 'Accent', 'Dark', 'White', 'Glow', 'Outline'] each with MI_Tsurube_<Slot>
+  [PASS] /Game/Art/Heroes/Tsurube/SM_Tsurube_UpperArm_L loads
+  [PASS] SM_Tsurube_UpperArm_L slots ['Body', 'Accent', 'Outline'] each with MI_Tsurube_<Slot>
+  [PASS] /Game/Art/Heroes/Tsurube/SM_Tsurube_UpperArm_R loads
+  [PASS] SM_Tsurube_UpperArm_R slots ['Body', 'Accent', 'Outline'] each with MI_Tsurube_<Slot>
+  [PASS] /Game/Art/Heroes/Tsurube/SM_Tsurube_LowerArm_L loads
+  [PASS] SM_Tsurube_LowerArm_L slots ['Body', 'Accent', 'TaG', 'Outline'] each with MI_Tsurube_<Slot>
+  [PASS] /Game/Art/Heroes/Tsurube/SM_Tsurube_LowerArm_R loads
+  [PASS] SM_Tsurube_LowerArm_R slots ['Body', 'Accent', 'Extra', 'TaG', 'Outline'] each with MI_Tsurube_<Slot>
+  [PASS] /Game/Art/Heroes/Tsurube/SM_Tsurube_Thigh_L loads
+  [PASS] SM_Tsurube_Thigh_L slots ['Accent', 'Outline'] each with MI_Tsurube_<Slot>
+  [PASS] /Game/Art/Heroes/Tsurube/SM_Tsurube_Thigh_R loads
+  [PASS] SM_Tsurube_Thigh_R slots ['Accent', 'Outline'] each with MI_Tsurube_<Slot>
+  [PASS] /Game/Art/Heroes/Tsurube/SM_Tsurube_Shin_L loads
+  [PASS] SM_Tsurube_Shin_L slots ['Body', 'TaG', 'Outline'] each with MI_Tsurube_<Slot>
+  [PASS] /Game/Art/Heroes/Tsurube/SM_Tsurube_Shin_R loads
+  [PASS] SM_Tsurube_Shin_R slots ['Body', 'TaG', 'Outline'] each with MI_Tsurube_<Slot>
+  [PASS] /Game/Art/Heroes/Tsurube/SM_Tsurube_Foot_L loads
+  [PASS] SM_Tsurube_Foot_L slots ['Accent', 'Extra', 'Glow', 'Outline'] each with MI_Tsurube_<Slot>
+  [PASS] /Game/Art/Heroes/Tsurube/SM_Tsurube_Foot_R loads
+  [PASS] SM_Tsurube_Foot_R slots ['Accent', 'Extra', 'Glow', 'Outline'] each with MI_Tsurube_<Slot>
+  [PASS] /Game/Art/Heroes/Suzu/SM_Suzu_Pelvis loads
+  [PASS] SM_Suzu_Pelvis slots ['Body', 'Accent', 'Outline'] each with MI_Suzu_<Slot>
+  [PASS] /Game/Art/Heroes/Suzu/SM_Suzu_Torso loads
+  [PASS] SM_Suzu_Torso slots ['Body', 'Accent', 'Extra', 'Outline'] each with MI_Suzu_<Slot>
+  [PASS] /Game/Art/Heroes/Suzu/SM_Suzu_Head loads
+  [PASS] SM_Suzu_Head slots ['Body', 'Skin', 'Hair', 'Dark', 'White', 'Glow', 'Outline'] each with MI_Suzu_<Slot>
+  [PASS] /Game/Art/Heroes/Suzu/SM_Suzu_UpperArm_L loads
+  [PASS] SM_Suzu_UpperArm_L slots ['Body', 'Accent', 'Glow', 'Outline'] each with MI_Suzu_<Slot>
+  [PASS] /Game/Art/Heroes/Suzu/SM_Suzu_UpperArm_R loads
+  [PASS] SM_Suzu_UpperArm_R slots ['Body', 'Accent', 'Glow', 'Outline'] each with MI_Suzu_<Slot>
+  [PASS] /Game/Art/Heroes/Suzu/SM_Suzu_LowerArm_L loads
+  [PASS] SM_Suzu_LowerArm_L slots ['Skin', 'TaG', 'Outline'] each with MI_Suzu_<Slot>
+  [PASS] /Game/Art/Heroes/Suzu/SM_Suzu_LowerArm_R loads
+  [PASS] SM_Suzu_LowerArm_R slots ['Skin', 'TaG', 'Outline'] each with MI_Suzu_<Slot>
+  [PASS] /Game/Art/Heroes/Suzu/SM_Suzu_Thigh_L loads
+  [PASS] SM_Suzu_Thigh_L slots ['Skin', 'Outline'] each with MI_Suzu_<Slot>
+  [PASS] /Game/Art/Heroes/Suzu/SM_Suzu_Thigh_R loads
+  [PASS] SM_Suzu_Thigh_R slots ['Skin', 'Outline'] each with MI_Suzu_<Slot>
+  [PASS] /Game/Art/Heroes/Suzu/SM_Suzu_Shin_L loads
+  [PASS] SM_Suzu_Shin_L slots ['Skin', 'TaG', 'Outline'] each with MI_Suzu_<Slot>
+  [PASS] /Game/Art/Heroes/Suzu/SM_Suzu_Shin_R loads
+  [PASS] SM_Suzu_Shin_R slots ['Skin', 'TaG', 'Outline'] each with MI_Suzu_<Slot>
+  [PASS] /Game/Art/Heroes/Suzu/SM_Suzu_Foot_L loads
+  [PASS] SM_Suzu_Foot_L slots ['Body', 'Accent', 'Extra', 'Outline'] each with MI_Suzu_<Slot>
+  [PASS] /Game/Art/Heroes/Suzu/SM_Suzu_Foot_R loads
+  [PASS] SM_Suzu_Foot_R slots ['Body', 'Accent', 'Extra', 'Outline'] each with MI_Suzu_<Slot>
+  [PASS] /Game/Art/Heroes/Nikoichi/SM_Nikoichi_Pelvis loads
+  [PASS] SM_Nikoichi_Pelvis slots ['Body', 'Outline'] each with MI_Nikoichi_<Slot>
+  [PASS] /Game/Art/Heroes/Nikoichi/SM_Nikoichi_Torso loads
+  [PASS] SM_Nikoichi_Torso slots ['Body', 'Accent', 'Dark', 'Glow', 'Outline'] each with MI_Nikoichi_<Slot>
+  [PASS] /Game/Art/Heroes/Nikoichi/SM_Nikoichi_Head loads
+  [PASS] SM_Nikoichi_Head slots ['Extra', 'Skin', 'Hair', 'Dark', 'White', 'Outline'] each with MI_Nikoichi_<Slot>
+  [PASS] /Game/Art/Heroes/Nikoichi/SM_Nikoichi_UpperArm_L loads
+  [PASS] SM_Nikoichi_UpperArm_L slots ['Body', 'Outline'] each with MI_Nikoichi_<Slot>
+  [PASS] /Game/Art/Heroes/Nikoichi/SM_Nikoichi_UpperArm_R loads
+  [PASS] SM_Nikoichi_UpperArm_R slots ['Body', 'Outline'] each with MI_Nikoichi_<Slot>
+  [PASS] /Game/Art/Heroes/Nikoichi/SM_Nikoichi_LowerArm_L loads
+  [PASS] SM_Nikoichi_LowerArm_L slots ['Body', 'Accent', 'TaG', 'Outline'] each with MI_Nikoichi_<Slot>
+  [PASS] /Game/Art/Heroes/Nikoichi/SM_Nikoichi_LowerArm_R loads
+  [PASS] SM_Nikoichi_LowerArm_R slots ['Body', 'Accent', 'TaG', 'Outline'] each with MI_Nikoichi_<Slot>
+  [PASS] /Game/Art/Heroes/Nikoichi/SM_Nikoichi_Thigh_L loads
+  [PASS] SM_Nikoichi_Thigh_L slots ['Body', 'Outline'] each with MI_Nikoichi_<Slot>
+  [PASS] /Game/Art/Heroes/Nikoichi/SM_Nikoichi_Thigh_R loads
+  [PASS] SM_Nikoichi_Thigh_R slots ['Body', 'Outline'] each with MI_Nikoichi_<Slot>
+  [PASS] /Game/Art/Heroes/Nikoichi/SM_Nikoichi_Shin_L loads
+  [PASS] SM_Nikoichi_Shin_L slots ['Body', 'TaG', 'Outline'] each with MI_Nikoichi_<Slot>
+  [PASS] /Game/Art/Heroes/Nikoichi/SM_Nikoichi_Shin_R loads
+  [PASS] SM_Nikoichi_Shin_R slots ['Body', 'TaG', 'Outline'] each with MI_Nikoichi_<Slot>
+  [PASS] /Game/Art/Heroes/Nikoichi/SM_Nikoichi_Foot_L loads
+  [PASS] SM_Nikoichi_Foot_L slots ['Accent', 'Dark', 'Glow', 'Outline'] each with MI_Nikoichi_<Slot>
+  [PASS] /Game/Art/Heroes/Nikoichi/SM_Nikoichi_Foot_R loads
+  [PASS] SM_Nikoichi_Foot_R slots ['Accent', 'Dark', 'Glow', 'Outline'] each with MI_Nikoichi_<Slot>
+  [PASS] /Game/Art/Heroes/Tsubame/SM_Tsubame_Pelvis loads
+  [PASS] SM_Tsubame_Pelvis slots ['Accent', 'Extra', 'Outline'] each with MI_Tsubame_<Slot>
+  [PASS] /Game/Art/Heroes/Tsubame/SM_Tsubame_Torso loads
+  [PASS] SM_Tsubame_Torso slots ['Body', 'Accent', 'Glow', 'Outline'] each with MI_Tsubame_<Slot>
+  [PASS] /Game/Art/Heroes/Tsubame/SM_Tsubame_Head loads
+  [PASS] SM_Tsubame_Head slots ['Body', 'Accent', 'Dark', 'White', 'Glow', 'Outline'] each with MI_Tsubame_<Slot>
+  [PASS] /Game/Art/Heroes/Tsubame/SM_Tsubame_UpperArm_L loads
+  [PASS] SM_Tsubame_UpperArm_L slots ['Body', 'Accent', 'Outline'] each with MI_Tsubame_<Slot>
+  [PASS] /Game/Art/Heroes/Tsubame/SM_Tsubame_UpperArm_R loads
+  [PASS] SM_Tsubame_UpperArm_R slots ['Body', 'Accent', 'Outline'] each with MI_Tsubame_<Slot>
+  [PASS] /Game/Art/Heroes/Tsubame/SM_Tsubame_LowerArm_L loads
+  [PASS] SM_Tsubame_LowerArm_L slots ['Body', 'Accent', 'TaG', 'Outline'] each with MI_Tsubame_<Slot>
+  [PASS] /Game/Art/Heroes/Tsubame/SM_Tsubame_LowerArm_R loads
+  [PASS] SM_Tsubame_LowerArm_R slots ['Body', 'Accent', 'TaG', 'Outline'] each with MI_Tsubame_<Slot>
+  [PASS] /Game/Art/Heroes/Tsubame/SM_Tsubame_Thigh_L loads
+  [PASS] SM_Tsubame_Thigh_L slots ['Body', 'Outline'] each with MI_Tsubame_<Slot>
+  [PASS] /Game/Art/Heroes/Tsubame/SM_Tsubame_Thigh_R loads
+  [PASS] SM_Tsubame_Thigh_R slots ['Body', 'Outline'] each with MI_Tsubame_<Slot>
+  [PASS] /Game/Art/Heroes/Tsubame/SM_Tsubame_Shin_L loads
+  [PASS] SM_Tsubame_Shin_L slots ['Extra', 'TaG', 'Outline'] each with MI_Tsubame_<Slot>
+  [PASS] /Game/Art/Heroes/Tsubame/SM_Tsubame_Shin_R loads
+  [PASS] SM_Tsubame_Shin_R slots ['Extra', 'TaG', 'Outline'] each with MI_Tsubame_<Slot>
+  [PASS] /Game/Art/Heroes/Tsubame/SM_Tsubame_Foot_L loads
+  [PASS] SM_Tsubame_Foot_L slots ['Accent', 'Extra', 'Glow', 'Outline'] each with MI_Tsubame_<Slot>
+  [PASS] /Game/Art/Heroes/Tsubame/SM_Tsubame_Foot_R loads
+  [PASS] SM_Tsubame_Foot_R slots ['Accent', 'Extra', 'Glow', 'Outline'] each with MI_Tsubame_<Slot>
+  [PASS] /Game/Art/Heroes/Kazami/SM_Kazami_Pelvis loads
+  [PASS] SM_Kazami_Pelvis slots ['Accent', 'Extra', 'Outline'] each with MI_Kazami_<Slot>
+  [PASS] /Game/Art/Heroes/Kazami/SM_Kazami_Torso loads
+  [PASS] SM_Kazami_Torso slots ['Body', 'Accent', 'Glow', 'Outline'] each with MI_Kazami_<Slot>
+  [PASS] /Game/Art/Heroes/Kazami/SM_Kazami_Head loads
+  [PASS] SM_Kazami_Head slots ['Accent', 'Extra', 'Glow', 'Outline'] each with MI_Kazami_<Slot>
+  [PASS] /Game/Art/Heroes/Kazami/SM_Kazami_UpperArm_L loads
+  [PASS] SM_Kazami_UpperArm_L slots ['Body', 'Outline'] each with MI_Kazami_<Slot>
+  [PASS] /Game/Art/Heroes/Kazami/SM_Kazami_UpperArm_R loads
+  [PASS] SM_Kazami_UpperArm_R slots ['Body', 'Outline'] each with MI_Kazami_<Slot>
+  [PASS] /Game/Art/Heroes/Kazami/SM_Kazami_LowerArm_L loads
+  [PASS] SM_Kazami_LowerArm_L slots ['Body', 'Accent', 'Extra', 'TaG', 'Outline'] each with MI_Kazami_<Slot>
+  [PASS] /Game/Art/Heroes/Kazami/SM_Kazami_LowerArm_R loads
+  [PASS] SM_Kazami_LowerArm_R slots ['Body', 'Accent', 'Extra', 'TaG', 'Outline'] each with MI_Kazami_<Slot>
+  [PASS] /Game/Art/Heroes/Kazami/SM_Kazami_Thigh_L loads
+  [PASS] SM_Kazami_Thigh_L slots ['Body', 'Outline'] each with MI_Kazami_<Slot>
+  [PASS] /Game/Art/Heroes/Kazami/SM_Kazami_Thigh_R loads
+  [PASS] SM_Kazami_Thigh_R slots ['Body', 'Outline'] each with MI_Kazami_<Slot>
+  [PASS] /Game/Art/Heroes/Kazami/SM_Kazami_Shin_L loads
+  [PASS] SM_Kazami_Shin_L slots ['Body', 'TaG', 'Outline'] each with MI_Kazami_<Slot>
+  [PASS] /Game/Art/Heroes/Kazami/SM_Kazami_Shin_R loads
+  [PASS] SM_Kazami_Shin_R slots ['Body', 'TaG', 'Outline'] each with MI_Kazami_<Slot>
+  [PASS] /Game/Art/Heroes/Kazami/SM_Kazami_Foot_L loads
+  [PASS] SM_Kazami_Foot_L slots ['Accent', 'Extra', 'Glow', 'Outline'] each with MI_Kazami_<Slot>
+  [PASS] /Game/Art/Heroes/Kazami/SM_Kazami_Foot_R loads
+  [PASS] SM_Kazami_Foot_R slots ['Accent', 'Extra', 'Glow', 'Outline'] each with MI_Kazami_<Slot>
+  [PASS] /Game/Art/Heroes/Hari/SM_Hari_Pelvis loads
+  [PASS] SM_Hari_Pelvis slots ['Body', 'Accent', 'Extra', 'Outline'] each with MI_Hari_<Slot>
+  [PASS] /Game/Art/Heroes/Hari/SM_Hari_Torso loads
+  [PASS] SM_Hari_Torso slots ['Body', 'Accent', 'Extra', 'Glow', 'Outline'] each with MI_Hari_<Slot>
+  [PASS] /Game/Art/Heroes/Hari/SM_Hari_Head loads
+  [PASS] SM_Hari_Head slots ['Skin', 'Hair', 'Dark', 'White', 'Glow', 'Outline'] each with MI_Hari_<Slot>
+  [PASS] /Game/Art/Heroes/Hari/SM_Hari_UpperArm_L loads
+  [PASS] SM_Hari_UpperArm_L slots ['Accent', 'Outline'] each with MI_Hari_<Slot>
+  [PASS] /Game/Art/Heroes/Hari/SM_Hari_UpperArm_R loads
+  [PASS] SM_Hari_UpperArm_R slots ['Accent', 'Outline'] each with MI_Hari_<Slot>
+  [PASS] /Game/Art/Heroes/Hari/SM_Hari_LowerArm_L loads
+  [PASS] SM_Hari_LowerArm_L slots ['Body', 'Accent', 'Skin', 'TaG', 'Outline'] each with MI_Hari_<Slot>
+  [PASS] /Game/Art/Heroes/Hari/SM_Hari_LowerArm_R loads
+  [PASS] SM_Hari_LowerArm_R slots ['Body', 'Metal', 'TaG', 'Glow', 'Outline'] each with MI_Hari_<Slot>
+  [PASS] /Game/Art/Heroes/Hari/SM_Hari_Thigh_L loads
+  [PASS] SM_Hari_Thigh_L slots ['Extra', 'Outline'] each with MI_Hari_<Slot>
+  [PASS] /Game/Art/Heroes/Hari/SM_Hari_Thigh_R loads
+  [PASS] SM_Hari_Thigh_R slots ['Extra', 'Outline'] each with MI_Hari_<Slot>
+  [PASS] /Game/Art/Heroes/Hari/SM_Hari_Shin_L loads
+  [PASS] SM_Hari_Shin_L slots ['Extra', 'TaG', 'Outline'] each with MI_Hari_<Slot>
+  [PASS] /Game/Art/Heroes/Hari/SM_Hari_Shin_R loads
+  [PASS] SM_Hari_Shin_R slots ['Extra', 'TaG', 'Outline'] each with MI_Hari_<Slot>
+  [PASS] /Game/Art/Heroes/Hari/SM_Hari_Foot_L loads
+  [PASS] SM_Hari_Foot_L slots ['Body', 'Extra', 'Glow', 'Outline'] each with MI_Hari_<Slot>
+  [PASS] /Game/Art/Heroes/Hari/SM_Hari_Foot_R loads
+  [PASS] SM_Hari_Foot_R slots ['Body', 'Extra', 'Glow', 'Outline'] each with MI_Hari_<Slot>
+  [PASS] /Game/Art/Heroes/Tomoshibi/SM_Tomoshibi_Pelvis loads
+  [PASS] SM_Tomoshibi_Pelvis slots ['Body', 'Outline'] each with MI_Tomoshibi_<Slot>
+  [PASS] /Game/Art/Heroes/Tomoshibi/SM_Tomoshibi_Torso loads
+  [PASS] SM_Tomoshibi_Torso slots ['Body', 'Accent', 'Extra', 'Outline'] each with MI_Tomoshibi_<Slot>
+  [PASS] /Game/Art/Heroes/Tomoshibi/SM_Tomoshibi_Head loads
+  [PASS] SM_Tomoshibi_Head slots ['Body', 'Extra', 'Glow', 'Outline'] each with MI_Tomoshibi_<Slot>
+  [PASS] /Game/Art/Heroes/Tomoshibi/SM_Tomoshibi_UpperArm_L loads
+  [PASS] SM_Tomoshibi_UpperArm_L slots ['Body', 'Accent', 'Outline'] each with MI_Tomoshibi_<Slot>
+  [PASS] /Game/Art/Heroes/Tomoshibi/SM_Tomoshibi_UpperArm_R loads
+  [PASS] SM_Tomoshibi_UpperArm_R slots ['Body', 'Accent', 'Outline'] each with MI_Tomoshibi_<Slot>
+  [PASS] /Game/Art/Heroes/Tomoshibi/SM_Tomoshibi_LowerArm_L loads
+  [PASS] SM_Tomoshibi_LowerArm_L slots ['Body', 'TaG', 'Outline'] each with MI_Tomoshibi_<Slot>
+  [PASS] /Game/Art/Heroes/Tomoshibi/SM_Tomoshibi_LowerArm_R loads
+  [PASS] SM_Tomoshibi_LowerArm_R slots ['Body', 'TaG', 'Outline'] each with MI_Tomoshibi_<Slot>
+  [PASS] /Game/Art/Heroes/Tomoshibi/SM_Tomoshibi_Thigh_L loads
+  [PASS] SM_Tomoshibi_Thigh_L slots ['Body', 'Outline'] each with MI_Tomoshibi_<Slot>
+  [PASS] /Game/Art/Heroes/Tomoshibi/SM_Tomoshibi_Thigh_R loads
+  [PASS] SM_Tomoshibi_Thigh_R slots ['Body', 'Outline'] each with MI_Tomoshibi_<Slot>
+  [PASS] /Game/Art/Heroes/Tomoshibi/SM_Tomoshibi_Shin_L loads
+  [PASS] SM_Tomoshibi_Shin_L slots ['Body', 'TaG', 'Outline'] each with MI_Tomoshibi_<Slot>
+  [PASS] /Game/Art/Heroes/Tomoshibi/SM_Tomoshibi_Shin_R loads
+  [PASS] SM_Tomoshibi_Shin_R slots ['Body', 'TaG', 'Outline'] each with MI_Tomoshibi_<Slot>
+  [PASS] /Game/Art/Heroes/Tomoshibi/SM_Tomoshibi_Foot_L loads
+  [PASS] SM_Tomoshibi_Foot_L slots ['Body', 'Accent', 'Outline'] each with MI_Tomoshibi_<Slot>
+  [PASS] /Game/Art/Heroes/Tomoshibi/SM_Tomoshibi_Foot_R loads
+  [PASS] SM_Tomoshibi_Foot_R slots ['Body', 'Accent', 'Outline'] each with MI_Tomoshibi_<Slot>
+  [PASS] /Game/Art/Heroes/Koyomi/SM_Koyomi_Pelvis loads
+  [PASS] SM_Koyomi_Pelvis slots ['Body', 'Extra', 'Glow', 'Outline'] each with MI_Koyomi_<Slot>
+  [PASS] /Game/Art/Heroes/Koyomi/SM_Koyomi_Torso loads
+  [PASS] SM_Koyomi_Torso slots ['Body', 'Accent', 'Extra', 'Glow', 'Outline'] each with MI_Koyomi_<Slot>
+  [PASS] /Game/Art/Heroes/Koyomi/SM_Koyomi_Head loads
+  [PASS] SM_Koyomi_Head slots ['Skin', 'Hair', 'Dark', 'Metal', 'White', 'Outline'] each with MI_Koyomi_<Slot>
+  [PASS] /Game/Art/Heroes/Koyomi/SM_Koyomi_UpperArm_L loads
+  [PASS] SM_Koyomi_UpperArm_L slots ['Body', 'Outline'] each with MI_Koyomi_<Slot>
+  [PASS] /Game/Art/Heroes/Koyomi/SM_Koyomi_UpperArm_R loads
+  [PASS] SM_Koyomi_UpperArm_R slots ['Body', 'Outline'] each with MI_Koyomi_<Slot>
+  [PASS] /Game/Art/Heroes/Koyomi/SM_Koyomi_LowerArm_L loads
+  [PASS] SM_Koyomi_LowerArm_L slots ['Body', 'Accent', 'Extra', 'Skin', 'TaG', 'Glow', 'Outline'] each with MI_Koyomi_<Slot>
+  [PASS] /Game/Art/Heroes/Koyomi/SM_Koyomi_LowerArm_R loads
+  [PASS] SM_Koyomi_LowerArm_R slots ['Body', 'Accent', 'Skin', 'TaG', 'Outline'] each with MI_Koyomi_<Slot>
+  [PASS] /Game/Art/Heroes/Koyomi/SM_Koyomi_Thigh_L loads
+  [PASS] SM_Koyomi_Thigh_L slots ['Extra', 'Outline'] each with MI_Koyomi_<Slot>
+  [PASS] /Game/Art/Heroes/Koyomi/SM_Koyomi_Thigh_R loads
+  [PASS] SM_Koyomi_Thigh_R slots ['Extra', 'Outline'] each with MI_Koyomi_<Slot>
+  [PASS] /Game/Art/Heroes/Koyomi/SM_Koyomi_Shin_L loads
+  [PASS] SM_Koyomi_Shin_L slots ['Extra', 'TaG', 'Outline'] each with MI_Koyomi_<Slot>
+  [PASS] /Game/Art/Heroes/Koyomi/SM_Koyomi_Shin_R loads
+  [PASS] SM_Koyomi_Shin_R slots ['Extra', 'TaG', 'Outline'] each with MI_Koyomi_<Slot>
+  [PASS] /Game/Art/Heroes/Koyomi/SM_Koyomi_Foot_L loads
+  [PASS] SM_Koyomi_Foot_L slots ['Body', 'Dark', 'Glow', 'Outline'] each with MI_Koyomi_<Slot>
+  [PASS] /Game/Art/Heroes/Koyomi/SM_Koyomi_Foot_R loads
+  [PASS] SM_Koyomi_Foot_R slots ['Body', 'Dark', 'Glow', 'Outline'] each with MI_Koyomi_<Slot>
+  [PASS] /Game/Art/Heroes/Yatai/SM_Yatai_Pelvis loads
+  [PASS] SM_Yatai_Pelvis slots ['Accent', 'Outline'] each with MI_Yatai_<Slot>
+  [PASS] /Game/Art/Heroes/Yatai/SM_Yatai_Torso loads
+  [PASS] SM_Yatai_Torso slots ['Body', 'Accent', 'Extra', 'Dark', 'White', 'Outline'] each with MI_Yatai_<Slot>
+  [PASS] /Game/Art/Heroes/Yatai/SM_Yatai_Head loads
+  [PASS] SM_Yatai_Head slots ['Dark', 'White', 'Glow', 'Outline'] each with MI_Yatai_<Slot>
+  [PASS] /Game/Art/Heroes/Yatai/SM_Yatai_UpperArm_L loads
+  [PASS] SM_Yatai_UpperArm_L slots ['Body', 'Outline'] each with MI_Yatai_<Slot>
+  [PASS] /Game/Art/Heroes/Yatai/SM_Yatai_UpperArm_R loads
+  [PASS] SM_Yatai_UpperArm_R slots ['Body', 'Outline'] each with MI_Yatai_<Slot>
+  [PASS] /Game/Art/Heroes/Yatai/SM_Yatai_LowerArm_L loads
+  [PASS] SM_Yatai_LowerArm_L slots ['Accent', 'Extra', 'TaG', 'Outline'] each with MI_Yatai_<Slot>
+  [PASS] /Game/Art/Heroes/Yatai/SM_Yatai_LowerArm_R loads
+  [PASS] SM_Yatai_LowerArm_R slots ['Accent', 'Extra', 'TaG', 'Outline'] each with MI_Yatai_<Slot>
+  [PASS] /Game/Art/Heroes/Yatai/SM_Yatai_Thigh_L loads
+  [PASS] SM_Yatai_Thigh_L slots ['Accent', 'Outline'] each with MI_Yatai_<Slot>
+  [PASS] /Game/Art/Heroes/Yatai/SM_Yatai_Thigh_R loads
+  [PASS] SM_Yatai_Thigh_R slots ['Accent', 'Outline'] each with MI_Yatai_<Slot>
+  [PASS] /Game/Art/Heroes/Yatai/SM_Yatai_Shin_L loads
+  [PASS] SM_Yatai_Shin_L slots ['Accent', 'TaG', 'Outline'] each with MI_Yatai_<Slot>
+  [PASS] /Game/Art/Heroes/Yatai/SM_Yatai_Shin_R loads
+  [PASS] SM_Yatai_Shin_R slots ['Accent', 'TaG', 'Outline'] each with MI_Yatai_<Slot>
+  [PASS] /Game/Art/Heroes/Yatai/SM_Yatai_Foot_L loads
+  [PASS] SM_Yatai_Foot_L slots ['Body', 'Accent', 'Dark', 'Outline'] each with MI_Yatai_<Slot>
+  [PASS] /Game/Art/Heroes/Yatai/SM_Yatai_Foot_R loads
+  [PASS] SM_Yatai_Foot_R slots ['Body', 'Accent', 'Dark', 'Outline'] each with MI_Yatai_<Slot>
+  [PASS] /Game/Art/Heroes/Oboro/SM_Oboro_Pelvis loads
+  [PASS] SM_Oboro_Pelvis slots ['Jelly', 'Outline'] each with MI_Oboro_<Slot>
+  [PASS] /Game/Art/Heroes/Oboro/SM_Oboro_Torso loads
+  [PASS] SM_Oboro_Torso slots ['Extra', 'Hair', 'Glow', 'Jelly', 'Outline'] each with MI_Oboro_<Slot>
+  [PASS] /Game/Art/Heroes/Oboro/SM_Oboro_Head loads
+  [PASS] SM_Oboro_Head slots ['Hair', 'Dark', 'White', 'Glow', 'Jelly', 'Outline'] each with MI_Oboro_<Slot>
+  [PASS] /Game/Art/Heroes/Oboro/SM_Oboro_UpperArm_L loads
+  [PASS] SM_Oboro_UpperArm_L slots ['Hair', 'Outline'] each with MI_Oboro_<Slot>
+  [PASS] /Game/Art/Heroes/Oboro/SM_Oboro_UpperArm_R loads
+  [PASS] SM_Oboro_UpperArm_R slots ['Hair', 'Outline'] each with MI_Oboro_<Slot>
+  [PASS] /Game/Art/Heroes/Oboro/SM_Oboro_LowerArm_L loads
+  [PASS] SM_Oboro_LowerArm_L slots ['Body', 'TaG', 'Outline'] each with MI_Oboro_<Slot>
+  [PASS] /Game/Art/Heroes/Oboro/SM_Oboro_LowerArm_R loads
+  [PASS] SM_Oboro_LowerArm_R slots ['Body', 'TaG', 'Outline'] each with MI_Oboro_<Slot>
+  [PASS] /Game/Art/Heroes/Oboro/SM_Oboro_Thigh_L loads
+  [PASS] SM_Oboro_Thigh_L slots ['Body', 'Outline'] each with MI_Oboro_<Slot>
+  [PASS] /Game/Art/Heroes/Oboro/SM_Oboro_Thigh_R loads
+  [PASS] SM_Oboro_Thigh_R slots ['Body', 'Outline'] each with MI_Oboro_<Slot>
+  [PASS] /Game/Art/Heroes/Oboro/SM_Oboro_Shin_L loads
+  [PASS] SM_Oboro_Shin_L slots ['Body', 'TaG', 'Outline'] each with MI_Oboro_<Slot>
+  [PASS] /Game/Art/Heroes/Oboro/SM_Oboro_Shin_R loads
+  [PASS] SM_Oboro_Shin_R slots ['Body', 'TaG', 'Outline'] each with MI_Oboro_<Slot>
+  [PASS] /Game/Art/Heroes/Oboro/SM_Oboro_Foot_L loads
+  [PASS] SM_Oboro_Foot_L slots ['Extra', 'Dark', 'Glow', 'Outline'] each with MI_Oboro_<Slot>
+  [PASS] /Game/Art/Heroes/Oboro/SM_Oboro_Foot_R loads
+  [PASS] SM_Oboro_Foot_R slots ['Extra', 'Dark', 'Glow', 'Outline'] each with MI_Oboro_<Slot>
+  [PASS] /Game/Art/Heroes/Hibana/SM_Hibana_Pelvis loads
+  [PASS] SM_Hibana_Pelvis slots ['Body', 'Accent', 'Outline'] each with MI_Hibana_<Slot>
+  [PASS] /Game/Art/Heroes/Hibana/SM_Hibana_Torso loads
+  [PASS] SM_Hibana_Torso slots ['Body', 'Accent', 'Metal', 'Outline'] each with MI_Hibana_<Slot>
+  [PASS] /Game/Art/Heroes/Hibana/SM_Hibana_Head loads
+  [PASS] SM_Hibana_Head slots ['Accent', 'Skin', 'Hair', 'Dark', 'Metal', 'White', 'Glow', 'Outline'] each with MI_Hibana_<Slot>
+  [PASS] /Game/Art/Heroes/Hibana/SM_Hibana_UpperArm_L loads
+  [PASS] SM_Hibana_UpperArm_L slots ['Body', 'Extra', 'Outline'] each with MI_Hibana_<Slot>
+  [PASS] /Game/Art/Heroes/Hibana/SM_Hibana_UpperArm_R loads
+  [PASS] SM_Hibana_UpperArm_R slots ['Body', 'Extra', 'Outline'] each with MI_Hibana_<Slot>
+  [PASS] /Game/Art/Heroes/Hibana/SM_Hibana_LowerArm_L loads
+  [PASS] SM_Hibana_LowerArm_L slots ['Accent', 'Skin', 'TaG', 'Glow', 'Outline'] each with MI_Hibana_<Slot>
+  [PASS] /Game/Art/Heroes/Hibana/SM_Hibana_LowerArm_R loads
+  [PASS] SM_Hibana_LowerArm_R slots ['Accent', 'Skin', 'TaG', 'Glow', 'Outline'] each with MI_Hibana_<Slot>
+  [PASS] /Game/Art/Heroes/Hibana/SM_Hibana_Thigh_L loads
+  [PASS] SM_Hibana_Thigh_L slots ['Body', 'Outline'] each with MI_Hibana_<Slot>
+  [PASS] /Game/Art/Heroes/Hibana/SM_Hibana_Thigh_R loads
+  [PASS] SM_Hibana_Thigh_R slots ['Body', 'Outline'] each with MI_Hibana_<Slot>
+  [PASS] /Game/Art/Heroes/Hibana/SM_Hibana_Shin_L loads
+  [PASS] SM_Hibana_Shin_L slots ['Body', 'Extra', 'TaG', 'Outline'] each with MI_Hibana_<Slot>
+  [PASS] /Game/Art/Heroes/Hibana/SM_Hibana_Shin_R loads
+  [PASS] SM_Hibana_Shin_R slots ['Body', 'Extra', 'TaG', 'Outline'] each with MI_Hibana_<Slot>
+  [PASS] /Game/Art/Heroes/Hibana/SM_Hibana_Foot_L loads
+  [PASS] SM_Hibana_Foot_L slots ['Accent', 'Metal', 'Glow', 'Outline'] each with MI_Hibana_<Slot>
+  [PASS] /Game/Art/Heroes/Hibana/SM_Hibana_Foot_R loads
+  [PASS] SM_Hibana_Foot_R slots ['Accent', 'Metal', 'Glow', 'Outline'] each with MI_Hibana_<Slot>
+  [PASS] /Game/Art/Heroes/Tsurara/SM_Tsurara_Pelvis loads
+  [PASS] SM_Tsurara_Pelvis slots ['Accent', 'Extra', 'Outline'] each with MI_Tsurara_<Slot>
+  [PASS] /Game/Art/Heroes/Tsurara/SM_Tsurara_Torso loads
+  [PASS] SM_Tsurara_Torso slots ['Body', 'Accent', 'Glow', 'Outline'] each with MI_Tsurara_<Slot>
+  [PASS] /Game/Art/Heroes/Tsurara/SM_Tsurara_Head loads
+  [PASS] SM_Tsurara_Head slots ['Skin', 'Hair', 'Dark', 'White', 'Outline'] each with MI_Tsurara_<Slot>
+  [PASS] /Game/Art/Heroes/Tsurara/SM_Tsurara_UpperArm_L loads
+  [PASS] SM_Tsurara_UpperArm_L slots ['Body', 'Jelly', 'Outline'] each with MI_Tsurara_<Slot>
+  [PASS] /Game/Art/Heroes/Tsurara/SM_Tsurara_UpperArm_R loads
+  [PASS] SM_Tsurara_UpperArm_R slots ['Body', 'Jelly', 'Outline'] each with MI_Tsurara_<Slot>
+  [PASS] /Game/Art/Heroes/Tsurara/SM_Tsurara_LowerArm_L loads
+  [PASS] SM_Tsurara_LowerArm_L slots ['Body', 'Accent', 'Extra', 'TaG', 'Outline'] each with MI_Tsurara_<Slot>
+  [PASS] /Game/Art/Heroes/Tsurara/SM_Tsurara_LowerArm_R loads
+  [PASS] SM_Tsurara_LowerArm_R slots ['Body', 'Accent', 'Extra', 'TaG', 'Outline'] each with MI_Tsurara_<Slot>
+  [PASS] /Game/Art/Heroes/Tsurara/SM_Tsurara_Thigh_L loads
+  [PASS] SM_Tsurara_Thigh_L slots ['Accent', 'Outline'] each with MI_Tsurara_<Slot>
+  [PASS] /Game/Art/Heroes/Tsurara/SM_Tsurara_Thigh_R loads
+  [PASS] SM_Tsurara_Thigh_R slots ['Accent', 'Outline'] each with MI_Tsurara_<Slot>
+  [PASS] /Game/Art/Heroes/Tsurara/SM_Tsurara_Shin_L loads
+  [PASS] SM_Tsurara_Shin_L slots ['Extra', 'Metal', 'TaG', 'Outline'] each with MI_Tsurara_<Slot>
+  [PASS] /Game/Art/Heroes/Tsurara/SM_Tsurara_Shin_R loads
+  [PASS] SM_Tsurara_Shin_R slots ['Extra', 'Metal', 'TaG', 'Outline'] each with MI_Tsurara_<Slot>
+  [PASS] /Game/Art/Heroes/Tsurara/SM_Tsurara_Foot_L loads
+  [PASS] SM_Tsurara_Foot_L slots ['Body', 'Accent', 'Metal', 'Outline'] each with MI_Tsurara_<Slot>
+  [PASS] /Game/Art/Heroes/Tsurara/SM_Tsurara_Foot_R loads
+  [PASS] SM_Tsurara_Foot_R slots ['Body', 'Accent', 'Metal', 'Outline'] each with MI_Tsurara_<Slot>
+  [PASS] /Game/Art/Heroes/Kawara/SM_Kawara_Pelvis loads
+  [PASS] SM_Kawara_Pelvis slots ['Body', 'Accent', 'Outline'] each with MI_Kawara_<Slot>
+  [PASS] /Game/Art/Heroes/Kawara/SM_Kawara_Torso loads
+  [PASS] SM_Kawara_Torso slots ['Body', 'Accent', 'Glow', 'Outline'] each with MI_Kawara_<Slot>
+  [PASS] /Game/Art/Heroes/Kawara/SM_Kawara_Head loads
+  [PASS] SM_Kawara_Head slots ['Body', 'Accent', 'Extra', 'Dark', 'Glow', 'Outline'] each with MI_Kawara_<Slot>
+  [PASS] /Game/Art/Heroes/Kawara/SM_Kawara_UpperArm_L loads
+  [PASS] SM_Kawara_UpperArm_L slots ['Body', 'Accent', 'Outline'] each with MI_Kawara_<Slot>
+  [PASS] /Game/Art/Heroes/Kawara/SM_Kawara_UpperArm_R loads
+  [PASS] SM_Kawara_UpperArm_R slots ['Body', 'Accent', 'Outline'] each with MI_Kawara_<Slot>
+  [PASS] /Game/Art/Heroes/Kawara/SM_Kawara_LowerArm_L loads
+  [PASS] SM_Kawara_LowerArm_L slots ['Extra', 'Dark', 'TaG', 'Outline'] each with MI_Kawara_<Slot>
+  [PASS] /Game/Art/Heroes/Kawara/SM_Kawara_LowerArm_R loads
+  [PASS] SM_Kawara_LowerArm_R slots ['Extra', 'Dark', 'TaG', 'Outline'] each with MI_Kawara_<Slot>
+  [PASS] /Game/Art/Heroes/Kawara/SM_Kawara_Thigh_L loads
+  [PASS] SM_Kawara_Thigh_L slots ['Accent', 'Outline'] each with MI_Kawara_<Slot>
+  [PASS] /Game/Art/Heroes/Kawara/SM_Kawara_Thigh_R loads
+  [PASS] SM_Kawara_Thigh_R slots ['Accent', 'Outline'] each with MI_Kawara_<Slot>
+  [PASS] /Game/Art/Heroes/Kawara/SM_Kawara_Shin_L loads
+  [PASS] SM_Kawara_Shin_L slots ['Body', 'TaG', 'Outline'] each with MI_Kawara_<Slot>
+  [PASS] /Game/Art/Heroes/Kawara/SM_Kawara_Shin_R loads
+  [PASS] SM_Kawara_Shin_R slots ['Body', 'TaG', 'Outline'] each with MI_Kawara_<Slot>
+  [PASS] /Game/Art/Heroes/Kawara/SM_Kawara_Foot_L loads
+  [PASS] SM_Kawara_Foot_L slots ['Body', 'Dark', 'Glow', 'Outline'] each with MI_Kawara_<Slot>
+  [PASS] /Game/Art/Heroes/Kawara/SM_Kawara_Foot_R loads
+  [PASS] SM_Kawara_Foot_R slots ['Body', 'Dark', 'Glow', 'Outline'] each with MI_Kawara_<Slot>
+  [PASS] /Game/Art/Heroes/Aoji/SM_Aoji_Pelvis loads
+  [PASS] SM_Aoji_Pelvis slots ['Accent', 'Outline'] each with MI_Aoji_<Slot>
+  [PASS] /Game/Art/Heroes/Aoji/SM_Aoji_Torso loads
+  [PASS] SM_Aoji_Torso slots ['Body', 'Accent', 'Extra', 'Hair', 'Glow', 'Outline'] each with MI_Aoji_<Slot>
+  [PASS] /Game/Art/Heroes/Aoji/SM_Aoji_Head loads
+  [PASS] SM_Aoji_Head slots ['Accent', 'Extra', 'Glow', 'Outline'] each with MI_Aoji_<Slot>
+  [PASS] /Game/Art/Heroes/Aoji/SM_Aoji_UpperArm_L loads
+  [PASS] SM_Aoji_UpperArm_L slots ['Accent', 'Extra', 'Outline'] each with MI_Aoji_<Slot>
+  [PASS] /Game/Art/Heroes/Aoji/SM_Aoji_UpperArm_R loads
+  [PASS] SM_Aoji_UpperArm_R slots ['Accent', 'Extra', 'Outline'] each with MI_Aoji_<Slot>
+  [PASS] /Game/Art/Heroes/Aoji/SM_Aoji_LowerArm_L loads
+  [PASS] SM_Aoji_LowerArm_L slots ['Body', 'Accent', 'TaG', 'Outline'] each with MI_Aoji_<Slot>
+  [PASS] /Game/Art/Heroes/Aoji/SM_Aoji_LowerArm_R loads
+  [PASS] SM_Aoji_LowerArm_R slots ['Body', 'Accent', 'TaG', 'Outline'] each with MI_Aoji_<Slot>
+  [PASS] /Game/Art/Heroes/Aoji/SM_Aoji_Thigh_L loads
+  [PASS] SM_Aoji_Thigh_L slots ['Accent', 'Outline'] each with MI_Aoji_<Slot>
+  [PASS] /Game/Art/Heroes/Aoji/SM_Aoji_Thigh_R loads
+  [PASS] SM_Aoji_Thigh_R slots ['Accent', 'Outline'] each with MI_Aoji_<Slot>
+  [PASS] /Game/Art/Heroes/Aoji/SM_Aoji_Shin_L loads
+  [PASS] SM_Aoji_Shin_L slots ['Body', 'TaG', 'Outline'] each with MI_Aoji_<Slot>
+  [PASS] /Game/Art/Heroes/Aoji/SM_Aoji_Shin_R loads
+  [PASS] SM_Aoji_Shin_R slots ['Body', 'TaG', 'Outline'] each with MI_Aoji_<Slot>
+  [PASS] /Game/Art/Heroes/Aoji/SM_Aoji_Foot_L loads
+  [PASS] SM_Aoji_Foot_L slots ['Accent', 'Dark', 'Glow', 'Outline'] each with MI_Aoji_<Slot>
+  [PASS] /Game/Art/Heroes/Aoji/SM_Aoji_Foot_R loads
+  [PASS] SM_Aoji_Foot_R slots ['Accent', 'Dark', 'Glow', 'Outline'] each with MI_Aoji_<Slot>
+  [PASS] /Game/Art/Heroes/Ankou/SM_Ankou_Pelvis loads
+  [PASS] SM_Ankou_Pelvis slots ['Body', 'Outline'] each with MI_Ankou_<Slot>
+  [PASS] /Game/Art/Heroes/Ankou/SM_Ankou_Torso loads
+  [PASS] SM_Ankou_Torso slots ['Body', 'Accent', 'Extra', 'Outline'] each with MI_Ankou_<Slot>
+  [PASS] /Game/Art/Heroes/Ankou/SM_Ankou_Head loads
+  [PASS] SM_Ankou_Head slots ['Body', 'Accent', 'Dark', 'White', 'Glow', 'Outline'] each with MI_Ankou_<Slot>
+  [PASS] /Game/Art/Heroes/Ankou/SM_Ankou_UpperArm_L loads
+  [PASS] SM_Ankou_UpperArm_L slots ['Body', 'Outline'] each with MI_Ankou_<Slot>
+  [PASS] /Game/Art/Heroes/Ankou/SM_Ankou_UpperArm_R loads
+  [PASS] SM_Ankou_UpperArm_R slots ['Body', 'Outline'] each with MI_Ankou_<Slot>
+  [PASS] /Game/Art/Heroes/Ankou/SM_Ankou_LowerArm_L loads
+  [PASS] SM_Ankou_LowerArm_L slots ['Body', 'Accent', 'TaG', 'Outline'] each with MI_Ankou_<Slot>
+  [PASS] /Game/Art/Heroes/Ankou/SM_Ankou_LowerArm_R loads
+  [PASS] SM_Ankou_LowerArm_R slots ['Body', 'Accent', 'TaG', 'Outline'] each with MI_Ankou_<Slot>
+  [PASS] /Game/Art/Heroes/Ankou/SM_Ankou_Thigh_L loads
+  [PASS] SM_Ankou_Thigh_L slots ['Body', 'Outline'] each with MI_Ankou_<Slot>
+  [PASS] /Game/Art/Heroes/Ankou/SM_Ankou_Thigh_R loads
+  [PASS] SM_Ankou_Thigh_R slots ['Body', 'Outline'] each with MI_Ankou_<Slot>
+  [PASS] /Game/Art/Heroes/Ankou/SM_Ankou_Shin_L loads
+  [PASS] SM_Ankou_Shin_L slots ['Body', 'TaG', 'Outline'] each with MI_Ankou_<Slot>
+  [PASS] /Game/Art/Heroes/Ankou/SM_Ankou_Shin_R loads
+  [PASS] SM_Ankou_Shin_R slots ['Body', 'TaG', 'Outline'] each with MI_Ankou_<Slot>
+  [PASS] /Game/Art/Heroes/Ankou/SM_Ankou_Foot_L loads
+  [PASS] SM_Ankou_Foot_L slots ['Accent', 'Outline'] each with MI_Ankou_<Slot>
+  [PASS] /Game/Art/Heroes/Ankou/SM_Ankou_Foot_R loads
+  [PASS] SM_Ankou_Foot_R slots ['Accent', 'Outline'] each with MI_Ankou_<Slot>
+  [PASS] /Game/Art/Heroes/Hotaru/SM_Hotaru_Pelvis loads
+  [PASS] SM_Hotaru_Pelvis slots ['Body', 'Outline'] each with MI_Hotaru_<Slot>
+  [PASS] /Game/Art/Heroes/Hotaru/SM_Hotaru_Torso loads
+  [PASS] SM_Hotaru_Torso slots ['Body', 'Extra', 'Glow', 'Jelly', 'Outline'] each with MI_Hotaru_<Slot>
+  [PASS] /Game/Art/Heroes/Hotaru/SM_Hotaru_Head loads
+  [PASS] SM_Hotaru_Head slots ['Body', 'Extra', 'Dark', 'White', 'Glow', 'Jelly', 'Outline'] each with MI_Hotaru_<Slot>
+  [PASS] /Game/Art/Heroes/Hotaru/SM_Hotaru_UpperArm_L loads
+  [PASS] SM_Hotaru_UpperArm_L slots ['Body', 'Outline'] each with MI_Hotaru_<Slot>
+  [PASS] /Game/Art/Heroes/Hotaru/SM_Hotaru_UpperArm_R loads
+  [PASS] SM_Hotaru_UpperArm_R slots ['Body', 'Outline'] each with MI_Hotaru_<Slot>
+  [PASS] /Game/Art/Heroes/Hotaru/SM_Hotaru_LowerArm_L loads
+  [PASS] SM_Hotaru_LowerArm_L slots ['Body', 'TaG', 'Glow', 'Outline'] each with MI_Hotaru_<Slot>
+  [PASS] /Game/Art/Heroes/Hotaru/SM_Hotaru_LowerArm_R loads
+  [PASS] SM_Hotaru_LowerArm_R slots ['Body', 'TaG', 'Glow', 'Outline'] each with MI_Hotaru_<Slot>
+  [PASS] /Game/Art/Heroes/Hotaru/SM_Hotaru_Thigh_L loads
+  [PASS] SM_Hotaru_Thigh_L slots ['Body', 'Outline'] each with MI_Hotaru_<Slot>
+  [PASS] /Game/Art/Heroes/Hotaru/SM_Hotaru_Thigh_R loads
+  [PASS] SM_Hotaru_Thigh_R slots ['Body', 'Outline'] each with MI_Hotaru_<Slot>
+  [PASS] /Game/Art/Heroes/Hotaru/SM_Hotaru_Shin_L loads
+  [PASS] SM_Hotaru_Shin_L slots ['Body', 'TaG', 'Outline'] each with MI_Hotaru_<Slot>
+  [PASS] /Game/Art/Heroes/Hotaru/SM_Hotaru_Shin_R loads
+  [PASS] SM_Hotaru_Shin_R slots ['Body', 'TaG', 'Outline'] each with MI_Hotaru_<Slot>
+  [PASS] /Game/Art/Heroes/Hotaru/SM_Hotaru_Foot_L loads
+  [PASS] SM_Hotaru_Foot_L slots ['Body', 'Accent', 'Extra', 'Outline'] each with MI_Hotaru_<Slot>
+  [PASS] /Game/Art/Heroes/Hotaru/SM_Hotaru_Foot_R loads
+  [PASS] SM_Hotaru_Foot_R slots ['Body', 'Accent', 'Extra', 'Outline'] each with MI_Hotaru_<Slot>
   [PASS] /Game/Art/Ball/SM_Ball loads
   [PASS] SM_Ball slots ['Body', 'Dark', 'Glow'] each with MI_Ball_<Slot>
   [PASS] /Game/Art/Court/SM_Hoop loads
@@ -157,7 +824,7 @@ SUMMARY: 449 checks, 449 passed, 0 failed, 0 warnings  (0.5s)
   [PASS] /Game/Art/Court/SM_Rooftop loads
   [PASS] SM_Rooftop slots ['Dark', 'Court', 'Paint', 'Apron'] each with MI_Rooftop_<Slot>
   [PASS] /Game/Art/Court/SM_RooftopProps loads
-  [PASS] SM_RooftopProps slots ['Body', 'Accent', 'Dark', 'Metal', 'Glow', 'Window'] each with MI_RooftopProps_<Slot>
+  [PASS] SM_RooftopProps slots ['Body', 'Accent', 'Extra', 'Dark', 'Metal', 'White', 'Glow', 'Window'] each with MI_RooftopProps_<Slot>
   [PASS] /Game/Art/Court/SM_RooftopProps_Furnace loads
   [PASS] SM_RooftopProps_Furnace slots ['Body', 'Dark', 'Metal', 'Glow'] each with MI_RooftopProps_Furnace_<Slot>
   [PASS] /Game/Art/City/SM_CityA_01 loads
@@ -210,165 +877,1035 @@ SUMMARY: 449 checks, 449 passed, 0 failed, 0 warnings  (0.5s)
   [PASS] SM_CityB_12 slots ['Body', 'Accent', 'Dark', 'Metal', 'Glow', 'Window'] each with MI_CityB_<Slot>
   [PASS] /Game/Art/City/SM_Sea loads
   [PASS] SM_Sea slots ['Body', 'Dark', 'Glow', 'Water'] each with MI_Sea_<Slot>
-  [PASS] all 87 material instances load
+  [PASS] /Game/Art/City/SM_SkyDome loads
+  [PASS] SM_SkyDome slots ['Sky'] each with MI_SkyDome_<Slot>
+  [PASS] /Game/Art/City/SM_Clouds loads
+  [PASS] SM_Clouds slots ['Body', 'Accent', 'Extra', 'Hair', 'White', 'Glow'] each with MI_Clouds_<Slot>
+  [PASS] all 312 material instances load
 
 == Heroes (rest pose assembled from the imported sockets) ==
 -- Gantetsu (XL) --
-  [PASS] SM_Gantetsu_Pelvis sockets ['spine', 'hip_l', 'hip_r'] present (rotation 0, scale 1): spine(0.00, -0.00, 14.00), hip_l(0.00, -21.00, -10.00), hip_r(0.00, 21.00, -10.00)
-  [PASS] SM_Gantetsu_Torso sockets ['neck', 'shoulder_l', 'shoulder_r'] present (rotation 0, scale 1): neck(8.00, -0.00, 98.00), shoulder_l(-2.00, -33.00, 82.00), shoulder_r(-2.00, 33.00, 82.00)
-  [PASS] SM_Gantetsu_Head sockets ['eyes'] present (rotation 0, scale 1): eyes(18.00, -0.00, 22.00)
-  [PASS] SM_Gantetsu_UpperArm_L sockets ['elbow'] present (rotation 0, scale 1): elbow(0.00, 0.00, -56.00)
-  [PASS] SM_Gantetsu_UpperArm_R sockets ['elbow'] present (rotation 0, scale 1): elbow(0.00, 0.00, -56.00)
-  [PASS] SM_Gantetsu_LowerArm_L sockets ['hand'] present (rotation 0, scale 1): hand(2.00, 7.60, -57.00)
-  [PASS] SM_Gantetsu_LowerArm_R sockets ['hand'] present (rotation 0, scale 1): hand(2.00, -7.60, -57.00)
-  [PASS] SM_Gantetsu_Thigh_L sockets ['knee'] present (rotation 0, scale 1): knee(0.00, 0.00, -46.00)
-  [PASS] SM_Gantetsu_Thigh_R sockets ['knee'] present (rotation 0, scale 1): knee(0.00, 0.00, -46.00)
-  [PASS] SM_Gantetsu_Shin_L sockets ['sole'] present (rotation 0, scale 1): sole(6.00, 0.00, -60.00)
-  [PASS] SM_Gantetsu_Shin_R sockets ['sole'] present (rotation 0, scale 1): sole(6.00, 0.00, -60.00)
-  [PASS] soles level: left z -116.00 right z -116.00 (floor)
-  [PASS] floor-to-eyes 250.00 cm (target 250 +-5)
-  [PASS] overall width 94.40 cm (target 95, +-5 tolerance)
-  [PASS] triangles 7920 <= 8000
-  [PASS] left sockets negative Y: hip_l.y -21.00 shoulder_l.y -33.00 (right: 21.00, 33.00)
-  [PASS] L arm hangs down: shoulder z 212.0 > elbow z 156.0 > hand z 99.0
-  [PASS] L sole socket on the bottom of the foot: sole z -60.00, foot min z -60.00 (rel. knee)
-  [PASS] L knee below hip (-46.0)
-  [PASS] R arm hangs down: shoulder z 212.0 > elbow z 156.0 > hand z 99.0
-  [PASS] R sole socket on the bottom of the foot: sole z -60.00, foot min z -60.00 (rel. knee)
-  [PASS] R knee below hip (-46.0)
-  [PASS] uses slots TaG and Team
-  [PASS] faces +X (eyes x 18.0, sole x 6.0)
-   eye height 250.00  width 94.40  height 298.26  triangles 7920  pelvis height 116.00
+  [PASS] SM_Gantetsu_Pelvis sockets ['spine', 'hip_l', 'hip_r'] present (rotation 0, scale 1): spine(0.00, -0.00, 11.43), hip_l(0.00, -14.27, -8.57), hip_r(0.00, 14.27, -8.57)
+  [PASS] SM_Gantetsu_Torso sockets ['neck', 'shoulder_l', 'shoulder_r'] present (rotation 0, scale 1): neck(0.00, -0.00, 108.94), shoulder_l(0.00, -27.52, 100.37), shoulder_r(0.00, 27.52, 100.37)
+  [PASS] SM_Gantetsu_Head sockets ['eyes'] present (rotation 0, scale 1): eyes(16.71, -0.00, 15.71)
+  [PASS] SM_Gantetsu_UpperArm_L sockets ['elbow'] present (rotation 0, scale 1): elbow(0.00, 0.00, -31.43)
+  [PASS] SM_Gantetsu_UpperArm_R sockets ['elbow'] present (rotation 0, scale 1): elbow(0.00, 0.00, -31.43)
+  [PASS] SM_Gantetsu_LowerArm_L sockets ['hand'] present (rotation 0, scale 1): hand(2.14, 12.81, -41.43)
+  [PASS] SM_Gantetsu_LowerArm_R sockets ['hand'] present (rotation 0, scale 1): hand(2.14, -12.81, -41.43)
+  [PASS] SM_Gantetsu_Thigh_L sockets ['knee'] present (rotation 0, scale 1): knee(0.00, 0.00, -47.91)
+  [PASS] SM_Gantetsu_Thigh_R sockets ['knee'] present (rotation 0, scale 1): knee(0.00, 0.00, -47.91)
+  [PASS] SM_Gantetsu_Shin_L sockets ['ankle'] present (rotation 0, scale 1): ankle(0.00, 0.00, -44.57)
+  [PASS] SM_Gantetsu_Shin_R sockets ['ankle'] present (rotation 0, scale 1): ankle(0.00, 0.00, -44.57)
+  [PASS] SM_Gantetsu_Foot_L sockets ['sole', 'toe'] present (rotation 0, scale 1): sole(6.43, 0.00, -12.86), toe(22.43, 0.00, -12.86)
+  [PASS] SM_Gantetsu_Foot_R sockets ['sole', 'toe'] present (rotation 0, scale 1): sole(6.43, 0.00, -12.86), toe(22.43, 0.00, -12.86)
+  [PASS] soles level: left z -113.91 right z -113.91 (floor)
+  [PASS] floor-to-eyes 250.00 cm (target 250 +-3%)
+  [PASS] overall width 94.59 cm (target 95 +-3%)
+  [PASS] triangles 7060 <= 9000
+  [PASS] left sockets negative Y: hip_l.y -14.27 shoulder_l.y -27.52 (right: 14.27, 27.52)
+  [PASS] L arm hangs down: shoulder z 225.7 > elbow z 194.3 > hand z 152.9
+  [PASS] L sole socket on the bottom of the foot: sole z -12.86, foot min z -13.54 (rel. ankle)
+  [PASS] L toe socket on the floor in front of the sole (toe x 22.4, sole x 6.4)
+  [PASS] L ankle below knee (-44.6)
+  [PASS] L knee below hip (-47.9)
+  [PASS] R arm hangs down: shoulder z 225.7 > elbow z 194.3 > hand z 152.9
+  [PASS] R sole socket on the bottom of the foot: sole z -12.86, foot min z -13.54 (rel. ankle)
+  [PASS] R toe socket on the floor in front of the sole (toe x 22.4, sole x 6.4)
+  [PASS] R ankle below knee (-44.6)
+  [PASS] R knee below hip (-47.9)
+  [PASS] TaG slot on both wrists (LowerArm) and both ankles (Shin)
+  [PASS] Outline slot on every part
+  [PASS] faces +X (eyes x 16.7, toe x 22.4)
+   eye height 250.00  width 94.59  height 271.70  triangles 7060  pelvis height 113.91
 -- Minamo (L) --
-  [PASS] SM_Minamo_Pelvis sockets ['spine', 'hip_l', 'hip_r'] present (rotation 0, scale 1): spine(0.00, -0.00, 10.00), hip_l(0.00, -16.50, -6.00), hip_r(0.00, 16.50, -6.00)
-  [PASS] SM_Minamo_Torso sockets ['neck', 'shoulder_l', 'shoulder_r'] present (rotation 0, scale 1): neck(-1.00, -0.00, 58.00), shoulder_l(-1.00, -25.00, 51.00), shoulder_r(-1.00, 25.00, 51.00)
-  [PASS] SM_Minamo_Head sockets ['eyes'] present (rotation 0, scale 1): eyes(12.00, -0.00, 28.00)
-  [PASS] SM_Minamo_UpperArm_L sockets ['elbow'] present (rotation 0, scale 1): elbow(0.00, 0.00, -34.00)
-  [PASS] SM_Minamo_UpperArm_R sockets ['elbow'] present (rotation 0, scale 1): elbow(0.00, 0.00, -34.00)
-  [PASS] SM_Minamo_LowerArm_L sockets ['hand'] present (rotation 0, scale 1): hand(0.34, 1.90, -35.04)
-  [PASS] SM_Minamo_LowerArm_R sockets ['hand'] present (rotation 0, scale 1): hand(0.37, -2.31, -35.54)
-  [PASS] SM_Minamo_Thigh_L sockets ['knee'] present (rotation 0, scale 1): knee(0.00, 0.00, -46.00)
-  [PASS] SM_Minamo_Thigh_R sockets ['knee'] present (rotation 0, scale 1): knee(0.00, 0.00, -46.00)
-  [PASS] SM_Minamo_Shin_L sockets ['sole'] present (rotation 0, scale 1): sole(6.00, 0.00, -62.00)
-  [PASS] SM_Minamo_Shin_R sockets ['sole'] present (rotation 0, scale 1): sole(6.00, 0.00, -62.00)
-  [PASS] soles level: left z -114.00 right z -114.00 (floor)
-  [PASS] floor-to-eyes 210.00 cm (target 210 +-5)
-  [PASS] overall width 70.19 cm (target 70, +-5 tolerance)
-  [PASS] triangles 7972 <= 8000
-  [PASS] left sockets negative Y: hip_l.y -16.50 shoulder_l.y -25.00 (right: 16.50, 25.00)
-  [PASS] L arm hangs down: shoulder z 175.0 > elbow z 141.0 > hand z 106.0
-  [PASS] L sole socket on the bottom of the foot: sole z -62.00, foot min z -62.00 (rel. knee)
-  [PASS] L knee below hip (-46.0)
-  [PASS] R arm hangs down: shoulder z 175.0 > elbow z 141.0 > hand z 105.5
-  [PASS] R sole socket on the bottom of the foot: sole z -62.00, foot min z -62.00 (rel. knee)
-  [PASS] R knee below hip (-46.0)
-  [PASS] uses slots TaG and Team
-  [PASS] faces +X (eyes x 12.0, sole x 6.0)
-   eye height 210.00  width 70.19  height 221.60  triangles 7972  pelvis height 114.00
+  [PASS] SM_Minamo_Pelvis sockets ['spine', 'hip_l', 'hip_r'] present (rotation 0, scale 1): spine(0.00, -0.00, 9.60), hip_l(0.00, -12.62, -7.20), hip_r(0.00, 12.62, -7.20)
+  [PASS] SM_Minamo_Torso sockets ['neck', 'shoulder_l', 'shoulder_r'] present (rotation 0, scale 1): neck(-1.20, -0.00, 65.59), shoulder_l(-1.20, -25.23, 59.59), shoulder_r(-1.20, 25.23, 59.59)
+  [PASS] SM_Minamo_Head sockets ['eyes'] present (rotation 0, scale 1): eyes(18.72, -0.00, 19.20)
+  [PASS] SM_Minamo_UpperArm_L sockets ['elbow'] present (rotation 0, scale 1): elbow(0.00, 0.00, -34.80)
+  [PASS] SM_Minamo_UpperArm_R sockets ['elbow'] present (rotation 0, scale 1): elbow(0.00, 0.00, -34.80)
+  [PASS] SM_Minamo_LowerArm_L sockets ['hand'] present (rotation 0, scale 1): hand(0.74, 3.94, -35.94)
+  [PASS] SM_Minamo_LowerArm_R sockets ['hand'] present (rotation 0, scale 1): hand(0.50, -2.67, -32.94)
+  [PASS] SM_Minamo_Thigh_L sockets ['knee'] present (rotation 0, scale 1): knee(0.00, 0.00, -50.57)
+  [PASS] SM_Minamo_Thigh_R sockets ['knee'] present (rotation 0, scale 1): knee(0.00, 0.00, -50.57)
+  [PASS] SM_Minamo_Shin_L sockets ['ankle'] present (rotation 0, scale 1): ankle(0.00, 0.00, -47.04)
+  [PASS] SM_Minamo_Shin_R sockets ['ankle'] present (rotation 0, scale 1): ankle(0.00, 0.00, -47.04)
+  [PASS] SM_Minamo_Foot_L sockets ['sole', 'toe'] present (rotation 0, scale 1): sole(5.67, 0.00, -10.80), toe(19.78, 0.00, -10.80)
+  [PASS] SM_Minamo_Foot_R sockets ['sole', 'toe'] present (rotation 0, scale 1): sole(5.67, 0.00, -10.80), toe(19.78, 0.00, -10.80)
+  [PASS] soles level: left z -115.61 right z -115.61 (floor)
+  [PASS] floor-to-eyes 210.00 cm (target 210 +-3%)
+  [PASS] overall width 69.88 cm (target 70 +-3%)
+  [PASS] triangles 6920 <= 9000
+  [PASS] left sockets negative Y: hip_l.y -12.62 shoulder_l.y -25.23 (right: 12.62, 25.23)
+  [PASS] L arm hangs down: shoulder z 184.8 > elbow z 150.0 > hand z 114.1
+  [PASS] L sole socket on the bottom of the foot: sole z -10.80, foot min z -11.35 (rel. ankle)
+  [PASS] L toe socket on the floor in front of the sole (toe x 19.8, sole x 5.7)
+  [PASS] L ankle below knee (-47.0)
+  [PASS] L knee below hip (-50.6)
+  [PASS] R arm hangs down: shoulder z 184.8 > elbow z 150.0 > hand z 117.1
+  [PASS] R sole socket on the bottom of the foot: sole z -10.80, foot min z -11.35 (rel. ankle)
+  [PASS] R toe socket on the floor in front of the sole (toe x 19.8, sole x 5.7)
+  [PASS] R ankle below knee (-47.0)
+  [PASS] R knee below hip (-50.6)
+  [PASS] TaG slot on both wrists (LowerArm) and both ankles (Shin)
+  [PASS] Outline slot on every part
+  [PASS] faces +X (eyes x 18.7, toe x 19.8)
+   eye height 210.00  width 69.88  height 235.40  triangles 6920  pelvis height 115.61
 -- Rei (M) --
-  [PASS] SM_Rei_Pelvis sockets ['spine', 'hip_l', 'hip_r'] present (rotation 0, scale 1): spine(0.00, -0.00, 9.00), hip_l(0.00, -9.50, -6.00), hip_r(0.00, 9.50, -6.00)
-  [PASS] SM_Rei_Torso sockets ['neck', 'shoulder_l', 'shoulder_r'] present (rotation 0, scale 1): neck(-1.00, -0.00, 44.00), shoulder_l(-1.00, -17.80, 38.00), shoulder_r(-1.00, 17.80, 38.00)
-  [PASS] SM_Rei_Head sockets ['eyes'] present (rotation 0, scale 1): eyes(10.00, -0.00, 23.00)
-  [PASS] SM_Rei_UpperArm_L sockets ['elbow'] present (rotation 0, scale 1): elbow(0.00, 0.00, -30.00)
-  [PASS] SM_Rei_UpperArm_R sockets ['elbow'] present (rotation 0, scale 1): elbow(0.00, 0.00, -30.00)
-  [PASS] SM_Rei_LowerArm_L sockets ['hand'] present (rotation 0, scale 1): hand(0.32, 1.83, -31.35)
-  [PASS] SM_Rei_LowerArm_R sockets ['hand'] present (rotation 0, scale 1): hand(0.32, -1.83, -31.35)
-  [PASS] SM_Rei_Thigh_L sockets ['knee'] present (rotation 0, scale 1): knee(0.00, 0.00, -43.00)
-  [PASS] SM_Rei_Thigh_R sockets ['knee'] present (rotation 0, scale 1): knee(0.00, 0.00, -43.00)
-  [PASS] SM_Rei_Shin_L sockets ['sole'] present (rotation 0, scale 1): sole(5.71, 0.00, -50.00)
-  [PASS] SM_Rei_Shin_R sockets ['sole'] present (rotation 0, scale 1): sole(5.71, 0.00, -50.00)
-  [PASS] soles level: left z -99.00 right z -99.00 (floor)
-  [PASS] floor-to-eyes 175.00 cm (target 175 +-5)
-  [PASS] overall width 47.98 cm (target 50, +-5 tolerance)
-  [PASS] triangles 6522 <= 8000
-  [PASS] left sockets negative Y: hip_l.y -9.50 shoulder_l.y -17.80 (right: 9.50, 17.80)
-  [PASS] L arm hangs down: shoulder z 146.0 > elbow z 116.0 > hand z 84.7
-  [PASS] L sole socket on the bottom of the foot: sole z -50.00, foot min z -50.00 (rel. knee)
-  [PASS] L knee below hip (-43.0)
-  [PASS] R arm hangs down: shoulder z 146.0 > elbow z 116.0 > hand z 84.7
-  [PASS] R sole socket on the bottom of the foot: sole z -50.00, foot min z -50.00 (rel. knee)
-  [PASS] R knee below hip (-43.0)
-  [PASS] uses slots TaG and Team
-  [PASS] faces +X (eyes x 10.0, sole x 5.7)
-   eye height 175.00  width 47.98  height 193.98  triangles 6522  pelvis height 99.00
+  [PASS] SM_Rei_Pelvis sockets ['spine', 'hip_l', 'hip_r'] present (rotation 0, scale 1): spine(0.00, -0.00, 8.00), hip_l(0.00, -8.51, -6.00), hip_r(0.00, 8.51, -6.00)
+  [PASS] SM_Rei_Torso sockets ['neck', 'shoulder_l', 'shoulder_r'] present (rotation 0, scale 1): neck(-1.00, -0.00, 50.51), shoulder_l(-1.00, -17.98, 45.51), shoulder_r(-1.00, 17.98, 45.51)
+  [PASS] SM_Rei_Head sockets ['eyes'] present (rotation 0, scale 1): eyes(15.60, -0.00, 16.00)
+  [PASS] SM_Rei_UpperArm_L sockets ['elbow'] present (rotation 0, scale 1): elbow(0.00, 0.00, -29.00)
+  [PASS] SM_Rei_UpperArm_R sockets ['elbow'] present (rotation 0, scale 1): elbow(0.00, 0.00, -29.00)
+  [PASS] SM_Rei_LowerArm_L sockets ['hand'] present (rotation 0, scale 1): hand(0.62, 3.15, -29.95)
+  [PASS] SM_Rei_LowerArm_R sockets ['hand'] present (rotation 0, scale 1): hand(0.62, -3.15, -29.95)
+  [PASS] SM_Rei_Thigh_L sockets ['knee'] present (rotation 0, scale 1): knee(0.00, 0.00, -44.29)
+  [PASS] SM_Rei_Thigh_R sockets ['knee'] present (rotation 0, scale 1): knee(0.00, 0.00, -44.29)
+  [PASS] SM_Rei_Shin_L sockets ['ankle'] present (rotation 0, scale 1): ankle(0.00, 0.00, -41.20)
+  [PASS] SM_Rei_Shin_R sockets ['ankle'] present (rotation 0, scale 1): ankle(0.00, 0.00, -41.20)
+  [PASS] SM_Rei_Foot_L sockets ['sole', 'toe'] present (rotation 0, scale 1): sole(5.20, 0.00, -9.00), toe(17.40, 0.00, -9.00)
+  [PASS] SM_Rei_Foot_R sockets ['sole', 'toe'] present (rotation 0, scale 1): sole(5.20, 0.00, -9.00), toe(17.40, 0.00, -9.00)
+  [PASS] soles level: left z -100.49 right z -100.49 (floor)
+  [PASS] floor-to-eyes 175.00 cm (target 175 +-3%)
+  [PASS] overall width 50.02 cm (target 50 +-3%)
+  [PASS] triangles 6855 <= 9000
+  [PASS] left sockets negative Y: hip_l.y -8.51 shoulder_l.y -17.98 (right: 8.51, 17.98)
+  [PASS] L arm hangs down: shoulder z 154.0 > elbow z 125.0 > hand z 95.0
+  [PASS] L sole socket on the bottom of the foot: sole z -9.00, foot min z -9.21 (rel. ankle)
+  [PASS] L toe socket on the floor in front of the sole (toe x 17.4, sole x 5.2)
+  [PASS] L ankle below knee (-41.2)
+  [PASS] L knee below hip (-44.3)
+  [PASS] R arm hangs down: shoulder z 154.0 > elbow z 125.0 > hand z 95.0
+  [PASS] R sole socket on the bottom of the foot: sole z -9.00, foot min z -9.21 (rel. ankle)
+  [PASS] R toe socket on the floor in front of the sole (toe x 17.4, sole x 5.2)
+  [PASS] R ankle below knee (-41.2)
+  [PASS] R knee below hip (-44.3)
+  [PASS] TaG slot on both wrists (LowerArm) and both ankles (Shin)
+  [PASS] Outline slot on every part
+  [PASS] faces +X (eyes x 15.6, toe x 17.4)
+   eye height 175.00  width 50.02  height 195.98  triangles 6855  pelvis height 100.49
 -- Hayate (M) --
-  [PASS] SM_Hayate_Pelvis sockets ['spine', 'hip_l', 'hip_r'] present (rotation 0, scale 1): spine(0.00, -0.00, 10.00), hip_l(0.00, -9.20, -6.50), hip_r(0.00, 9.20, -6.50)
-  [PASS] SM_Hayate_Torso sockets ['neck', 'shoulder_l', 'shoulder_r'] present (rotation 0, scale 1): neck(-1.00, -0.00, 48.00), shoulder_l(-1.00, -18.50, 41.00), shoulder_r(-1.00, 18.50, 41.00)
-  [PASS] SM_Hayate_Head sockets ['eyes'] present (rotation 0, scale 1): eyes(10.00, -0.00, 24.00)
-  [PASS] SM_Hayate_UpperArm_L sockets ['elbow'] present (rotation 0, scale 1): elbow(0.00, 0.00, -32.00)
-  [PASS] SM_Hayate_UpperArm_R sockets ['elbow'] present (rotation 0, scale 1): elbow(0.00, 0.00, -32.00)
-  [PASS] SM_Hayate_LowerArm_L sockets ['hand'] present (rotation 0, scale 1): hand(0.33, 1.86, -33.45)
-  [PASS] SM_Hayate_LowerArm_R sockets ['hand'] present (rotation 0, scale 1): hand(0.33, -1.86, -33.45)
-  [PASS] SM_Hayate_Thigh_L sockets ['knee'] present (rotation 0, scale 1): knee(0.00, 0.00, -46.50)
-  [PASS] SM_Hayate_Thigh_R sockets ['knee'] present (rotation 0, scale 1): knee(0.00, 0.00, -46.50)
-  [PASS] SM_Hayate_Shin_L sockets ['sole'] present (rotation 0, scale 1): sole(5.88, 0.00, -55.00)
-  [PASS] SM_Hayate_Shin_R sockets ['sole'] present (rotation 0, scale 1): sole(5.88, 0.00, -55.00)
-  [PASS] soles level: left z -108.00 right z -108.00 (floor)
-  [PASS] floor-to-eyes 190.00 cm (target 190 +-5)
-  [PASS] overall width 48.45 cm (target 50, +-5 tolerance)
-  [PASS] triangles 6774 <= 8000
-  [PASS] left sockets negative Y: hip_l.y -9.20 shoulder_l.y -18.50 (right: 9.20, 18.50)
-  [PASS] L arm hangs down: shoulder z 159.0 > elbow z 127.0 > hand z 93.6
-  [PASS] L sole socket on the bottom of the foot: sole z -55.00, foot min z -55.00 (rel. knee)
-  [PASS] L knee below hip (-46.5)
-  [PASS] R arm hangs down: shoulder z 159.0 > elbow z 127.0 > hand z 93.6
-  [PASS] R sole socket on the bottom of the foot: sole z -55.00, foot min z -55.00 (rel. knee)
-  [PASS] R knee below hip (-46.5)
-  [PASS] uses slots TaG and Team
-  [PASS] faces +X (eyes x 10.0, sole x 5.9)
-   eye height 190.00  width 48.45  height 200.50  triangles 6774  pelvis height 108.00
+  [PASS] SM_Hayate_Pelvis sockets ['spine', 'hip_l', 'hip_r'] present (rotation 0, scale 1): spine(0.00, -0.00, 8.69), hip_l(0.00, -8.18, -6.51), hip_r(0.00, 8.18, -6.51)
+  [PASS] SM_Hayate_Torso sockets ['neck', 'shoulder_l', 'shoulder_r'] present (rotation 0, scale 1): neck(-1.09, -0.00, 50.33), shoulder_l(-1.09, -15.60, 44.91), shoulder_r(-1.09, 15.60, 44.91)
+  [PASS] SM_Hayate_Head sockets ['eyes'] present (rotation 0, scale 1): eyes(16.94, -0.00, 17.37)
+  [PASS] SM_Hayate_UpperArm_L sockets ['elbow'] present (rotation 0, scale 1): elbow(0.00, 0.00, -31.49)
+  [PASS] SM_Hayate_UpperArm_R sockets ['elbow'] present (rotation 0, scale 1): elbow(0.00, 0.00, -31.49)
+  [PASS] SM_Hayate_LowerArm_L sockets ['hand'] present (rotation 0, scale 1): hand(0.67, 3.36, -32.52)
+  [PASS] SM_Hayate_LowerArm_R sockets ['hand'] present (rotation 0, scale 1): hand(0.67, -3.36, -32.52)
+  [PASS] SM_Hayate_Thigh_L sockets ['knee'] present (rotation 0, scale 1): knee(0.00, 0.00, -50.42)
+  [PASS] SM_Hayate_Thigh_R sockets ['knee'] present (rotation 0, scale 1): knee(0.00, 0.00, -50.42)
+  [PASS] SM_Hayate_Shin_L sockets ['ankle'] present (rotation 0, scale 1): ankle(0.00, 0.00, -46.90)
+  [PASS] SM_Hayate_Shin_R sockets ['ankle'] present (rotation 0, scale 1): ankle(0.00, 0.00, -46.90)
+  [PASS] SM_Hayate_Foot_L sockets ['sole', 'toe'] present (rotation 0, scale 1): sole(7.23, 0.00, -9.77), toe(24.18, 0.00, -9.77)
+  [PASS] SM_Hayate_Foot_R sockets ['sole', 'toe'] present (rotation 0, scale 1): sole(7.23, 0.00, -9.77), toe(24.18, 0.00, -9.77)
+  [PASS] soles level: left z -113.61 right z -113.61 (floor)
+  [PASS] floor-to-eyes 190.00 cm (target 190 +-3%)
+  [PASS] overall width 49.87 cm (target 50 +-3%)
+  [PASS] triangles 7738 <= 9000
+  [PASS] left sockets negative Y: hip_l.y -8.18 shoulder_l.y -15.60 (right: 8.18, 15.60)
+  [PASS] L arm hangs down: shoulder z 167.2 > elbow z 135.7 > hand z 103.2
+  [PASS] L sole socket on the bottom of the foot: sole z -9.77, foot min z -9.77 (rel. ankle)
+  [PASS] L toe socket on the floor in front of the sole (toe x 24.2, sole x 7.2)
+  [PASS] L ankle below knee (-46.9)
+  [PASS] L knee below hip (-50.4)
+  [PASS] R arm hangs down: shoulder z 167.2 > elbow z 135.7 > hand z 103.2
+  [PASS] R sole socket on the bottom of the foot: sole z -9.77, foot min z -9.77 (rel. ankle)
+  [PASS] R toe socket on the floor in front of the sole (toe x 24.2, sole x 7.2)
+  [PASS] R ankle below knee (-46.9)
+  [PASS] R knee below hip (-50.4)
+  [PASS] TaG slot on both wrists (LowerArm) and both ankles (Shin)
+  [PASS] Outline slot on every part
+  [PASS] faces +X (eyes x 16.9, toe x 24.2)
+   eye height 190.00  width 49.87  height 212.94  triangles 7738  pelvis height 113.61
 -- Tsumugi (S) --
-  [PASS] SM_Tsumugi_Pelvis sockets ['spine', 'hip_l', 'hip_r'] present (rotation 0, scale 1): spine(0.00, -0.00, 7.50), hip_l(0.00, -7.50, -5.00), hip_r(0.00, 7.50, -5.00)
-  [PASS] SM_Tsumugi_Torso sockets ['neck', 'shoulder_l', 'shoulder_r'] present (rotation 0, scale 1): neck(-0.50, -0.00, 37.00), shoulder_l(-0.50, -14.50, 32.50), shoulder_r(-0.50, 14.50, 32.50)
-  [PASS] SM_Tsumugi_Head sockets ['eyes'] present (rotation 0, scale 1): eyes(9.20, -0.00, 20.50)
-  [PASS] SM_Tsumugi_UpperArm_L sockets ['elbow'] present (rotation 0, scale 1): elbow(0.00, 0.00, -22.50)
-  [PASS] SM_Tsumugi_UpperArm_R sockets ['elbow'] present (rotation 0, scale 1): elbow(0.00, 0.00, -22.50)
-  [PASS] SM_Tsumugi_LowerArm_L sockets ['hand'] present (rotation 0, scale 1): hand(0.25, 1.40, -24.56)
-  [PASS] SM_Tsumugi_LowerArm_R sockets ['hand'] present (rotation 0, scale 1): hand(0.25, -1.40, -24.56)
-  [PASS] SM_Tsumugi_Thigh_L sockets ['knee'] present (rotation 0, scale 1): knee(0.00, 0.00, -34.00)
-  [PASS] SM_Tsumugi_Thigh_R sockets ['knee'] present (rotation 0, scale 1): knee(0.00, 0.00, -34.00)
-  [PASS] SM_Tsumugi_Shin_L sockets ['sole'] present (rotation 0, scale 1): sole(4.76, 0.00, -41.00)
-  [PASS] SM_Tsumugi_Shin_R sockets ['sole'] present (rotation 0, scale 1): sole(4.76, 0.00, -41.00)
-  [PASS] soles level: left z -80.00 right z -80.00 (floor)
-  [PASS] floor-to-eyes 145.00 cm (target 145 +-5)
-  [PASS] overall width 41.39 cm (target 40, +-5 tolerance)
-  [PASS] triangles 7614 <= 8000
-  [PASS] left sockets negative Y: hip_l.y -7.50 shoulder_l.y -14.50 (right: 7.50, 14.50)
-  [PASS] L arm hangs down: shoulder z 120.0 > elbow z 97.5 > hand z 72.9
-  [PASS] L sole socket on the bottom of the foot: sole z -41.00, foot min z -41.00 (rel. knee)
-  [PASS] L knee below hip (-34.0)
-  [PASS] R arm hangs down: shoulder z 120.0 > elbow z 97.5 > hand z 72.9
-  [PASS] R sole socket on the bottom of the foot: sole z -41.00, foot min z -41.00 (rel. knee)
-  [PASS] R knee below hip (-34.0)
-  [PASS] uses slots TaG and Team
-  [PASS] faces +X (eyes x 9.2, sole x 4.8)
-   eye height 145.00  width 41.39  height 154.60  triangles 7614  pelvis height 80.00
+  [PASS] SM_Tsumugi_Pelvis sockets ['spine', 'hip_l', 'hip_r'] present (rotation 0, scale 1): spine(0.00, -0.00, 6.63), hip_l(0.00, -7.08, -4.97), hip_r(0.00, 7.08, -4.97)
+  [PASS] SM_Tsumugi_Torso sockets ['neck', 'shoulder_l', 'shoulder_r'] present (rotation 0, scale 1): neck(-0.83, -0.00, 46.93), shoulder_l(-0.83, -13.96, 42.79), shoulder_r(-0.83, 13.96, 42.79)
+  [PASS] SM_Tsumugi_Head sockets ['eyes'] present (rotation 0, scale 1): eyes(13.76, -0.00, 15.74)
+  [PASS] SM_Tsumugi_UpperArm_L sockets ['elbow'] present (rotation 0, scale 1): elbow(0.00, 0.00, -24.03)
+  [PASS] SM_Tsumugi_UpperArm_R sockets ['elbow'] present (rotation 0, scale 1): elbow(0.00, 0.00, -24.03)
+  [PASS] SM_Tsumugi_LowerArm_L sockets ['hand'] present (rotation 0, scale 1): hand(0.36, 1.83, -22.95)
+  [PASS] SM_Tsumugi_LowerArm_R sockets ['hand'] present (rotation 0, scale 1): hand(0.36, -1.83, -22.95)
+  [PASS] SM_Tsumugi_Thigh_L sockets ['knee'] present (rotation 0, scale 1): knee(0.00, 0.00, -32.78)
+  [PASS] SM_Tsumugi_Thigh_R sockets ['knee'] present (rotation 0, scale 1): knee(0.00, 0.00, -32.78)
+  [PASS] SM_Tsumugi_Shin_L sockets ['ankle'] present (rotation 0, scale 1): ankle(0.00, 0.00, -30.49)
+  [PASS] SM_Tsumugi_Shin_R sockets ['ankle'] present (rotation 0, scale 1): ankle(0.00, 0.00, -30.49)
+  [PASS] SM_Tsumugi_Foot_L sockets ['sole', 'toe'] present (rotation 0, scale 1): sole(3.96, 0.00, -7.46), toe(13.26, 0.00, -7.46)
+  [PASS] SM_Tsumugi_Foot_R sockets ['sole', 'toe'] present (rotation 0, scale 1): sole(3.96, 0.00, -7.46), toe(13.26, 0.00, -7.46)
+  [PASS] soles level: left z -75.70 right z -75.70 (floor)
+  [PASS] floor-to-eyes 145.00 cm (target 145 +-3%)
+  [PASS] overall width 39.98 cm (target 40 +-3%)
+  [PASS] triangles 6844 <= 9000
+  [PASS] left sockets negative Y: hip_l.y -7.08 shoulder_l.y -13.96 (right: 7.08, 13.96)
+  [PASS] L arm hangs down: shoulder z 125.1 > elbow z 101.1 > hand z 78.1
+  [PASS] L sole socket on the bottom of the foot: sole z -7.46, foot min z -7.99 (rel. ankle)
+  [PASS] L toe socket on the floor in front of the sole (toe x 13.3, sole x 4.0)
+  [PASS] L ankle below knee (-30.5)
+  [PASS] L knee below hip (-32.8)
+  [PASS] R arm hangs down: shoulder z 125.1 > elbow z 101.1 > hand z 78.1
+  [PASS] R sole socket on the bottom of the foot: sole z -7.46, foot min z -7.99 (rel. ankle)
+  [PASS] R toe socket on the floor in front of the sole (toe x 13.3, sole x 4.0)
+  [PASS] R ankle below knee (-30.5)
+  [PASS] R knee below hip (-32.8)
+  [PASS] TaG slot on both wrists (LowerArm) and both ankles (Shin)
+  [PASS] Outline slot on every part
+  [PASS] faces +X (eyes x 13.8, toe x 13.3)
+   eye height 145.00  width 39.98  height 164.12  triangles 6844  pelvis height 75.70
 -- Hibiki (M) --
-  [PASS] SM_Hibiki_Pelvis sockets ['spine', 'hip_l', 'hip_r'] present (rotation 0, scale 1): spine(0.00, -0.00, 9.00), hip_l(0.00, -9.00, -6.00), hip_r(0.00, 9.00, -6.00)
-  [PASS] SM_Hibiki_Torso sockets ['neck', 'shoulder_l', 'shoulder_r'] present (rotation 0, scale 1): neck(-1.00, -0.00, 42.00), shoulder_l(-1.00, -18.50, 37.00), shoulder_r(-1.00, 18.50, 37.00)
-  [PASS] SM_Hibiki_Head sockets ['eyes'] present (rotation 0, scale 1): eyes(11.00, -0.00, 25.00)
+  [PASS] SM_Hibiki_Pelvis sockets ['spine', 'hip_l', 'hip_r'] present (rotation 0, scale 1): spine(0.00, -0.00, 8.00), hip_l(0.00, -8.33, -6.00), hip_r(0.00, 8.33, -6.00)
+  [PASS] SM_Hibiki_Torso sockets ['neck', 'shoulder_l', 'shoulder_r'] present (rotation 0, scale 1): neck(-1.00, -0.00, 53.00), shoulder_l(-1.00, -17.04, 48.00), shoulder_r(-1.00, 17.04, 48.00)
+  [PASS] SM_Hibiki_Head sockets ['eyes'] present (rotation 0, scale 1): eyes(9.25, -0.00, 16.00)
   [PASS] SM_Hibiki_UpperArm_L sockets ['elbow'] present (rotation 0, scale 1): elbow(0.00, 0.00, -29.00)
   [PASS] SM_Hibiki_UpperArm_R sockets ['elbow'] present (rotation 0, scale 1): elbow(0.00, 0.00, -29.00)
-  [PASS] SM_Hibiki_LowerArm_L sockets ['hand'] present (rotation 0, scale 1): hand(0.29, 1.67, -29.85)
-  [PASS] SM_Hibiki_LowerArm_R sockets ['hand'] present (rotation 0, scale 1): hand(0.29, -1.67, -29.85)
+  [PASS] SM_Hibiki_LowerArm_L sockets ['hand'] present (rotation 0, scale 1): hand(0.62, 3.15, -29.95)
+  [PASS] SM_Hibiki_LowerArm_R sockets ['hand'] present (rotation 0, scale 1): hand(0.62, -3.15, -29.95)
   [PASS] SM_Hibiki_Thigh_L sockets ['knee'] present (rotation 0, scale 1): knee(0.00, 0.00, -43.00)
   [PASS] SM_Hibiki_Thigh_R sockets ['knee'] present (rotation 0, scale 1): knee(0.00, 0.00, -43.00)
-  [PASS] SM_Hibiki_Shin_L sockets ['sole'] present (rotation 0, scale 1): sole(5.49, 0.00, -50.00)
-  [PASS] SM_Hibiki_Shin_R sockets ['sole'] present (rotation 0, scale 1): sole(5.49, 0.00, -50.00)
-  [PASS] soles level: left z -99.00 right z -99.00 (floor)
-  [PASS] floor-to-eyes 175.00 cm (target 175 +-5)
-  [PASS] overall width 50.42 cm (target 50, +-5 tolerance)
-  [PASS] triangles 7786 <= 8000
-  [PASS] left sockets negative Y: hip_l.y -9.00 shoulder_l.y -18.50 (right: 9.00, 18.50)
-  [PASS] L arm hangs down: shoulder z 145.0 > elbow z 116.0 > hand z 86.1
-  [PASS] L sole socket on the bottom of the foot: sole z -50.00, foot min z -50.00 (rel. knee)
+  [PASS] SM_Hibiki_Shin_L sockets ['ankle'] present (rotation 0, scale 1): ankle(0.00, 0.00, -40.00)
+  [PASS] SM_Hibiki_Shin_R sockets ['ankle'] present (rotation 0, scale 1): ankle(0.00, 0.00, -40.00)
+  [PASS] SM_Hibiki_Foot_L sockets ['sole', 'toe'] present (rotation 0, scale 1): sole(5.46, 0.00, -9.00), toe(18.27, 0.00, -9.00)
+  [PASS] SM_Hibiki_Foot_R sockets ['sole', 'toe'] present (rotation 0, scale 1): sole(5.46, 0.00, -9.00), toe(18.27, 0.00, -9.00)
+  [PASS] soles level: left z -98.00 right z -98.00 (floor)
+  [PASS] floor-to-eyes 175.00 cm (target 175 +-3%)
+  [PASS] overall width 50.19 cm (target 50 +-3%)
+  [PASS] triangles 7242 <= 9000
+  [PASS] left sockets negative Y: hip_l.y -8.33 shoulder_l.y -17.04 (right: 8.33, 17.04)
+  [PASS] L arm hangs down: shoulder z 154.0 > elbow z 125.0 > hand z 95.0
+  [PASS] L sole socket on the bottom of the foot: sole z -9.00, foot min z -9.21 (rel. ankle)
+  [PASS] L toe socket on the floor in front of the sole (toe x 18.3, sole x 5.5)
+  [PASS] L ankle below knee (-40.0)
   [PASS] L knee below hip (-43.0)
-  [PASS] R arm hangs down: shoulder z 145.0 > elbow z 116.0 > hand z 86.1
-  [PASS] R sole socket on the bottom of the foot: sole z -50.00, foot min z -50.00 (rel. knee)
+  [PASS] R arm hangs down: shoulder z 154.0 > elbow z 125.0 > hand z 95.0
+  [PASS] R sole socket on the bottom of the foot: sole z -9.00, foot min z -9.21 (rel. ankle)
+  [PASS] R toe socket on the floor in front of the sole (toe x 18.3, sole x 5.5)
+  [PASS] R ankle below knee (-40.0)
   [PASS] R knee below hip (-43.0)
-  [PASS] uses slots TaG and Team
-  [PASS] faces +X (eyes x 11.0, sole x 5.5)
-   eye height 175.00  width 50.42  height 194.50  triangles 7786  pelvis height 99.00
+  [PASS] TaG slot on both wrists (LowerArm) and both ankles (Shin)
+  [PASS] Outline slot on every part
+  [PASS] faces +X (eyes x 9.2, toe x 18.3)
+   eye height 175.00  width 50.19  height 193.39  triangles 7242  pelvis height 98.00
+-- Kokemaru (XL) --
+  [PASS] SM_Kokemaru_Pelvis sockets ['spine', 'hip_l', 'hip_r'] present (rotation 0, scale 1): spine(0.00, -0.00, 11.66), hip_l(0.00, -16.00, -8.74), hip_r(0.00, 16.00, -8.74)
+  [PASS] SM_Kokemaru_Torso sockets ['neck', 'shoulder_l', 'shoulder_r'] present (rotation 0, scale 1): neck(0.00, -0.00, 117.42), shoulder_l(0.00, -31.80, 107.22), shoulder_r(0.00, 31.80, 107.22)
+  [PASS] SM_Kokemaru_Head sockets ['eyes'] present (rotation 0, scale 1): eyes(19.59, -0.00, 14.57)
+  [PASS] SM_Kokemaru_UpperArm_L sockets ['elbow'] present (rotation 0, scale 1): elbow(0.00, 0.00, -34.97)
+  [PASS] SM_Kokemaru_UpperArm_R sockets ['elbow'] present (rotation 0, scale 1): elbow(0.00, 0.00, -34.97)
+  [PASS] SM_Kokemaru_LowerArm_L sockets ['hand'] present (rotation 0, scale 1): hand(1.28, 6.73, -42.26)
+  [PASS] SM_Kokemaru_LowerArm_R sockets ['hand'] present (rotation 0, scale 1): hand(1.28, -6.73, -42.26)
+  [PASS] SM_Kokemaru_Thigh_L sockets ['knee'] present (rotation 0, scale 1): knee(0.00, 0.00, -46.37)
+  [PASS] SM_Kokemaru_Thigh_R sockets ['knee'] present (rotation 0, scale 1): knee(0.00, 0.00, -46.37)
+  [PASS] SM_Kokemaru_Shin_L sockets ['ankle'] present (rotation 0, scale 1): ankle(0.00, 0.00, -43.13)
+  [PASS] SM_Kokemaru_Shin_R sockets ['ankle'] present (rotation 0, scale 1): ankle(0.00, 0.00, -43.13)
+  [PASS] SM_Kokemaru_Foot_L sockets ['sole', 'toe'] present (rotation 0, scale 1): sole(5.83, 0.00, -13.11), toe(23.31, 0.00, -13.11)
+  [PASS] SM_Kokemaru_Foot_R sockets ['sole', 'toe'] present (rotation 0, scale 1): sole(5.83, 0.00, -13.11), toe(23.31, 0.00, -13.11)
+  [PASS] soles level: left z -111.35 right z -111.35 (floor)
+  [PASS] floor-to-eyes 255.00 cm (target 255 +-3%)
+  [PASS] overall width 100.33 cm (target 100 +-3%)
+  [PASS] triangles 7416 <= 9000
+  [PASS] left sockets negative Y: hip_l.y -16.00 shoulder_l.y -31.80 (right: 16.00, 31.80)
+  [PASS] L arm hangs down: shoulder z 230.2 > elbow z 195.3 > hand z 153.0
+  [PASS] L sole socket on the bottom of the foot: sole z -13.11, foot min z -13.91 (rel. ankle)
+  [PASS] L toe socket on the floor in front of the sole (toe x 23.3, sole x 5.8)
+  [PASS] L ankle below knee (-43.1)
+  [PASS] L knee below hip (-46.4)
+  [PASS] R arm hangs down: shoulder z 230.2 > elbow z 195.3 > hand z 153.0
+  [PASS] R sole socket on the bottom of the foot: sole z -13.11, foot min z -13.91 (rel. ankle)
+  [PASS] R toe socket on the floor in front of the sole (toe x 23.3, sole x 5.8)
+  [PASS] R ankle below knee (-43.1)
+  [PASS] R knee below hip (-46.4)
+  [PASS] TaG slot on both wrists (LowerArm) and both ankles (Shin)
+  [PASS] Outline slot on every part
+  [PASS] faces +X (eyes x 19.6, toe x 23.3)
+   eye height 255.00  width 100.33  height 284.24  triangles 7416  pelvis height 111.35
+-- Keibi (L) --
+  [PASS] SM_Keibi_Pelvis sockets ['spine', 'hip_l', 'hip_r'] present (rotation 0, scale 1): spine(0.00, -0.00, 9.37), hip_l(0.00, -12.19, -7.03), hip_r(0.00, 12.19, -7.03)
+  [PASS] SM_Keibi_Torso sockets ['neck', 'shoulder_l', 'shoulder_r'] present (rotation 0, scale 1): neck(0.00, -0.00, 80.38), shoulder_l(0.00, -25.39, 74.53), shoulder_r(0.00, 25.39, 74.53)
+  [PASS] SM_Keibi_Head sockets ['eyes'] present (rotation 0, scale 1): eyes(13.47, -0.00, 14.06)
+  [PASS] SM_Keibi_UpperArm_L sockets ['elbow'] present (rotation 0, scale 1): elbow(0.00, 0.00, -33.97)
+  [PASS] SM_Keibi_UpperArm_R sockets ['elbow'] present (rotation 0, scale 1): elbow(0.00, 0.00, -33.97)
+  [PASS] SM_Keibi_LowerArm_L sockets ['hand'] present (rotation 0, scale 1): hand(0.75, 4.00, -35.38)
+  [PASS] SM_Keibi_LowerArm_R sockets ['hand'] present (rotation 0, scale 1): hand(0.75, -4.00, -35.38)
+  [PASS] SM_Keibi_Thigh_L sockets ['knee'] present (rotation 0, scale 1): knee(0.00, 0.00, -43.32)
+  [PASS] SM_Keibi_Thigh_R sockets ['knee'] present (rotation 0, scale 1): knee(0.00, 0.00, -43.32)
+  [PASS] SM_Keibi_Shin_L sockets ['ankle'] present (rotation 0, scale 1): ankle(0.00, 0.00, -40.30)
+  [PASS] SM_Keibi_Shin_R sockets ['ankle'] present (rotation 0, scale 1): ankle(0.00, 0.00, -40.30)
+  [PASS] SM_Keibi_Foot_L sockets ['sole', 'toe'] present (rotation 0, scale 1): sole(5.54, 0.00, -10.54), toe(19.31, 0.00, -10.54)
+  [PASS] SM_Keibi_Foot_R sockets ['sole', 'toe'] present (rotation 0, scale 1): sole(5.54, 0.00, -10.54), toe(19.31, 0.00, -10.54)
+  [PASS] soles level: left z -101.19 right z -101.19 (floor)
+  [PASS] floor-to-eyes 205.00 cm (target 205 +-3%)
+  [PASS] overall width 75.10 cm (target 75 +-3%)
+  [PASS] triangles 7482 <= 9000
+  [PASS] left sockets negative Y: hip_l.y -12.19 shoulder_l.y -25.39 (right: 12.19, 25.39)
+  [PASS] L arm hangs down: shoulder z 185.1 > elbow z 151.1 > hand z 115.7
+  [PASS] L sole socket on the bottom of the foot: sole z -10.54, foot min z -10.87 (rel. ankle)
+  [PASS] L toe socket on the floor in front of the sole (toe x 19.3, sole x 5.5)
+  [PASS] L ankle below knee (-40.3)
+  [PASS] L knee below hip (-43.3)
+  [PASS] R arm hangs down: shoulder z 185.1 > elbow z 151.1 > hand z 115.7
+  [PASS] R sole socket on the bottom of the foot: sole z -10.54, foot min z -10.87 (rel. ankle)
+  [PASS] R toe socket on the floor in front of the sole (toe x 19.3, sole x 5.5)
+  [PASS] R ankle below knee (-40.3)
+  [PASS] R knee below hip (-43.3)
+  [PASS] TaG slot on both wrists (LowerArm) and both ankles (Shin)
+  [PASS] Outline slot on every part
+  [PASS] faces +X (eyes x 13.5, toe x 19.3)
+   eye height 205.00  width 75.10  height 226.47  triangles 7482  pelvis height 101.19
+-- Yadori (L) --
+  [PASS] SM_Yadori_Pelvis sockets ['spine', 'hip_l', 'hip_r'] present (rotation 0, scale 1): spine(0.00, -0.00, 9.14), hip_l(0.00, -12.86, -6.86), hip_r(0.00, 12.86, -6.86)
+  [PASS] SM_Yadori_Torso sockets ['neck', 'shoulder_l', 'shoulder_r'] present (rotation 0, scale 1): neck(0.00, -0.00, 84.11), shoulder_l(0.00, -31.17, 78.40), shoulder_r(0.00, 31.17, 78.40)
+  [PASS] SM_Yadori_Head sockets ['eyes'] present (rotation 0, scale 1): eyes(10.86, -0.00, 13.71)
+  [PASS] SM_Yadori_UpperArm_L sockets ['elbow'] present (rotation 0, scale 1): elbow(0.00, 0.00, -33.14)
+  [PASS] SM_Yadori_UpperArm_R sockets ['elbow'] present (rotation 0, scale 1): elbow(0.00, 0.00, -33.14)
+  [PASS] SM_Yadori_LowerArm_L sockets ['hand'] present (rotation 0, scale 1): hand(2.29, 4.68, -31.09)
+  [PASS] SM_Yadori_LowerArm_R sockets ['hand'] present (rotation 0, scale 1): hand(2.29, -8.32, -37.49)
+  [PASS] SM_Yadori_Thigh_L sockets ['knee'] present (rotation 0, scale 1): knee(0.00, 0.00, -39.31)
+  [PASS] SM_Yadori_Thigh_R sockets ['knee'] present (rotation 0, scale 1): knee(0.00, 0.00, -39.31)
+  [PASS] SM_Yadori_Shin_L sockets ['ankle'] present (rotation 0, scale 1): ankle(0.00, 0.00, -36.57)
+  [PASS] SM_Yadori_Shin_R sockets ['ankle'] present (rotation 0, scale 1): ankle(0.00, 0.00, -36.57)
+  [PASS] SM_Yadori_Foot_L sockets ['sole', 'toe'] present (rotation 0, scale 1): sole(5.14, 0.00, -10.29), toe(17.94, 0.00, -10.29)
+  [PASS] SM_Yadori_Foot_R sockets ['sole', 'toe'] present (rotation 0, scale 1): sole(5.14, 0.00, -10.29), toe(17.94, 0.00, -10.29)
+  [PASS] soles level: left z -93.03 right z -93.03 (floor)
+  [PASS] floor-to-eyes 200.00 cm (target 200 +-3%)
+  [PASS] overall width 79.74 cm (target 80 +-3%)
+  [PASS] triangles 6874 <= 9000
+  [PASS] left sockets negative Y: hip_l.y -12.86 shoulder_l.y -31.17 (right: 12.86, 31.17)
+  [PASS] L arm hangs down: shoulder z 180.6 > elbow z 147.4 > hand z 116.3
+  [PASS] L sole socket on the bottom of the foot: sole z -10.29, foot min z -10.82 (rel. ankle)
+  [PASS] L toe socket on the floor in front of the sole (toe x 17.9, sole x 5.1)
+  [PASS] L ankle below knee (-36.6)
+  [PASS] L knee below hip (-39.3)
+  [PASS] R arm hangs down: shoulder z 180.6 > elbow z 147.4 > hand z 109.9
+  [PASS] R sole socket on the bottom of the foot: sole z -10.29, foot min z -10.82 (rel. ankle)
+  [PASS] R toe socket on the floor in front of the sole (toe x 17.9, sole x 5.1)
+  [PASS] R ankle below knee (-36.6)
+  [PASS] R knee below hip (-39.3)
+  [PASS] TaG slot on both wrists (LowerArm) and both ankles (Shin)
+  [PASS] Outline slot on every part
+  [PASS] faces +X (eyes x 10.9, toe x 17.9)
+   eye height 200.00  width 79.74  height 203.76  triangles 6874  pelvis height 93.03
+-- Iwakura (M) --
+  [PASS] SM_Iwakura_Pelvis sockets ['spine', 'hip_l', 'hip_r'] present (rotation 0, scale 1): spine(0.00, -0.00, 8.14), hip_l(0.00, -9.45, -6.10), hip_r(0.00, 9.45, -6.10)
+  [PASS] SM_Iwakura_Torso sockets ['neck', 'shoulder_l', 'shoulder_r'] present (rotation 0, scale 1): neck(-1.02, -0.00, 62.35), shoulder_l(-1.02, -17.57, 57.27), shoulder_r(-1.02, 17.57, 57.27)
+  [PASS] SM_Iwakura_Head sockets ['eyes'] present (rotation 0, scale 1): eyes(15.87, -0.00, 16.27)
+  [PASS] SM_Iwakura_UpperArm_L sockets ['elbow'] present (rotation 0, scale 1): elbow(0.00, 0.00, -29.50)
+  [PASS] SM_Iwakura_UpperArm_R sockets ['elbow'] present (rotation 0, scale 1): elbow(0.00, 0.00, -29.50)
+  [PASS] SM_Iwakura_LowerArm_L sockets ['hand'] present (rotation 0, scale 1): hand(0.63, 3.13, -30.46)
+  [PASS] SM_Iwakura_LowerArm_R sockets ['hand'] present (rotation 0, scale 1): hand(0.63, -3.13, -30.46)
+  [PASS] SM_Iwakura_Thigh_L sockets ['knee'] present (rotation 0, scale 1): knee(0.00, 0.00, -39.36)
+  [PASS] SM_Iwakura_Thigh_R sockets ['knee'] present (rotation 0, scale 1): knee(0.00, 0.00, -39.36)
+  [PASS] SM_Iwakura_Shin_L sockets ['ankle'] present (rotation 0, scale 1): ankle(0.00, 0.00, -36.62)
+  [PASS] SM_Iwakura_Shin_R sockets ['ankle'] present (rotation 0, scale 1): ankle(0.00, 0.00, -36.62)
+  [PASS] SM_Iwakura_Foot_L sockets ['sole', 'toe'] present (rotation 0, scale 1): sole(6.77, 0.00, -9.15), toe(22.65, 0.00, -9.15)
+  [PASS] SM_Iwakura_Foot_R sockets ['sole', 'toe'] present (rotation 0, scale 1): sole(6.77, 0.00, -9.15), toe(22.65, 0.00, -9.15)
+  [PASS] soles level: left z -91.24 right z -91.24 (floor)
+  [PASS] floor-to-eyes 178.00 cm (target 178 +-3%)
+  [PASS] overall width 59.81 cm (target 60 +-3%)
+  [PASS] triangles 6842 <= 9000
+  [PASS] left sockets negative Y: hip_l.y -9.45 shoulder_l.y -17.57 (right: 9.45, 17.57)
+  [PASS] L arm hangs down: shoulder z 156.6 > elbow z 127.1 > hand z 96.7
+  [PASS] L sole socket on the bottom of the foot: sole z -9.15, foot min z -9.64 (rel. ankle)
+  [PASS] L toe socket on the floor in front of the sole (toe x 22.7, sole x 6.8)
+  [PASS] L ankle below knee (-36.6)
+  [PASS] L knee below hip (-39.4)
+  [PASS] R arm hangs down: shoulder z 156.6 > elbow z 127.1 > hand z 96.7
+  [PASS] R sole socket on the bottom of the foot: sole z -9.15, foot min z -9.64 (rel. ankle)
+  [PASS] R toe socket on the floor in front of the sole (toe x 22.7, sole x 6.8)
+  [PASS] R ankle below knee (-36.6)
+  [PASS] R knee below hip (-39.4)
+  [PASS] TaG slot on both wrists (LowerArm) and both ankles (Shin)
+  [PASS] Outline slot on every part
+  [PASS] faces +X (eyes x 15.9, toe x 22.7)
+   eye height 178.00  width 59.81  height 203.33  triangles 6842  pelvis height 91.24
+-- Kotetsu (S) --
+  [PASS] SM_Kotetsu_Pelvis sockets ['spine', 'hip_l', 'hip_r'] present (rotation 0, scale 1): spine(0.00, -0.00, 6.40), hip_l(0.00, -8.60, -4.80), hip_r(0.00, 8.60, -4.80)
+  [PASS] SM_Kotetsu_Torso sockets ['neck', 'shoulder_l', 'shoulder_r'] present (rotation 0, scale 1): neck(0.00, -0.00, 40.00), shoulder_l(0.00, -16.18, 36.00), shoulder_r(0.00, 16.18, 36.00)
+  [PASS] SM_Kotetsu_Head sockets ['eyes'] present (rotation 0, scale 1): eyes(13.17, -0.00, 15.20)
+  [PASS] SM_Kotetsu_UpperArm_L sockets ['elbow'] present (rotation 0, scale 1): elbow(0.00, 0.00, -19.20)
+  [PASS] SM_Kotetsu_UpperArm_R sockets ['elbow'] present (rotation 0, scale 1): elbow(0.00, 0.00, -19.20)
+  [PASS] SM_Kotetsu_LowerArm_L sockets ['hand'] present (rotation 0, scale 1): hand(0.48, 2.55, -20.00)
+  [PASS] SM_Kotetsu_LowerArm_R sockets ['hand'] present (rotation 0, scale 1): hand(0.80, -2.43, -18.00)
+  [PASS] SM_Kotetsu_Thigh_L sockets ['knee'] present (rotation 0, scale 1): knee(0.00, 0.00, -34.40)
+  [PASS] SM_Kotetsu_Thigh_R sockets ['knee'] present (rotation 0, scale 1): knee(0.00, 0.00, -34.40)
+  [PASS] SM_Kotetsu_Shin_L sockets ['ankle'] present (rotation 0, scale 1): ankle(0.00, 0.00, -32.00)
+  [PASS] SM_Kotetsu_Shin_R sockets ['ankle'] present (rotation 0, scale 1): ankle(0.00, 0.00, -32.00)
+  [PASS] SM_Kotetsu_Foot_L sockets ['sole', 'toe'] present (rotation 0, scale 1): sole(3.42, 0.00, -7.20), toe(11.93, 0.00, -7.20)
+  [PASS] SM_Kotetsu_Foot_R sockets ['sole', 'toe'] present (rotation 0, scale 1): sole(3.42, 0.00, -7.20), toe(11.93, 0.00, -7.20)
+  [PASS] soles level: left z -78.40 right z -78.40 (floor)
+  [PASS] floor-to-eyes 140.00 cm (target 140 +-3%)
+  [PASS] overall width 43.95 cm (target 44 +-3%)
+  [PASS] triangles 6854 <= 9000
+  [PASS] left sockets negative Y: hip_l.y -8.60 shoulder_l.y -16.18 (right: 8.60, 16.18)
+  [PASS] L arm hangs down: shoulder z 120.8 > elbow z 101.6 > hand z 81.6
+  [PASS] L sole socket on the bottom of the foot: sole z -7.20, foot min z -7.60 (rel. ankle)
+  [PASS] L toe socket on the floor in front of the sole (toe x 11.9, sole x 3.4)
+  [PASS] L ankle below knee (-32.0)
+  [PASS] L knee below hip (-34.4)
+  [PASS] R arm hangs down: shoulder z 120.8 > elbow z 101.6 > hand z 83.6
+  [PASS] R sole socket on the bottom of the foot: sole z -7.20, foot min z -7.60 (rel. ankle)
+  [PASS] R toe socket on the floor in front of the sole (toe x 11.9, sole x 3.4)
+  [PASS] R ankle below knee (-32.0)
+  [PASS] R knee below hip (-34.4)
+  [PASS] TaG slot on both wrists (LowerArm) and both ankles (Shin)
+  [PASS] Outline slot on every part
+  [PASS] faces +X (eyes x 13.2, toe x 11.9)
+   eye height 140.00  width 43.95  height 160.14  triangles 6854  pelvis height 78.40
+-- Mugura (L) --
+  [PASS] SM_Mugura_Pelvis sockets ['spine', 'hip_l', 'hip_r'] present (rotation 0, scale 1): spine(0.00, -0.00, 9.37), hip_l(0.00, -12.00, -7.03), hip_r(0.00, 12.00, -7.03)
+  [PASS] SM_Mugura_Torso sockets ['neck', 'shoulder_l', 'shoulder_r'] present (rotation 0, scale 1): neck(-1.17, -0.00, 62.26), shoulder_l(-1.17, -35.50, 56.40), shoulder_r(-1.17, 35.50, 56.40)
+  [PASS] SM_Mugura_Head sockets ['eyes'] present (rotation 0, scale 1): eyes(22.18, -0.00, 23.43)
+  [PASS] SM_Mugura_UpperArm_L sockets ['elbow'] present (rotation 0, scale 1): elbow(0.00, 0.00, -33.97)
+  [PASS] SM_Mugura_UpperArm_R sockets ['elbow'] present (rotation 0, scale 1): elbow(0.00, 0.00, -33.97)
+  [PASS] SM_Mugura_LowerArm_L sockets ['hand'] present (rotation 0, scale 1): hand(0.70, 3.69, -34.79)
+  [PASS] SM_Mugura_LowerArm_R sockets ['hand'] present (rotation 0, scale 1): hand(0.70, -3.69, -34.79)
+  [PASS] SM_Mugura_Thigh_L sockets ['knee'] present (rotation 0, scale 1): knee(0.00, 0.00, -47.85)
+  [PASS] SM_Mugura_Thigh_R sockets ['knee'] present (rotation 0, scale 1): knee(0.00, 0.00, -47.85)
+  [PASS] SM_Mugura_Shin_L sockets ['ankle'] present (rotation 0, scale 1): ankle(0.00, 0.00, -44.51)
+  [PASS] SM_Mugura_Shin_R sockets ['ankle'] present (rotation 0, scale 1): ankle(0.00, 0.00, -44.51)
+  [PASS] SM_Mugura_Foot_L sockets ['sole', 'toe'] present (rotation 0, scale 1): sole(7.61, 0.00, -10.54), toe(25.48, 0.00, -10.54)
+  [PASS] SM_Mugura_Foot_R sockets ['sole', 'toe'] present (rotation 0, scale 1): sole(7.61, 0.00, -10.54), toe(25.48, 0.00, -10.54)
+  [PASS] soles level: left z -109.94 right z -109.94 (floor)
+  [PASS] floor-to-eyes 205.00 cm (target 205 +-3%)
+  [PASS] overall width 88.41 cm (target 88 +-3%)
+  [PASS] triangles 7304 <= 9000
+  [PASS] left sockets negative Y: hip_l.y -12.00 shoulder_l.y -35.50 (right: 12.00, 35.50)
+  [PASS] L arm hangs down: shoulder z 175.7 > elbow z 141.7 > hand z 107.0
+  [PASS] L sole socket on the bottom of the foot: sole z -10.54, foot min z -11.10 (rel. ankle)
+  [PASS] L toe socket on the floor in front of the sole (toe x 25.5, sole x 7.6)
+  [PASS] L ankle below knee (-44.5)
+  [PASS] L knee below hip (-47.9)
+  [PASS] R arm hangs down: shoulder z 175.7 > elbow z 141.7 > hand z 107.0
+  [PASS] R sole socket on the bottom of the foot: sole z -10.54, foot min z -11.10 (rel. ankle)
+  [PASS] R toe socket on the floor in front of the sole (toe x 25.5, sole x 7.6)
+  [PASS] R ankle below knee (-44.5)
+  [PASS] R knee below hip (-47.9)
+  [PASS] TaG slot on both wrists (LowerArm) and both ankles (Shin)
+  [PASS] Outline slot on every part
+  [PASS] faces +X (eyes x 22.2, toe x 25.5)
+   eye height 205.00  width 88.41  height 225.73  triangles 7304  pelvis height 109.94
+-- Amagi (M) --
+  [PASS] SM_Amagi_Pelvis sockets ['spine', 'hip_l', 'hip_r'] present (rotation 0, scale 1): spine(0.00, -0.00, 8.23), hip_l(0.00, -8.50, -6.17), hip_r(0.00, 8.50, -6.17)
+  [PASS] SM_Amagi_Torso sockets ['neck', 'shoulder_l', 'shoulder_r'] present (rotation 0, scale 1): neck(-1.03, -0.00, 52.81), shoulder_l(-1.03, -18.04, 47.66), shoulder_r(-1.03, 18.04, 47.66)
+  [PASS] SM_Amagi_Head sockets ['eyes'] present (rotation 0, scale 1): eyes(13.70, -0.00, 16.46)
+  [PASS] SM_Amagi_UpperArm_L sockets ['elbow'] present (rotation 0, scale 1): elbow(0.00, 0.00, -29.83)
+  [PASS] SM_Amagi_UpperArm_R sockets ['elbow'] present (rotation 0, scale 1): elbow(0.00, 0.00, -29.83)
+  [PASS] SM_Amagi_LowerArm_L sockets ['hand'] present (rotation 0, scale 1): hand(0.58, 3.13, -30.24)
+  [PASS] SM_Amagi_LowerArm_R sockets ['hand'] present (rotation 0, scale 1): hand(0.58, -3.13, -30.24)
+  [PASS] SM_Amagi_Thigh_L sockets ['knee'] present (rotation 0, scale 1): knee(0.00, 0.00, -45.11)
+  [PASS] SM_Amagi_Thigh_R sockets ['knee'] present (rotation 0, scale 1): knee(0.00, 0.00, -45.11)
+  [PASS] SM_Amagi_Shin_L sockets ['ankle'] present (rotation 0, scale 1): ankle(0.00, 0.00, -41.97)
+  [PASS] SM_Amagi_Shin_R sockets ['ankle'] present (rotation 0, scale 1): ankle(0.00, 0.00, -41.97)
+  [PASS] SM_Amagi_Foot_L sockets ['sole', 'toe'] present (rotation 0, scale 1): sole(5.88, 0.00, -9.26), toe(19.69, 0.00, -9.26)
+  [PASS] SM_Amagi_Foot_R sockets ['sole', 'toe'] present (rotation 0, scale 1): sole(5.88, 0.00, -9.26), toe(19.69, 0.00, -9.26)
+  [PASS] soles level: left z -102.51 right z -102.51 (floor)
+  [PASS] floor-to-eyes 180.00 cm (target 180 +-3%)
+  [PASS] overall width 47.96 cm (target 48 +-3%)
+  [PASS] triangles 6868 <= 9000
+  [PASS] left sockets negative Y: hip_l.y -8.50 shoulder_l.y -18.04 (right: 8.50, 18.04)
+  [PASS] L arm hangs down: shoulder z 158.4 > elbow z 128.6 > hand z 98.3
+  [PASS] L sole socket on the bottom of the foot: sole z -9.26, foot min z -9.68 (rel. ankle)
+  [PASS] L toe socket on the floor in front of the sole (toe x 19.7, sole x 5.9)
+  [PASS] L ankle below knee (-42.0)
+  [PASS] L knee below hip (-45.1)
+  [PASS] R arm hangs down: shoulder z 158.4 > elbow z 128.6 > hand z 98.3
+  [PASS] R sole socket on the bottom of the foot: sole z -9.26, foot min z -9.68 (rel. ankle)
+  [PASS] R toe socket on the floor in front of the sole (toe x 19.7, sole x 5.9)
+  [PASS] R ankle below knee (-42.0)
+  [PASS] R knee below hip (-45.1)
+  [PASS] TaG slot on both wrists (LowerArm) and both ankles (Shin)
+  [PASS] Outline slot on every part
+  [PASS] faces +X (eyes x 13.7, toe x 19.7)
+   eye height 180.00  width 47.96  height 201.50  triangles 6868  pelvis height 102.51
+-- Ushio (M) --
+  [PASS] SM_Ushio_Pelvis sockets ['spine', 'hip_l', 'hip_r'] present (rotation 0, scale 1): spine(0.00, -0.00, 8.14), hip_l(0.00, -9.60, -6.10), hip_r(0.00, 9.60, -6.10)
+  [PASS] SM_Ushio_Torso sockets ['neck', 'shoulder_l', 'shoulder_r'] present (rotation 0, scale 1): neck(-1.02, -0.00, 53.91), shoulder_l(-1.02, -19.60, 48.82), shoulder_r(-1.02, 19.60, 48.82)
+  [PASS] SM_Ushio_Head sockets ['eyes'] present (rotation 0, scale 1): eyes(15.87, -0.00, 16.27)
+  [PASS] SM_Ushio_UpperArm_L sockets ['elbow'] present (rotation 0, scale 1): elbow(0.00, 0.00, -29.50)
+  [PASS] SM_Ushio_UpperArm_R sockets ['elbow'] present (rotation 0, scale 1): elbow(0.00, 0.00, -29.50)
+  [PASS] SM_Ushio_LowerArm_L sockets ['hand'] present (rotation 0, scale 1): hand(0.59, 3.10, -29.95)
+  [PASS] SM_Ushio_LowerArm_R sockets ['hand'] present (rotation 0, scale 1): hand(0.59, -3.10, -29.95)
+  [PASS] SM_Ushio_Thigh_L sockets ['knee'] present (rotation 0, scale 1): knee(0.00, 0.00, -43.74)
+  [PASS] SM_Ushio_Thigh_R sockets ['knee'] present (rotation 0, scale 1): knee(0.00, 0.00, -43.74)
+  [PASS] SM_Ushio_Shin_L sockets ['ankle'] present (rotation 0, scale 1): ankle(0.00, 0.00, -40.69)
+  [PASS] SM_Ushio_Shin_R sockets ['ankle'] present (rotation 0, scale 1): ankle(0.00, 0.00, -40.69)
+  [PASS] SM_Ushio_Foot_L sockets ['sole', 'toe'] present (rotation 0, scale 1): sole(5.71, 0.00, -9.15), toe(19.11, 0.00, -9.15)
+  [PASS] SM_Ushio_Foot_R sockets ['sole', 'toe'] present (rotation 0, scale 1): sole(5.71, 0.00, -9.15), toe(19.11, 0.00, -9.15)
+  [PASS] soles level: left z -99.68 right z -99.68 (floor)
+  [PASS] floor-to-eyes 178.00 cm (target 178 +-3%)
+  [PASS] overall width 53.99 cm (target 54 +-3%)
+  [PASS] triangles 6832 <= 9000
+  [PASS] left sockets negative Y: hip_l.y -9.60 shoulder_l.y -19.60 (right: 9.60, 19.60)
+  [PASS] L arm hangs down: shoulder z 156.6 > elbow z 127.1 > hand z 97.2
+  [PASS] L sole socket on the bottom of the foot: sole z -9.15, foot min z -9.61 (rel. ankle)
+  [PASS] L toe socket on the floor in front of the sole (toe x 19.1, sole x 5.7)
+  [PASS] L ankle below knee (-40.7)
+  [PASS] L knee below hip (-43.7)
+  [PASS] R arm hangs down: shoulder z 156.6 > elbow z 127.1 > hand z 97.2
+  [PASS] R sole socket on the bottom of the foot: sole z -9.15, foot min z -9.61 (rel. ankle)
+  [PASS] R toe socket on the floor in front of the sole (toe x 19.1, sole x 5.7)
+  [PASS] R ankle below knee (-40.7)
+  [PASS] R knee below hip (-43.7)
+  [PASS] TaG slot on both wrists (LowerArm) and both ankles (Shin)
+  [PASS] Outline slot on every part
+  [PASS] faces +X (eyes x 15.9, toe x 19.1)
+   eye height 178.00  width 53.99  height 213.17  triangles 6832  pelvis height 99.68
+-- Tsurube (XL) --
+  [PASS] SM_Tsurube_Pelvis sockets ['spine', 'hip_l', 'hip_r'] present (rotation 0, scale 1): spine(0.00, -0.00, 11.89), hip_l(0.00, -12.43, -8.91), hip_r(0.00, 12.43, -8.91)
+  [PASS] SM_Tsurube_Torso sockets ['neck', 'shoulder_l', 'shoulder_r'] present (rotation 0, scale 1): neck(0.00, -0.00, 87.66), shoulder_l(0.00, -32.62, 81.71), shoulder_r(0.00, 32.62, 81.71)
+  [PASS] SM_Tsurube_Head sockets ['eyes'] present (rotation 0, scale 1): eyes(14.86, -0.00, 14.86)
+  [PASS] SM_Tsurube_UpperArm_L sockets ['elbow'] present (rotation 0, scale 1): elbow(0.00, 0.00, -49.03)
+  [PASS] SM_Tsurube_UpperArm_R sockets ['elbow'] present (rotation 0, scale 1): elbow(0.00, 0.00, -49.03)
+  [PASS] SM_Tsurube_LowerArm_L sockets ['hand'] present (rotation 0, scale 1): hand(0.89, 4.85, -53.49)
+  [PASS] SM_Tsurube_LowerArm_R sockets ['hand'] present (rotation 0, scale 1): hand(0.00, -2.31, -51.26)
+  [PASS] SM_Tsurube_Thigh_L sockets ['knee'] present (rotation 0, scale 1): knee(0.00, 0.00, -63.89)
+  [PASS] SM_Tsurube_Thigh_R sockets ['knee'] present (rotation 0, scale 1): knee(0.00, 0.00, -63.89)
+  [PASS] SM_Tsurube_Shin_L sockets ['ankle'] present (rotation 0, scale 1): ankle(0.00, 0.00, -59.43)
+  [PASS] SM_Tsurube_Shin_R sockets ['ankle'] present (rotation 0, scale 1): ankle(0.00, 0.00, -59.43)
+  [PASS] SM_Tsurube_Foot_L sockets ['sole', 'toe'] present (rotation 0, scale 1): sole(7.35, 0.00, -13.37), toe(25.66, 0.00, -13.37)
+  [PASS] SM_Tsurube_Foot_R sockets ['sole', 'toe'] present (rotation 0, scale 1): sole(7.35, 0.00, -13.37), toe(25.66, 0.00, -13.37)
+  [PASS] soles level: left z -145.60 right z -145.60 (floor)
+  [PASS] floor-to-eyes 260.00 cm (target 260 +-3%)
+  [PASS] overall width 84.93 cm (target 85 +-3%)
+  [PASS] triangles 6880 <= 9000
+  [PASS] left sockets negative Y: hip_l.y -12.43 shoulder_l.y -32.62 (right: 12.43, 32.62)
+  [PASS] L arm hangs down: shoulder z 239.2 > elbow z 190.2 > hand z 136.7
+  [PASS] L sole socket on the bottom of the foot: sole z -13.37, foot min z -14.05 (rel. ankle)
+  [PASS] L toe socket on the floor in front of the sole (toe x 25.7, sole x 7.4)
+  [PASS] L ankle below knee (-59.4)
+  [PASS] L knee below hip (-63.9)
+  [PASS] R arm hangs down: shoulder z 239.2 > elbow z 190.2 > hand z 138.9
+  [PASS] R sole socket on the bottom of the foot: sole z -13.37, foot min z -14.05 (rel. ankle)
+  [PASS] R toe socket on the floor in front of the sole (toe x 25.7, sole x 7.4)
+  [PASS] R ankle below knee (-59.4)
+  [PASS] R knee below hip (-63.9)
+  [PASS] TaG slot on both wrists (LowerArm) and both ankles (Shin)
+  [PASS] Outline slot on every part
+  [PASS] faces +X (eyes x 14.9, toe x 25.7)
+   eye height 260.00  width 84.93  height 280.81  triangles 6880  pelvis height 145.60
+-- Suzu (S) --
+  [PASS] SM_Suzu_Pelvis sockets ['spine', 'hip_l', 'hip_r'] present (rotation 0, scale 1): spine(0.00, -0.00, 6.40), hip_l(0.00, -6.75, -4.80), hip_r(0.00, 6.75, -4.80)
+  [PASS] SM_Suzu_Torso sockets ['neck', 'shoulder_l', 'shoulder_r'] present (rotation 0, scale 1): neck(-0.80, -0.00, 46.64), shoulder_l(-0.80, -13.12, 42.64), shoulder_r(-0.80, 13.12, 42.64)
+  [PASS] SM_Suzu_Head sockets ['eyes'] present (rotation 0, scale 1): eyes(13.28, -0.00, 15.20)
+  [PASS] SM_Suzu_UpperArm_L sockets ['elbow'] present (rotation 0, scale 1): elbow(0.00, 0.00, -23.20)
+  [PASS] SM_Suzu_UpperArm_R sockets ['elbow'] present (rotation 0, scale 1): elbow(0.00, 0.00, -23.20)
+  [PASS] SM_Suzu_LowerArm_L sockets ['hand'] present (rotation 0, scale 1): hand(0.46, 2.35, -23.56)
+  [PASS] SM_Suzu_LowerArm_R sockets ['hand'] present (rotation 0, scale 1): hand(0.46, -2.35, -23.56)
+  [PASS] SM_Suzu_Thigh_L sockets ['knee'] present (rotation 0, scale 1): knee(0.00, 0.00, -30.96)
+  [PASS] SM_Suzu_Thigh_R sockets ['knee'] present (rotation 0, scale 1): knee(0.00, 0.00, -30.96)
+  [PASS] SM_Suzu_Shin_L sockets ['ankle'] present (rotation 0, scale 1): ankle(0.00, 0.00, -28.80)
+  [PASS] SM_Suzu_Shin_R sockets ['ankle'] present (rotation 0, scale 1): ankle(0.00, 0.00, -28.80)
+  [PASS] SM_Suzu_Foot_L sockets ['sole', 'toe'] present (rotation 0, scale 1): sole(3.95, 0.00, -7.20), toe(13.22, 0.00, -7.20)
+  [PASS] SM_Suzu_Foot_R sockets ['sole', 'toe'] present (rotation 0, scale 1): sole(3.95, 0.00, -7.20), toe(13.22, 0.00, -7.20)
+  [PASS] soles level: left z -71.76 right z -71.76 (floor)
+  [PASS] floor-to-eyes 140.00 cm (target 140 +-3%)
+  [PASS] overall width 38.25 cm (target 38 +-3%)
+  [PASS] triangles 6916 <= 9000
+  [PASS] left sockets negative Y: hip_l.y -6.75 shoulder_l.y -13.12 (right: 6.75, 13.12)
+  [PASS] L arm hangs down: shoulder z 120.8 > elbow z 97.6 > hand z 74.0
+  [PASS] L sole socket on the bottom of the foot: sole z -7.20, foot min z -7.72 (rel. ankle)
+  [PASS] L toe socket on the floor in front of the sole (toe x 13.2, sole x 4.0)
+  [PASS] L ankle below knee (-28.8)
+  [PASS] L knee below hip (-31.0)
+  [PASS] R arm hangs down: shoulder z 120.8 > elbow z 97.6 > hand z 74.0
+  [PASS] R sole socket on the bottom of the foot: sole z -7.20, foot min z -7.72 (rel. ankle)
+  [PASS] R toe socket on the floor in front of the sole (toe x 13.2, sole x 4.0)
+  [PASS] R ankle below knee (-28.8)
+  [PASS] R knee below hip (-31.0)
+  [PASS] TaG slot on both wrists (LowerArm) and both ankles (Shin)
+  [PASS] Outline slot on every part
+  [PASS] faces +X (eyes x 13.3, toe x 13.2)
+   eye height 140.00  width 38.25  height 163.04  triangles 6916  pelvis height 71.76
+-- Nikoichi (L) --
+  [PASS] SM_Nikoichi_Pelvis sockets ['spine', 'hip_l', 'hip_r'] present (rotation 0, scale 1): spine(0.00, -0.00, 9.83), hip_l(0.00, -12.14, -7.37), hip_r(0.00, 12.14, -7.37)
+  [PASS] SM_Nikoichi_Torso sockets ['neck', 'shoulder_l', 'shoulder_r'] present (rotation 0, scale 1): neck(0.00, -0.00, 71.60), shoulder_l(0.00, -26.30, 65.46), shoulder_r(0.00, 26.30, 65.46)
+  [PASS] SM_Nikoichi_Head sockets ['eyes'] present (rotation 0, scale 1): eyes(13.84, -0.00, 29.49)
+  [PASS] SM_Nikoichi_UpperArm_L sockets ['elbow'] present (rotation 0, scale 1): elbow(0.00, 0.00, -35.63)
+  [PASS] SM_Nikoichi_UpperArm_R sockets ['elbow'] present (rotation 0, scale 1): elbow(0.00, 0.00, -35.63)
+  [PASS] SM_Nikoichi_LowerArm_L sockets ['hand'] present (rotation 0, scale 1): hand(0.98, 5.22, -39.56)
+  [PASS] SM_Nikoichi_LowerArm_R sockets ['hand'] present (rotation 0, scale 1): hand(0.98, -5.22, -39.56)
+  [PASS] SM_Nikoichi_Thigh_L sockets ['knee'] present (rotation 0, scale 1): knee(0.00, 0.00, -44.38)
+  [PASS] SM_Nikoichi_Thigh_R sockets ['knee'] present (rotation 0, scale 1): knee(0.00, 0.00, -44.38)
+  [PASS] SM_Nikoichi_Shin_L sockets ['ankle'] present (rotation 0, scale 1): ankle(0.00, 0.00, -41.28)
+  [PASS] SM_Nikoichi_Shin_R sockets ['ankle'] present (rotation 0, scale 1): ankle(0.00, 0.00, -41.28)
+  [PASS] SM_Nikoichi_Foot_L sockets ['sole', 'toe'] present (rotation 0, scale 1): sole(5.80, 0.00, -11.06), toe(20.25, 0.00, -11.06)
+  [PASS] SM_Nikoichi_Foot_R sockets ['sole', 'toe'] present (rotation 0, scale 1): sole(5.80, 0.00, -11.06), toe(20.25, 0.00, -11.06)
+  [PASS] soles level: left z -104.08 right z -104.08 (floor)
+  [PASS] floor-to-eyes 215.00 cm (target 215 +-3%)
+  [PASS] overall width 71.99 cm (target 72 +-3%)
+  [PASS] triangles 6938 <= 9000
+  [PASS] left sockets negative Y: hip_l.y -12.14 shoulder_l.y -26.30 (right: 12.14, 26.30)
+  [PASS] L arm hangs down: shoulder z 179.4 > elbow z 143.7 > hand z 104.2
+  [PASS] L sole socket on the bottom of the foot: sole z -11.06, foot min z -11.42 (rel. ankle)
+  [PASS] L toe socket on the floor in front of the sole (toe x 20.3, sole x 5.8)
+  [PASS] L ankle below knee (-41.3)
+  [PASS] L knee below hip (-44.4)
+  [PASS] R arm hangs down: shoulder z 179.4 > elbow z 143.7 > hand z 104.2
+  [PASS] R sole socket on the bottom of the foot: sole z -11.06, foot min z -11.42 (rel. ankle)
+  [PASS] R toe socket on the floor in front of the sole (toe x 20.3, sole x 5.8)
+  [PASS] R ankle below knee (-41.3)
+  [PASS] R knee below hip (-44.4)
+  [PASS] TaG slot on both wrists (LowerArm) and both ankles (Shin)
+  [PASS] Outline slot on every part
+  [PASS] faces +X (eyes x 13.8, toe x 20.3)
+   eye height 215.00  width 71.99  height 236.50  triangles 6938  pelvis height 104.08
+-- Tsubame (S) --
+  [PASS] SM_Tsubame_Pelvis sockets ['spine', 'hip_l', 'hip_r'] present (rotation 0, scale 1): spine(0.00, -0.00, 6.63), hip_l(0.00, -7.12, -4.97), hip_r(0.00, 7.12, -4.97)
+  [PASS] SM_Tsubame_Torso sockets ['neck', 'shoulder_l', 'shoulder_r'] present (rotation 0, scale 1): neck(-0.83, -0.00, 44.87), shoulder_l(-0.83, -13.65, 40.72), shoulder_r(-0.83, 13.65, 40.72)
+  [PASS] SM_Tsubame_Head sockets ['eyes'] present (rotation 0, scale 1): eyes(13.26, -0.00, 15.74)
+  [PASS] SM_Tsubame_UpperArm_L sockets ['elbow'] present (rotation 0, scale 1): elbow(0.00, 0.00, -24.03)
+  [PASS] SM_Tsubame_UpperArm_R sockets ['elbow'] present (rotation 0, scale 1): elbow(0.00, 0.00, -24.03)
+  [PASS] SM_Tsubame_LowerArm_L sockets ['hand'] present (rotation 0, scale 1): hand(0.46, 2.41, -24.19)
+  [PASS] SM_Tsubame_LowerArm_R sockets ['hand'] present (rotation 0, scale 1): hand(0.46, -2.41, -24.19)
+  [PASS] SM_Tsubame_Thigh_L sockets ['knee'] present (rotation 0, scale 1): knee(0.00, 0.00, -33.85)
+  [PASS] SM_Tsubame_Thigh_R sockets ['knee'] present (rotation 0, scale 1): knee(0.00, 0.00, -33.85)
+  [PASS] SM_Tsubame_Shin_L sockets ['ankle'] present (rotation 0, scale 1): ankle(0.00, 0.00, -31.49)
+  [PASS] SM_Tsubame_Shin_R sockets ['ankle'] present (rotation 0, scale 1): ankle(0.00, 0.00, -31.49)
+  [PASS] SM_Tsubame_Foot_L sockets ['sole', 'toe'] present (rotation 0, scale 1): sole(3.36, 0.00, -7.46), toe(11.71, 0.00, -7.46)
+  [PASS] SM_Tsubame_Foot_R sockets ['sole', 'toe'] present (rotation 0, scale 1): sole(3.36, 0.00, -7.46), toe(11.71, 0.00, -7.46)
+  [PASS] soles level: left z -77.76 right z -77.76 (floor)
+  [PASS] floor-to-eyes 145.00 cm (target 145 +-3%)
+  [PASS] overall width 39.99 cm (target 40 +-3%)
+  [PASS] triangles 6866 <= 9000
+  [PASS] left sockets negative Y: hip_l.y -7.12 shoulder_l.y -13.65 (right: 7.12, 13.65)
+  [PASS] L arm hangs down: shoulder z 125.1 > elbow z 101.1 > hand z 76.9
+  [PASS] L sole socket on the bottom of the foot: sole z -7.46, foot min z -7.90 (rel. ankle)
+  [PASS] L toe socket on the floor in front of the sole (toe x 11.7, sole x 3.4)
+  [PASS] L ankle below knee (-31.5)
+  [PASS] L knee below hip (-33.8)
+  [PASS] R arm hangs down: shoulder z 125.1 > elbow z 101.1 > hand z 76.9
+  [PASS] R sole socket on the bottom of the foot: sole z -7.46, foot min z -7.90 (rel. ankle)
+  [PASS] R toe socket on the floor in front of the sole (toe x 11.7, sole x 3.4)
+  [PASS] R ankle below knee (-31.5)
+  [PASS] R knee below hip (-33.8)
+  [PASS] TaG slot on both wrists (LowerArm) and both ankles (Shin)
+  [PASS] Outline slot on every part
+  [PASS] faces +X (eyes x 13.3, toe x 11.7)
+   eye height 145.00  width 39.99  height 159.10  triangles 6866  pelvis height 77.76
+-- Kazami (M) --
+  [PASS] SM_Kazami_Pelvis sockets ['spine', 'hip_l', 'hip_r'] present (rotation 0, scale 1): spine(0.00, -0.00, 7.95), hip_l(0.00, -8.71, -5.97), hip_r(0.00, 8.71, -5.97)
+  [PASS] SM_Kazami_Torso sockets ['neck', 'shoulder_l', 'shoulder_r'] present (rotation 0, scale 1): neck(-0.99, -0.00, 54.35), shoulder_l(-0.99, -17.62, 49.38), shoulder_r(-0.99, 17.62, 49.38)
+  [PASS] SM_Kazami_Head sockets ['eyes'] present (rotation 0, scale 1): eyes(13.78, -0.00, 15.91)
+  [PASS] SM_Kazami_UpperArm_L sockets ['elbow'] present (rotation 0, scale 1): elbow(0.00, 0.00, -28.83)
+  [PASS] SM_Kazami_UpperArm_R sockets ['elbow'] present (rotation 0, scale 1): elbow(0.00, 0.00, -28.83)
+  [PASS] SM_Kazami_LowerArm_L sockets ['hand'] present (rotation 0, scale 1): hand(0.62, 3.35, -29.78)
+  [PASS] SM_Kazami_LowerArm_R sockets ['hand'] present (rotation 0, scale 1): hand(0.62, -3.35, -29.78)
+  [PASS] SM_Kazami_Thigh_L sockets ['knee'] present (rotation 0, scale 1): knee(0.00, 0.00, -41.90)
+  [PASS] SM_Kazami_Thigh_R sockets ['knee'] present (rotation 0, scale 1): knee(0.00, 0.00, -41.90)
+  [PASS] SM_Kazami_Shin_L sockets ['ankle'] present (rotation 0, scale 1): ankle(0.00, 0.00, -38.98)
+  [PASS] SM_Kazami_Shin_R sockets ['ankle'] present (rotation 0, scale 1): ankle(0.00, 0.00, -38.98)
+  [PASS] SM_Kazami_Foot_L sockets ['sole', 'toe'] present (rotation 0, scale 1): sole(5.95, 0.00, -8.95), toe(19.90, 0.00, -8.95)
+  [PASS] SM_Kazami_Foot_R sockets ['sole', 'toe'] present (rotation 0, scale 1): sole(5.95, 0.00, -8.95), toe(19.90, 0.00, -8.95)
+  [PASS] soles level: left z -95.79 right z -95.79 (floor)
+  [PASS] floor-to-eyes 174.00 cm (target 174 +-3%)
+  [PASS] overall width 50.07 cm (target 50 +-3%)
+  [PASS] triangles 7034 <= 9000
+  [PASS] left sockets negative Y: hip_l.y -8.71 shoulder_l.y -17.62 (right: 8.71, 17.62)
+  [PASS] L arm hangs down: shoulder z 153.1 > elbow z 124.3 > hand z 94.5
+  [PASS] L sole socket on the bottom of the foot: sole z -8.95, foot min z -9.30 (rel. ankle)
+  [PASS] L toe socket on the floor in front of the sole (toe x 19.9, sole x 5.9)
+  [PASS] L ankle below knee (-39.0)
+  [PASS] L knee below hip (-41.9)
+  [PASS] R arm hangs down: shoulder z 153.1 > elbow z 124.3 > hand z 94.5
+  [PASS] R sole socket on the bottom of the foot: sole z -8.95, foot min z -9.30 (rel. ankle)
+  [PASS] R toe socket on the floor in front of the sole (toe x 19.9, sole x 5.9)
+  [PASS] R ankle below knee (-39.0)
+  [PASS] R knee below hip (-41.9)
+  [PASS] TaG slot on both wrists (LowerArm) and both ankles (Shin)
+  [PASS] Outline slot on every part
+  [PASS] faces +X (eyes x 13.8, toe x 19.9)
+   eye height 174.00  width 50.07  height 198.87  triangles 7034  pelvis height 95.79
+-- Hari (M) --
+  [PASS] SM_Hari_Pelvis sockets ['spine', 'hip_l', 'hip_r'] present (rotation 0, scale 1): spine(0.00, -0.00, 8.05), hip_l(0.00, -8.60, -6.03), hip_r(0.00, 8.60, -6.03)
+  [PASS] SM_Hari_Torso sockets ['neck', 'shoulder_l', 'shoulder_r'] present (rotation 0, scale 1): neck(-1.01, -0.00, 53.30), shoulder_l(-1.01, -17.80, 48.27), shoulder_r(-1.01, 17.80, 48.27)
+  [PASS] SM_Hari_Head sockets ['eyes'] present (rotation 0, scale 1): eyes(15.69, -0.00, 16.09)
+  [PASS] SM_Hari_UpperArm_L sockets ['elbow'] present (rotation 0, scale 1): elbow(0.00, 0.00, -29.17)
+  [PASS] SM_Hari_UpperArm_R sockets ['elbow'] present (rotation 0, scale 1): elbow(0.00, 0.00, -29.17)
+  [PASS] SM_Hari_LowerArm_L sockets ['hand'] present (rotation 0, scale 1): hand(0.62, 3.27, -30.12)
+  [PASS] SM_Hari_LowerArm_R sockets ['hand'] present (rotation 0, scale 1): hand(0.52, -2.75, -28.86)
+  [PASS] SM_Hari_Thigh_L sockets ['knee'] present (rotation 0, scale 1): knee(0.00, 0.00, -43.25)
+  [PASS] SM_Hari_Thigh_R sockets ['knee'] present (rotation 0, scale 1): knee(0.00, 0.00, -43.25)
+  [PASS] SM_Hari_Shin_L sockets ['ankle'] present (rotation 0, scale 1): ankle(0.00, 0.00, -40.23)
+  [PASS] SM_Hari_Shin_R sockets ['ankle'] present (rotation 0, scale 1): ankle(0.00, 0.00, -40.23)
+  [PASS] SM_Hari_Foot_L sockets ['sole', 'toe'] present (rotation 0, scale 1): sole(5.33, 0.00, -9.05), toe(17.85, 0.00, -9.05)
+  [PASS] SM_Hari_Foot_R sockets ['sole', 'toe'] present (rotation 0, scale 1): sole(5.33, 0.00, -9.05), toe(17.85, 0.00, -9.05)
+  [PASS] soles level: left z -98.56 right z -98.56 (floor)
+  [PASS] floor-to-eyes 176.00 cm (target 176 +-3%)
+  [PASS] overall width 49.73 cm (target 50 +-3%)
+  [PASS] triangles 8293 <= 9000
+  [PASS] left sockets negative Y: hip_l.y -8.60 shoulder_l.y -17.80 (right: 8.60, 17.80)
+  [PASS] L arm hangs down: shoulder z 154.9 > elbow z 125.7 > hand z 95.6
+  [PASS] L sole socket on the bottom of the foot: sole z -9.05, foot min z -9.51 (rel. ankle)
+  [PASS] L toe socket on the floor in front of the sole (toe x 17.8, sole x 5.3)
+  [PASS] L ankle below knee (-40.2)
+  [PASS] L knee below hip (-43.2)
+  [PASS] R arm hangs down: shoulder z 154.9 > elbow z 125.7 > hand z 96.8
+  [PASS] R sole socket on the bottom of the foot: sole z -9.05, foot min z -9.51 (rel. ankle)
+  [PASS] R toe socket on the floor in front of the sole (toe x 17.8, sole x 5.3)
+  [PASS] R ankle below knee (-40.2)
+  [PASS] R knee below hip (-43.2)
+  [PASS] TaG slot on both wrists (LowerArm) and both ankles (Shin)
+  [PASS] Outline slot on every part
+  [PASS] faces +X (eyes x 15.7, toe x 17.8)
+   eye height 176.00  width 49.73  height 197.03  triangles 8293  pelvis height 98.56
+-- Tomoshibi (L) --
+  [PASS] SM_Tomoshibi_Pelvis sockets ['spine', 'hip_l', 'hip_r'] present (rotation 0, scale 1): spine(0.00, -0.00, 10.06), hip_l(0.00, -9.00, -7.54), hip_r(0.00, 9.00, -7.54)
+  [PASS] SM_Tomoshibi_Torso sockets ['neck', 'shoulder_l', 'shoulder_r'] present (rotation 0, scale 1): neck(0.00, -0.00, 69.57), shoulder_l(0.00, -22.00, 63.28), shoulder_r(0.00, 22.00, 63.28)
+  [PASS] SM_Tomoshibi_Head sockets ['eyes'] present (rotation 0, scale 1): eyes(11.31, -0.00, 15.09)
+  [PASS] SM_Tomoshibi_UpperArm_L sockets ['elbow'] present (rotation 0, scale 1): elbow(0.00, 0.00, -36.46)
+  [PASS] SM_Tomoshibi_UpperArm_R sockets ['elbow'] present (rotation 0, scale 1): elbow(0.00, 0.00, -36.46)
+  [PASS] SM_Tomoshibi_LowerArm_L sockets ['hand'] present (rotation 0, scale 1): hand(0.68, 3.56, -36.39)
+  [PASS] SM_Tomoshibi_LowerArm_R sockets ['hand'] present (rotation 0, scale 1): hand(0.68, -3.56, -36.39)
+  [PASS] SM_Tomoshibi_Thigh_L sockets ['knee'] present (rotation 0, scale 1): knee(0.00, 0.00, -55.14)
+  [PASS] SM_Tomoshibi_Thigh_R sockets ['knee'] present (rotation 0, scale 1): knee(0.00, 0.00, -55.14)
+  [PASS] SM_Tomoshibi_Shin_L sockets ['ankle'] present (rotation 0, scale 1): ankle(0.00, 0.00, -51.29)
+  [PASS] SM_Tomoshibi_Shin_R sockets ['ankle'] present (rotation 0, scale 1): ankle(0.00, 0.00, -51.29)
+  [PASS] SM_Tomoshibi_Foot_L sockets ['sole', 'toe'] present (rotation 0, scale 1): sole(2.51, 0.00, -11.31), toe(13.83, 0.00, -11.31)
+  [PASS] SM_Tomoshibi_Foot_R sockets ['sole', 'toe'] present (rotation 0, scale 1): sole(2.51, 0.00, -11.31), toe(13.83, 0.00, -11.31)
+  [PASS] soles level: left z -125.29 right z -125.29 (floor)
+  [PASS] floor-to-eyes 220.00 cm (target 220 +-3%)
+  [PASS] overall width 65.65 cm (target 66 +-3%)
+  [PASS] triangles 6880 <= 9000
+  [PASS] left sockets negative Y: hip_l.y -9.00 shoulder_l.y -22.00 (right: 9.00, 22.00)
+  [PASS] L arm hangs down: shoulder z 198.6 > elbow z 162.2 > hand z 125.8
+  [PASS] L sole socket on the bottom of the foot: sole z -11.31, foot min z -11.64 (rel. ankle)
+  [PASS] L toe socket on the floor in front of the sole (toe x 13.8, sole x 2.5)
+  [PASS] L ankle below knee (-51.3)
+  [PASS] L knee below hip (-55.1)
+  [PASS] R arm hangs down: shoulder z 198.6 > elbow z 162.2 > hand z 125.8
+  [PASS] R sole socket on the bottom of the foot: sole z -11.31, foot min z -11.64 (rel. ankle)
+  [PASS] R toe socket on the floor in front of the sole (toe x 13.8, sole x 2.5)
+  [PASS] R ankle below knee (-51.3)
+  [PASS] R knee below hip (-55.1)
+  [PASS] TaG slot on both wrists (LowerArm) and both ankles (Shin)
+  [PASS] Outline slot on every part
+  [PASS] faces +X (eyes x 11.3, toe x 13.8)
+   eye height 220.00  width 65.65  height 247.76  triangles 6880  pelvis height 125.29
+-- Koyomi (M) --
+  [PASS] SM_Koyomi_Pelvis sockets ['spine', 'hip_l', 'hip_r'] present (rotation 0, scale 1): spine(0.00, -0.00, 7.86), hip_l(0.00, -8.13, -5.90), hip_r(0.00, 8.13, -5.90)
+  [PASS] SM_Koyomi_Torso sockets ['neck', 'shoulder_l', 'shoulder_r'] present (rotation 0, scale 1): neck(-0.98, -0.00, 50.46), shoulder_l(-0.98, -16.86, 45.55), shoulder_r(-0.98, 16.86, 45.55)
+  [PASS] SM_Koyomi_Head sockets ['eyes'] present (rotation 0, scale 1): eyes(15.33, -0.00, 15.73)
+  [PASS] SM_Koyomi_UpperArm_L sockets ['elbow'] present (rotation 0, scale 1): elbow(0.00, 0.00, -28.50)
+  [PASS] SM_Koyomi_UpperArm_R sockets ['elbow'] present (rotation 0, scale 1): elbow(0.00, 0.00, -28.50)
+  [PASS] SM_Koyomi_LowerArm_L sockets ['hand'] present (rotation 0, scale 1): hand(0.61, 3.17, -29.44)
+  [PASS] SM_Koyomi_LowerArm_R sockets ['hand'] present (rotation 0, scale 1): hand(0.61, -3.17, -29.44)
+  [PASS] SM_Koyomi_Thigh_L sockets ['knee'] present (rotation 0, scale 1): knee(0.00, 0.00, -43.11)
+  [PASS] SM_Koyomi_Thigh_R sockets ['knee'] present (rotation 0, scale 1): knee(0.00, 0.00, -43.11)
+  [PASS] SM_Koyomi_Shin_L sockets ['ankle'] present (rotation 0, scale 1): ankle(0.00, 0.00, -40.10)
+  [PASS] SM_Koyomi_Shin_R sockets ['ankle'] present (rotation 0, scale 1): ankle(0.00, 0.00, -40.10)
+  [PASS] SM_Koyomi_Foot_L sockets ['sole', 'toe'] present (rotation 0, scale 1): sole(5.37, 0.00, -8.85), toe(17.96, 0.00, -8.85)
+  [PASS] SM_Koyomi_Foot_R sockets ['sole', 'toe'] present (rotation 0, scale 1): sole(5.37, 0.00, -8.85), toe(17.96, 0.00, -8.85)
+  [PASS] soles level: left z -97.95 right z -97.95 (floor)
+  [PASS] floor-to-eyes 172.00 cm (target 172 +-3%)
+  [PASS] overall width 48.09 cm (target 48 +-3%)
+  [PASS] triangles 7006 <= 9000
+  [PASS] left sockets negative Y: hip_l.y -8.13 shoulder_l.y -16.86 (right: 8.13, 16.86)
+  [PASS] L arm hangs down: shoulder z 151.4 > elbow z 122.9 > hand z 93.4
+  [PASS] L sole socket on the bottom of the foot: sole z -8.85, foot min z -9.60 (rel. ankle)
+  [PASS] L toe socket on the floor in front of the sole (toe x 18.0, sole x 5.4)
+  [PASS] L ankle below knee (-40.1)
+  [PASS] L knee below hip (-43.1)
+  [PASS] R arm hangs down: shoulder z 151.4 > elbow z 122.9 > hand z 93.4
+  [PASS] R sole socket on the bottom of the foot: sole z -8.85, foot min z -9.60 (rel. ankle)
+  [PASS] R toe socket on the floor in front of the sole (toe x 18.0, sole x 5.4)
+  [PASS] R ankle below knee (-40.1)
+  [PASS] R knee below hip (-43.1)
+  [PASS] TaG slot on both wrists (LowerArm) and both ankles (Shin)
+  [PASS] Outline slot on every part
+  [PASS] faces +X (eyes x 15.3, toe x 18.0)
+   eye height 172.00  width 48.09  height 193.09  triangles 7006  pelvis height 97.95
+-- Yatai (XL) --
+  [PASS] SM_Yatai_Pelvis sockets ['spine', 'hip_l', 'hip_r'] present (rotation 0, scale 1): spine(0.00, -0.00, 10.74), hip_l(0.00, -18.23, -8.06), hip_r(0.00, 18.23, -8.06)
+  [PASS] SM_Yatai_Torso sockets ['neck', 'shoulder_l', 'shoulder_r'] present (rotation 0, scale 1): neck(0.00, -0.00, 105.06), shoulder_l(0.00, -44.57, 94.32), shoulder_r(0.00, 44.57, 94.32)
+  [PASS] SM_Yatai_Head sockets ['eyes'] present (rotation 0, scale 1): eyes(17.45, -0.00, 18.80)
+  [PASS] SM_Yatai_UpperArm_L sockets ['elbow'] present (rotation 0, scale 1): elbow(0.00, 0.00, -32.23)
+  [PASS] SM_Yatai_UpperArm_R sockets ['elbow'] present (rotation 0, scale 1): elbow(0.00, 0.00, -32.23)
+  [PASS] SM_Yatai_LowerArm_L sockets ['hand'] present (rotation 0, scale 1): hand(1.02, 5.43, -42.57)
+  [PASS] SM_Yatai_LowerArm_R sockets ['hand'] present (rotation 0, scale 1): hand(1.02, -5.43, -42.57)
+  [PASS] SM_Yatai_Thigh_L sockets ['knee'] present (rotation 0, scale 1): knee(0.00, 0.00, -41.58)
+  [PASS] SM_Yatai_Thigh_R sockets ['knee'] present (rotation 0, scale 1): knee(0.00, 0.00, -41.58)
+  [PASS] SM_Yatai_Shin_L sockets ['ankle'] present (rotation 0, scale 1): ankle(0.00, 0.00, -38.67)
+  [PASS] SM_Yatai_Shin_R sockets ['ankle'] present (rotation 0, scale 1): ankle(0.00, 0.00, -38.67)
+  [PASS] SM_Yatai_Foot_L sockets ['sole', 'toe'] present (rotation 0, scale 1): sole(6.71, 0.00, -12.09), toe(24.17, 0.00, -12.09)
+  [PASS] SM_Yatai_Foot_R sockets ['sole', 'toe'] present (rotation 0, scale 1): sole(6.71, 0.00, -12.09), toe(24.17, 0.00, -12.09)
+  [PASS] soles level: left z -100.39 right z -100.39 (floor)
+  [PASS] floor-to-eyes 235.00 cm (target 235 +-3%)
+  [PASS] overall width 109.96 cm (target 110 +-3%)
+  [PASS] triangles 7740 <= 9000
+  [PASS] left sockets negative Y: hip_l.y -18.23 shoulder_l.y -44.57 (right: 18.23, 44.57)
+  [PASS] L arm hangs down: shoulder z 205.5 > elbow z 173.2 > hand z 130.7
+  [PASS] L sole socket on the bottom of the foot: sole z -12.09, foot min z -12.79 (rel. ankle)
+  [PASS] L toe socket on the floor in front of the sole (toe x 24.2, sole x 6.7)
+  [PASS] L ankle below knee (-38.7)
+  [PASS] L knee below hip (-41.6)
+  [PASS] R arm hangs down: shoulder z 205.5 > elbow z 173.2 > hand z 130.7
+  [PASS] R sole socket on the bottom of the foot: sole z -12.09, foot min z -12.79 (rel. ankle)
+  [PASS] R toe socket on the floor in front of the sole (toe x 24.2, sole x 6.7)
+  [PASS] R ankle below knee (-38.7)
+  [PASS] R knee below hip (-41.6)
+  [PASS] TaG slot on both wrists (LowerArm) and both ankles (Shin)
+  [PASS] Outline slot on every part
+  [PASS] faces +X (eyes x 17.4, toe x 24.2)
+   eye height 235.00  width 109.96  height 256.17  triangles 7740  pelvis height 100.39
+-- Oboro (M) --
+  [PASS] SM_Oboro_Pelvis sockets ['spine', 'hip_l', 'hip_r'] present (rotation 0, scale 1): spine(0.00, -0.00, 8.23), hip_l(0.00, -8.16, -6.17), hip_r(0.00, 8.16, -6.17)
+  [PASS] SM_Oboro_Torso sockets ['neck', 'shoulder_l', 'shoulder_r'] present (rotation 0, scale 1): neck(-1.03, -0.00, 54.51), shoulder_l(-1.03, -17.09, 49.37), shoulder_r(-1.03, 17.09, 49.37)
+  [PASS] SM_Oboro_Head sockets ['eyes'] present (rotation 0, scale 1): eyes(13.88, -0.00, 16.46)
+  [PASS] SM_Oboro_UpperArm_L sockets ['elbow'] present (rotation 0, scale 1): elbow(0.00, 0.00, -29.83)
+  [PASS] SM_Oboro_UpperArm_R sockets ['elbow'] present (rotation 0, scale 1): elbow(0.00, 0.00, -29.83)
+  [PASS] SM_Oboro_LowerArm_L sockets ['hand'] present (rotation 0, scale 1): hand(0.58, 2.94, -30.03)
+  [PASS] SM_Oboro_LowerArm_R sockets ['hand'] present (rotation 0, scale 1): hand(0.58, -2.94, -30.03)
+  [PASS] SM_Oboro_Thigh_L sockets ['knee'] present (rotation 0, scale 1): knee(0.00, 0.00, -44.23)
+  [PASS] SM_Oboro_Thigh_R sockets ['knee'] present (rotation 0, scale 1): knee(0.00, 0.00, -44.23)
+  [PASS] SM_Oboro_Shin_L sockets ['ankle'] present (rotation 0, scale 1): ankle(0.00, 0.00, -41.14)
+  [PASS] SM_Oboro_Shin_R sockets ['ankle'] present (rotation 0, scale 1): ankle(0.00, 0.00, -41.14)
+  [PASS] SM_Oboro_Foot_L sockets ['sole', 'toe'] present (rotation 0, scale 1): sole(5.62, 0.00, -9.26), toe(18.79, 0.00, -9.26)
+  [PASS] SM_Oboro_Foot_R sockets ['sole', 'toe'] present (rotation 0, scale 1): sole(5.62, 0.00, -9.26), toe(18.79, 0.00, -9.26)
+  [PASS] soles level: left z -100.80 right z -100.80 (floor)
+  [PASS] floor-to-eyes 180.00 cm (target 180 +-3%)
+  [PASS] overall width 50.01 cm (target 50 +-3%)
+  [PASS] triangles 6860 <= 9000
+  [PASS] left sockets negative Y: hip_l.y -8.16 shoulder_l.y -17.09 (right: 8.16, 17.09)
+  [PASS] L arm hangs down: shoulder z 158.4 > elbow z 128.6 > hand z 98.5
+  [PASS] L sole socket on the bottom of the foot: sole z -9.26, foot min z -9.61 (rel. ankle)
+  [PASS] L toe socket on the floor in front of the sole (toe x 18.8, sole x 5.6)
+  [PASS] L ankle below knee (-41.1)
+  [PASS] L knee below hip (-44.2)
+  [PASS] R arm hangs down: shoulder z 158.4 > elbow z 128.6 > hand z 98.5
+  [PASS] R sole socket on the bottom of the foot: sole z -9.26, foot min z -9.61 (rel. ankle)
+  [PASS] R toe socket on the floor in front of the sole (toe x 18.8, sole x 5.6)
+  [PASS] R ankle below knee (-41.1)
+  [PASS] R knee below hip (-44.2)
+  [PASS] TaG slot on both wrists (LowerArm) and both ankles (Shin)
+  [PASS] Outline slot on every part
+  [PASS] faces +X (eyes x 13.9, toe x 18.8)
+   eye height 180.00  width 50.01  height 201.19  triangles 6860  pelvis height 100.80
+-- Hibana (S) --
+  [PASS] SM_Hibana_Pelvis sockets ['spine', 'hip_l', 'hip_r'] present (rotation 0, scale 1): spine(0.00, -0.00, 6.77), hip_l(0.00, -7.09, -5.07), hip_r(0.00, 7.09, -5.07)
+  [PASS] SM_Hibana_Torso sockets ['neck', 'shoulder_l', 'shoulder_r'] present (rotation 0, scale 1): neck(-0.85, -0.00, 45.80), shoulder_l(-0.85, -13.99, 41.57), shoulder_r(-0.85, 13.99, 41.57)
+  [PASS] SM_Hibana_Head sockets ['eyes'] present (rotation 0, scale 1): eyes(13.93, -0.00, 16.07)
+  [PASS] SM_Hibana_UpperArm_L sockets ['elbow'] present (rotation 0, scale 1): elbow(0.00, 0.00, -24.53)
+  [PASS] SM_Hibana_UpperArm_R sockets ['elbow'] present (rotation 0, scale 1): elbow(0.00, 0.00, -24.53)
+  [PASS] SM_Hibana_LowerArm_L sockets ['hand'] present (rotation 0, scale 1): hand(0.51, 2.55, -25.12)
+  [PASS] SM_Hibana_LowerArm_R sockets ['hand'] present (rotation 0, scale 1): hand(0.51, -2.55, -25.12)
+  [PASS] SM_Hibana_Thigh_L sockets ['knee'] present (rotation 0, scale 1): knee(0.00, 0.00, -34.55)
+  [PASS] SM_Hibana_Thigh_R sockets ['knee'] present (rotation 0, scale 1): knee(0.00, 0.00, -34.55)
+  [PASS] SM_Hibana_Shin_L sockets ['ankle'] present (rotation 0, scale 1): ankle(0.00, 0.00, -32.14)
+  [PASS] SM_Hibana_Shin_R sockets ['ankle'] present (rotation 0, scale 1): ankle(0.00, 0.00, -32.14)
+  [PASS] SM_Hibana_Foot_L sockets ['sole', 'toe'] present (rotation 0, scale 1): sole(4.40, 0.00, -7.61), toe(14.71, 0.00, -7.61)
+  [PASS] SM_Hibana_Foot_R sockets ['sole', 'toe'] present (rotation 0, scale 1): sole(4.40, 0.00, -7.61), toe(14.71, 0.00, -7.61)
+  [PASS] soles level: left z -79.37 right z -79.37 (floor)
+  [PASS] floor-to-eyes 148.00 cm (target 148 +-3%)
+  [PASS] overall width 40.20 cm (target 40 +-3%)
+  [PASS] triangles 6836 <= 9000
+  [PASS] left sockets negative Y: hip_l.y -7.09 shoulder_l.y -13.99 (right: 7.09, 13.99)
+  [PASS] L arm hangs down: shoulder z 127.7 > elbow z 103.2 > hand z 78.1
+  [PASS] L sole socket on the bottom of the foot: sole z -7.61, foot min z -8.17 (rel. ankle)
+  [PASS] L toe socket on the floor in front of the sole (toe x 14.7, sole x 4.4)
+  [PASS] L ankle below knee (-32.1)
+  [PASS] L knee below hip (-34.5)
+  [PASS] R arm hangs down: shoulder z 127.7 > elbow z 103.2 > hand z 78.1
+  [PASS] R sole socket on the bottom of the foot: sole z -7.61, foot min z -8.17 (rel. ankle)
+  [PASS] R toe socket on the floor in front of the sole (toe x 14.7, sole x 4.4)
+  [PASS] R ankle below knee (-32.1)
+  [PASS] R knee below hip (-34.5)
+  [PASS] TaG slot on both wrists (LowerArm) and both ankles (Shin)
+  [PASS] Outline slot on every part
+  [PASS] faces +X (eyes x 13.9, toe x 14.7)
+   eye height 148.00  width 40.20  height 169.08  triangles 6836  pelvis height 79.37
+-- Tsurara (M) --
+  [PASS] SM_Tsurara_Pelvis sockets ['spine', 'hip_l', 'hip_r'] present (rotation 0, scale 1): spine(0.00, -0.00, 8.05), hip_l(0.00, -8.29, -6.03), hip_r(0.00, 8.29, -6.03)
+  [PASS] SM_Tsurara_Torso sockets ['neck', 'shoulder_l', 'shoulder_r'] present (rotation 0, scale 1): neck(-1.01, -0.00, 51.63), shoulder_l(-1.01, -17.16, 46.60), shoulder_r(-1.01, 17.16, 46.60)
+  [PASS] SM_Tsurara_Head sockets ['eyes'] present (rotation 0, scale 1): eyes(15.69, -0.00, 16.09)
+  [PASS] SM_Tsurara_UpperArm_L sockets ['elbow'] present (rotation 0, scale 1): elbow(0.00, 0.00, -29.17)
+  [PASS] SM_Tsurara_UpperArm_R sockets ['elbow'] present (rotation 0, scale 1): elbow(0.00, 0.00, -29.17)
+  [PASS] SM_Tsurara_LowerArm_L sockets ['hand'] present (rotation 0, scale 1): hand(0.62, 3.23, -30.12)
+  [PASS] SM_Tsurara_LowerArm_R sockets ['hand'] present (rotation 0, scale 1): hand(0.62, -3.23, -30.12)
+  [PASS] SM_Tsurara_Thigh_L sockets ['knee'] present (rotation 0, scale 1): knee(0.00, 0.00, -44.11)
+  [PASS] SM_Tsurara_Thigh_R sockets ['knee'] present (rotation 0, scale 1): knee(0.00, 0.00, -44.11)
+  [PASS] SM_Tsurara_Shin_L sockets ['ankle'] present (rotation 0, scale 1): ankle(0.00, 0.00, -41.03)
+  [PASS] SM_Tsurara_Shin_R sockets ['ankle'] present (rotation 0, scale 1): ankle(0.00, 0.00, -41.03)
+  [PASS] SM_Tsurara_Foot_L sockets ['sole', 'toe'] present (rotation 0, scale 1): sole(5.49, 0.00, -9.05), toe(18.37, 0.00, -9.05)
+  [PASS] SM_Tsurara_Foot_R sockets ['sole', 'toe'] present (rotation 0, scale 1): sole(5.49, 0.00, -9.05), toe(18.37, 0.00, -9.05)
+  [PASS] soles level: left z -100.23 right z -100.23 (floor)
+  [PASS] floor-to-eyes 176.00 cm (target 176 +-3%)
+  [PASS] overall width 49.69 cm (target 50 +-3%)
+  [PASS] triangles 6874 <= 9000
+  [PASS] left sockets negative Y: hip_l.y -8.29 shoulder_l.y -17.16 (right: 8.29, 17.16)
+  [PASS] L arm hangs down: shoulder z 154.9 > elbow z 125.7 > hand z 95.6
+  [PASS] L sole socket on the bottom of the foot: sole z -9.05, foot min z -9.72 (rel. ankle)
+  [PASS] L toe socket on the floor in front of the sole (toe x 18.4, sole x 5.5)
+  [PASS] L ankle below knee (-41.0)
+  [PASS] L knee below hip (-44.1)
+  [PASS] R arm hangs down: shoulder z 154.9 > elbow z 125.7 > hand z 95.6
+  [PASS] R sole socket on the bottom of the foot: sole z -9.05, foot min z -9.72 (rel. ankle)
+  [PASS] R toe socket on the floor in front of the sole (toe x 18.4, sole x 5.5)
+  [PASS] R ankle below knee (-41.0)
+  [PASS] R knee below hip (-44.1)
+  [PASS] TaG slot on both wrists (LowerArm) and both ankles (Shin)
+  [PASS] Outline slot on every part
+  [PASS] faces +X (eyes x 15.7, toe x 18.4)
+   eye height 176.00  width 49.69  height 197.31  triangles 6874  pelvis height 100.23
+-- Kawara (M) --
+  [PASS] SM_Kawara_Pelvis sockets ['spine', 'hip_l', 'hip_r'] present (rotation 0, scale 1): spine(0.00, -0.00, 8.05), hip_l(0.00, -9.66, -6.03), hip_r(0.00, 9.66, -6.03)
+  [PASS] SM_Kawara_Torso sockets ['neck', 'shoulder_l', 'shoulder_r'] present (rotation 0, scale 1): neck(0.00, -0.00, 63.32), shoulder_l(0.00, -18.16, 58.29), shoulder_r(0.00, 18.16, 58.29)
+  [PASS] SM_Kawara_Head sockets ['eyes'] present (rotation 0, scale 1): eyes(12.07, -0.00, 16.09)
+  [PASS] SM_Kawara_UpperArm_L sockets ['elbow'] present (rotation 0, scale 1): elbow(0.00, 0.00, -29.17)
+  [PASS] SM_Kawara_UpperArm_R sockets ['elbow'] present (rotation 0, scale 1): elbow(0.00, 0.00, -29.17)
+  [PASS] SM_Kawara_LowerArm_L sockets ['hand'] present (rotation 0, scale 1): hand(0.62, 3.16, -30.12)
+  [PASS] SM_Kawara_LowerArm_R sockets ['hand'] present (rotation 0, scale 1): hand(0.62, -3.16, -30.12)
+  [PASS] SM_Kawara_Thigh_L sockets ['knee'] present (rotation 0, scale 1): knee(0.00, 0.00, -38.06)
+  [PASS] SM_Kawara_Thigh_R sockets ['knee'] present (rotation 0, scale 1): knee(0.00, 0.00, -38.06)
+  [PASS] SM_Kawara_Shin_L sockets ['ankle'] present (rotation 0, scale 1): ankle(0.00, 0.00, -35.40)
+  [PASS] SM_Kawara_Shin_R sockets ['ankle'] present (rotation 0, scale 1): ankle(0.00, 0.00, -35.40)
+  [PASS] SM_Kawara_Foot_L sockets ['sole', 'toe'] present (rotation 0, scale 1): sole(4.53, 0.00, -9.05), toe(15.79, 0.00, -9.05)
+  [PASS] SM_Kawara_Foot_R sockets ['sole', 'toe'] present (rotation 0, scale 1): sole(4.53, 0.00, -9.05), toe(15.79, 0.00, -9.05)
+  [PASS] soles level: left z -88.54 right z -88.54 (floor)
+  [PASS] floor-to-eyes 176.00 cm (target 176 +-3%)
+  [PASS] overall width 57.92 cm (target 58 +-3%)
+  [PASS] triangles 8763 <= 9000
+  [PASS] left sockets negative Y: hip_l.y -9.66 shoulder_l.y -18.16 (right: 9.66, 18.16)
+  [PASS] L arm hangs down: shoulder z 154.9 > elbow z 125.7 > hand z 95.6
+  [PASS] L sole socket on the bottom of the foot: sole z -9.05, foot min z -9.32 (rel. ankle)
+  [PASS] L toe socket on the floor in front of the sole (toe x 15.8, sole x 4.5)
+  [PASS] L ankle below knee (-35.4)
+  [PASS] L knee below hip (-38.1)
+  [PASS] R arm hangs down: shoulder z 154.9 > elbow z 125.7 > hand z 95.6
+  [PASS] R sole socket on the bottom of the foot: sole z -9.05, foot min z -9.32 (rel. ankle)
+  [PASS] R toe socket on the floor in front of the sole (toe x 15.8, sole x 4.5)
+  [PASS] R ankle below knee (-35.4)
+  [PASS] R knee below hip (-38.1)
+  [PASS] TaG slot on both wrists (LowerArm) and both ankles (Shin)
+  [PASS] Outline slot on every part
+  [PASS] faces +X (eyes x 12.1, toe x 15.8)
+   eye height 176.00  width 57.92  height 195.56  triangles 8763  pelvis height 88.54
+-- Aoji (XL) --
+  [PASS] SM_Aoji_Pelvis sockets ['spine', 'hip_l', 'hip_r'] present (rotation 0, scale 1): spine(0.00, -0.00, 11.43), hip_l(0.00, -16.28, -8.57), hip_r(0.00, 16.28, -8.57)
+  [PASS] SM_Aoji_Torso sockets ['neck', 'shoulder_l', 'shoulder_r'] present (rotation 0, scale 1): neck(0.00, -0.00, 118.91), shoulder_l(0.00, -35.62, 107.49), shoulder_r(0.00, 35.62, 107.49)
+  [PASS] SM_Aoji_Head sockets ['eyes'] present (rotation 0, scale 1): eyes(19.29, -0.00, 12.86)
+  [PASS] SM_Aoji_UpperArm_L sockets ['elbow'] present (rotation 0, scale 1): elbow(0.00, 0.00, -34.29)
+  [PASS] SM_Aoji_UpperArm_R sockets ['elbow'] present (rotation 0, scale 1): elbow(0.00, 0.00, -34.29)
+  [PASS] SM_Aoji_LowerArm_L sockets ['hand'] present (rotation 0, scale 1): hand(2.14, 12.79, -37.14)
+  [PASS] SM_Aoji_LowerArm_R sockets ['hand'] present (rotation 0, scale 1): hand(2.14, -12.79, -37.14)
+  [PASS] SM_Aoji_Thigh_L sockets ['knee'] present (rotation 0, scale 1): knee(0.00, 0.00, -44.23)
+  [PASS] SM_Aoji_Thigh_R sockets ['knee'] present (rotation 0, scale 1): knee(0.00, 0.00, -44.23)
+  [PASS] SM_Aoji_Shin_L sockets ['ankle'] present (rotation 0, scale 1): ankle(0.00, 0.00, -41.14)
+  [PASS] SM_Aoji_Shin_R sockets ['ankle'] present (rotation 0, scale 1): ankle(0.00, 0.00, -41.14)
+  [PASS] SM_Aoji_Foot_L sockets ['sole', 'toe'] present (rotation 0, scale 1): sole(6.75, 0.00, -12.86), toe(23.55, 0.00, -12.86)
+  [PASS] SM_Aoji_Foot_R sockets ['sole', 'toe'] present (rotation 0, scale 1): sole(6.75, 0.00, -12.86), toe(23.55, 0.00, -12.86)
+  [PASS] soles level: left z -106.80 right z -106.80 (floor)
+  [PASS] floor-to-eyes 250.00 cm (target 250 +-3%)
+  [PASS] overall width 104.93 cm (target 105 +-3%)
+  [PASS] triangles 7062 <= 9000
+  [PASS] left sockets negative Y: hip_l.y -16.28 shoulder_l.y -35.62 (right: 16.28, 35.62)
+  [PASS] L arm hangs down: shoulder z 225.7 > elbow z 191.4 > hand z 154.3
+  [PASS] L sole socket on the bottom of the foot: sole z -12.86, foot min z -13.55 (rel. ankle)
+  [PASS] L toe socket on the floor in front of the sole (toe x 23.6, sole x 6.8)
+  [PASS] L ankle below knee (-41.1)
+  [PASS] L knee below hip (-44.2)
+  [PASS] R arm hangs down: shoulder z 225.7 > elbow z 191.4 > hand z 154.3
+  [PASS] R sole socket on the bottom of the foot: sole z -12.86, foot min z -13.55 (rel. ankle)
+  [PASS] R toe socket on the floor in front of the sole (toe x 23.6, sole x 6.8)
+  [PASS] R ankle below knee (-41.1)
+  [PASS] R knee below hip (-44.2)
+  [PASS] TaG slot on both wrists (LowerArm) and both ankles (Shin)
+  [PASS] Outline slot on every part
+  [PASS] faces +X (eyes x 19.3, toe x 23.6)
+   eye height 250.00  width 104.93  height 263.02  triangles 7062  pelvis height 106.80
+-- Ankou (L) --
+  [PASS] SM_Ankou_Pelvis sockets ['spine', 'hip_l', 'hip_r'] present (rotation 0, scale 1): spine(0.00, -0.00, 9.14), hip_l(0.00, -13.00, -6.86), hip_r(0.00, 13.00, -6.86)
+  [PASS] SM_Ankou_Torso sockets ['neck', 'shoulder_l', 'shoulder_r'] present (rotation 0, scale 1): neck(0.00, -0.00, 86.77), shoulder_l(0.00, -34.00, 81.05), shoulder_r(0.00, 34.00, 81.05)
+  [PASS] SM_Ankou_Head sockets ['eyes'] present (rotation 0, scale 1): eyes(19.81, -0.00, 14.86)
+  [PASS] SM_Ankou_UpperArm_L sockets ['elbow'] present (rotation 0, scale 1): elbow(0.00, 0.00, -33.14)
+  [PASS] SM_Ankou_UpperArm_R sockets ['elbow'] present (rotation 0, scale 1): elbow(0.00, 0.00, -33.14)
+  [PASS] SM_Ankou_LowerArm_L sockets ['hand'] present (rotation 0, scale 1): hand(1.14, 2.97, -30.86)
+  [PASS] SM_Ankou_LowerArm_R sockets ['hand'] present (rotation 0, scale 1): hand(1.14, -2.97, -30.86)
+  [PASS] SM_Ankou_Thigh_L sockets ['knee'] present (rotation 0, scale 1): knee(0.00, 0.00, -37.35)
+  [PASS] SM_Ankou_Thigh_R sockets ['knee'] present (rotation 0, scale 1): knee(0.00, 0.00, -37.35)
+  [PASS] SM_Ankou_Shin_L sockets ['ankle'] present (rotation 0, scale 1): ankle(0.00, 0.00, -34.74)
+  [PASS] SM_Ankou_Shin_R sockets ['ankle'] present (rotation 0, scale 1): ankle(0.00, 0.00, -34.74)
+  [PASS] SM_Ankou_Foot_L sockets ['sole', 'toe'] present (rotation 0, scale 1): sole(6.86, 0.00, -10.29), toe(20.00, 0.00, -10.29)
+  [PASS] SM_Ankou_Foot_R sockets ['sole', 'toe'] present (rotation 0, scale 1): sole(6.86, 0.00, -10.29), toe(20.00, 0.00, -10.29)
+  [PASS] soles level: left z -89.23 right z -89.23 (floor)
+  [PASS] floor-to-eyes 200.00 cm (target 200 +-3%)
+  [PASS] overall width 84.65 cm (target 85 +-3%)
+  [PASS] triangles 6864 <= 9000
+  [PASS] left sockets negative Y: hip_l.y -13.00 shoulder_l.y -34.00 (right: 13.00, 34.00)
+  [PASS] L arm hangs down: shoulder z 179.4 > elbow z 146.3 > hand z 115.4
+  [PASS] L sole socket on the bottom of the foot: sole z -10.29, foot min z -10.49 (rel. ankle)
+  [PASS] L toe socket on the floor in front of the sole (toe x 20.0, sole x 6.9)
+  [PASS] L ankle below knee (-34.7)
+  [PASS] L knee below hip (-37.3)
+  [PASS] R arm hangs down: shoulder z 179.4 > elbow z 146.3 > hand z 115.4
+  [PASS] R sole socket on the bottom of the foot: sole z -10.29, foot min z -10.49 (rel. ankle)
+  [PASS] R toe socket on the floor in front of the sole (toe x 20.0, sole x 6.9)
+  [PASS] R ankle below knee (-34.7)
+  [PASS] R knee below hip (-37.3)
+  [PASS] TaG slot on both wrists (LowerArm) and both ankles (Shin)
+  [PASS] Outline slot on every part
+  [PASS] faces +X (eyes x 19.8, toe x 20.0)
+   eye height 200.00  width 84.65  height 224.92  triangles 6864  pelvis height 89.23
+-- Hotaru (S) --
+  [PASS] SM_Hotaru_Pelvis sockets ['spine', 'hip_l', 'hip_r'] present (rotation 0, scale 1): spine(0.00, -0.00, 6.31), hip_l(0.00, -7.08, -4.73), hip_r(0.00, 7.08, -4.73)
+  [PASS] SM_Hotaru_Torso sockets ['neck', 'shoulder_l', 'shoulder_r'] present (rotation 0, scale 1): neck(-0.79, -0.00, 45.97), shoulder_l(-0.79, -13.15, 42.03), shoulder_r(-0.79, 13.15, 42.03)
+  [PASS] SM_Hotaru_Head sockets ['eyes'] present (rotation 0, scale 1): eyes(11.78, -0.00, 14.98)
+  [PASS] SM_Hotaru_UpperArm_L sockets ['elbow'] present (rotation 0, scale 1): elbow(0.00, 0.00, -22.87)
+  [PASS] SM_Hotaru_UpperArm_R sockets ['elbow'] present (rotation 0, scale 1): elbow(0.00, 0.00, -22.87)
+  [PASS] SM_Hotaru_LowerArm_L sockets ['hand'] present (rotation 0, scale 1): hand(0.43, 2.26, -22.83)
+  [PASS] SM_Hotaru_LowerArm_R sockets ['hand'] present (rotation 0, scale 1): hand(0.43, -2.26, -22.83)
+  [PASS] SM_Hotaru_Thigh_L sockets ['knee'] present (rotation 0, scale 1): knee(0.00, 0.00, -30.52)
+  [PASS] SM_Hotaru_Thigh_R sockets ['knee'] present (rotation 0, scale 1): knee(0.00, 0.00, -30.52)
+  [PASS] SM_Hotaru_Shin_L sockets ['ankle'] present (rotation 0, scale 1): ankle(0.00, 0.00, -28.39)
+  [PASS] SM_Hotaru_Shin_R sockets ['ankle'] present (rotation 0, scale 1): ankle(0.00, 0.00, -28.39)
+  [PASS] SM_Hotaru_Foot_L sockets ['sole', 'toe'] present (rotation 0, scale 1): sole(4.10, 0.00, -7.10), toe(13.72, 0.00, -7.10)
+  [PASS] SM_Hotaru_Foot_R sockets ['sole', 'toe'] present (rotation 0, scale 1): sole(4.10, 0.00, -7.10), toe(13.72, 0.00, -7.10)
+  [PASS] soles level: left z -70.73 right z -70.73 (floor)
+  [PASS] floor-to-eyes 138.00 cm (target 138 +-3%)
+  [PASS] overall width 37.99 cm (target 38 +-3%)
+  [PASS] triangles 8520 <= 9000
+  [PASS] left sockets negative Y: hip_l.y -7.08 shoulder_l.y -13.15 (right: 7.08, 13.15)
+  [PASS] L arm hangs down: shoulder z 119.1 > elbow z 96.2 > hand z 73.4
+  [PASS] L sole socket on the bottom of the foot: sole z -7.10, foot min z -7.71 (rel. ankle)
+  [PASS] L toe socket on the floor in front of the sole (toe x 13.7, sole x 4.1)
+  [PASS] L ankle below knee (-28.4)
+  [PASS] L knee below hip (-30.5)
+  [PASS] R arm hangs down: shoulder z 119.1 > elbow z 96.2 > hand z 73.4
+  [PASS] R sole socket on the bottom of the foot: sole z -7.10, foot min z -7.71 (rel. ankle)
+  [PASS] R toe socket on the floor in front of the sole (toe x 13.7, sole x 4.1)
+  [PASS] R ankle below knee (-28.4)
+  [PASS] R knee below hip (-30.5)
+  [PASS] TaG slot on both wrists (LowerArm) and both ankles (Shin)
+  [PASS] Outline slot on every part
+  [PASS] faces +X (eyes x 11.8, toe x 13.7)
+   eye height 138.00  width 37.99  height 154.86  triangles 8520  pelvis height 70.73
+
+== Portraits (/Game/Art/UI) ==
+  [PASS] /Game/Art/UI/T_Portrait_Gantetsu loads, 256x256
+  [PASS] /Game/Art/UI/T_Portrait_Minamo loads, 256x256
+  [PASS] /Game/Art/UI/T_Portrait_Rei loads, 256x256
+  [PASS] /Game/Art/UI/T_Portrait_Hayate loads, 256x256
+  [PASS] /Game/Art/UI/T_Portrait_Tsumugi loads, 256x256
+  [PASS] /Game/Art/UI/T_Portrait_Hibiki loads, 256x256
+  [PASS] /Game/Art/UI/T_Portrait_Kokemaru loads, 256x256
+  [PASS] /Game/Art/UI/T_Portrait_Keibi loads, 256x256
+  [PASS] /Game/Art/UI/T_Portrait_Yadori loads, 256x256
+  [PASS] /Game/Art/UI/T_Portrait_Iwakura loads, 256x256
+  [PASS] /Game/Art/UI/T_Portrait_Kotetsu loads, 256x256
+  [PASS] /Game/Art/UI/T_Portrait_Mugura loads, 256x256
+  [PASS] /Game/Art/UI/T_Portrait_Amagi loads, 256x256
+  [PASS] /Game/Art/UI/T_Portrait_Ushio loads, 256x256
+  [PASS] /Game/Art/UI/T_Portrait_Tsurube loads, 256x256
+  [PASS] /Game/Art/UI/T_Portrait_Suzu loads, 256x256
+  [PASS] /Game/Art/UI/T_Portrait_Nikoichi loads, 256x256
+  [PASS] /Game/Art/UI/T_Portrait_Tsubame loads, 256x256
+  [PASS] /Game/Art/UI/T_Portrait_Kazami loads, 256x256
+  [PASS] /Game/Art/UI/T_Portrait_Hari loads, 256x256
+  [PASS] /Game/Art/UI/T_Portrait_Tomoshibi loads, 256x256
+  [PASS] /Game/Art/UI/T_Portrait_Koyomi loads, 256x256
+  [PASS] /Game/Art/UI/T_Portrait_Yatai loads, 256x256
+  [PASS] /Game/Art/UI/T_Portrait_Oboro loads, 256x256
+  [PASS] /Game/Art/UI/T_Portrait_Hibana loads, 256x256
+  [PASS] /Game/Art/UI/T_Portrait_Tsurara loads, 256x256
+  [PASS] /Game/Art/UI/T_Portrait_Kawara loads, 256x256
+  [PASS] /Game/Art/UI/T_Portrait_Aoji loads, 256x256
+  [PASS] /Game/Art/UI/T_Portrait_Ankou loads, 256x256
+  [PASS] /Game/Art/UI/T_Portrait_Hotaru loads, 256x256
 
 == Ball ==
   [PASS] SM_Ball diameter (24.00, 23.96, 24.00) (24 cm), centred (0.00, 0.00, 0.00)
@@ -423,6 +1960,10 @@ SUMMARY: 449 checks, 449 passed, 0 failed, 0 warnings  (0.5s)
   [PASS] SM_CityB_11 side B: centre (6141.55, 2663.96, -2958.00), 62 m from the court, z -4000..-1916, windows
   [PASS] SM_CityB_12 side B: centre (14985.14, 2216.96, 4834.90), 146 m from the court, z -4000..13670, windows
   [PASS] SM_Sea water plane z [-4000.0]
+
+== Sky (spawn at identity, no collision, no shadows) ==
+  [PASS] SM_SkyDome centre (549.93, -0.05, 0.00) radius (160000.12, 160000.05, 160000.00) slot ['Sky'] (M_TaGSky)
+  [PASS] SM_Clouds above the sea (z min 4277) and inside the dome (farthest vertex 142982 of 160000)
 
 == SFX (/Game/Audio/SFX) ==
   [PASS] /Game/Audio/SFX/Bounce loads
@@ -481,18 +2022,43 @@ SUMMARY: 449 checks, 449 passed, 0 failed, 0 warnings  (0.5s)
   [PASS] AmbientLoop  24.000 s looping=True, source peak -3.0 dBFS
 
 == Triangle totals (LOD0, read from UE) ==
-  Gantetsu    7920
-  Minamo      7972
-  Rei         6522
-  Hayate      6774
-  Tsumugi     7614
-  Hibiki      7786
-  heroes total 44588 (budget 8000 each)
+  Gantetsu    7060
+  Minamo      6920
+  Rei         6855
+  Hayate      7738
+  Tsumugi     6844
+  Hibiki      7242
+  Kokemaru    7416
+  Keibi       7482
+  Yadori      6874
+  Iwakura     6842
+  Kotetsu     6854
+  Mugura      7304
+  Amagi       6868
+  Ushio       6832
+  Tsurube     6880
+  Suzu        6916
+  Nikoichi    6938
+  Tsubame     6866
+  Kazami      7034
+  Hari        8293
+  Tomoshibi   6880
+  Koyomi      7006
+  Yatai       7740
+  Oboro       6860
+  Hibana      6836
+  Tsurara     6874
+  Kawara      8763
+  Aoji        7062
+  Ankou       6864
+  Hotaru      8520
+  heroes total 215463 (budget 9000 each)
   ball 3088
   SM_Hoop                    1848
   SM_Rooftop                   94
-  SM_RooftopProps            6454
+  SM_RooftopProps           14382
   SM_RooftopProps_Furnace    7492
-  city A (12 meshes) 19310, city B (12 meshes) 17326, sea 4376
-  [PASS] court + city + sea total 56900 (budget ~150k)
+  city A (12 meshes) 19310, city B (12 meshes) 17326, sea 10136
+  sky {'SM_SkyDome': 2208, 'SM_Clouds': 5640}
+  [PASS] court + city + sea total 70588 (budget ~150k)
 

@@ -59,6 +59,7 @@ void ATaGBall::BeginPlay()
 
 	if (GetNetMode() != NM_DedicatedServer)
 	{
+		BlobShadow = TaGArt::MakeBlobShadow(this);
 		constexpr int32 NumSegs = 12;
 		for (int32 i = 0; i < NumSegs; ++i)
 		{
@@ -211,8 +212,9 @@ void ATaGBall::LaunchShot(const FVector& From, const FVector& Velocity, ATaGChar
 	TaGAudio::PlayAt(this, TEXT("ShotRelease"), From, 0.6f);
 }
 
-void ATaGBall::LaunchPass(ATaGCharacter* InPasser, ATaGCharacter* Receiver, bool bThread)
+void ATaGBall::LaunchPass(ATaGCharacter* InPasser, ATaGCharacter* Receiver, uint8 Style)
 {
+	const bool bThread = Style == 1;
 	if (!InPasser || !Receiver)
 	{
 		return;
@@ -221,7 +223,7 @@ void ATaGBall::LaunchPass(ATaGCharacter* InPasser, ATaGCharacter* Receiver, bool
 	Passer = InPasser;
 	PassFrom = HoldPoint(InPasser);
 	// Lead the receiver a little
-	const float Speed = bThread ? TaG::ThreadPassSpeed : TaG::PassSpeed;
+	const float Speed = bThread ? TaG::ThreadPassSpeed : (Style == 3 ? 1150.f : TaG::PassSpeed);
 	FVector Target = Receiver->GetFeetLocation() + FVector(0.f, 0.f, Receiver->GetHeroDef().EyeHeight * 0.7f);
 	const float Dist0 = FVector::Dist(PassFrom, Target);
 	Target += Receiver->GetVelocity() * FMath::Clamp(Dist0 / Speed, 0.f, 0.6f) * 0.8f;
@@ -234,6 +236,7 @@ void ATaGBall::LaunchPass(ATaGCharacter* InPasser, ATaGCharacter* Receiver, bool
 	Net.Target = Target;
 	Net.Duration = Duration;
 	Net.bThread = bThread;
+	Net.Style = Style;
 	LastTouchTeam = InPasser->GetTeam();
 	FlightTime = 0.f;
 	Sim.Pos = PassFrom;
@@ -317,8 +320,20 @@ FVector ATaGBall::PassPosition(float T) const
 	const float S = FMath::Clamp(T / FMath::Max(Net.Duration, 0.01f), 0.f, 1.f);
 	const FVector From = FVector(Net.Pos);
 	const FVector To = FVector(Net.Target);
-	const float Arc = Net.bThread ? 8.f : FMath::Clamp(FVector::Dist2D(From, To) * 0.06f, 15.f, 70.f);
-	return FMath::Lerp(From, To, S) + FVector(0.f, 0.f, 4.f * Arc * S * (1.f - S));
+	const float Flat = FVector::Dist2D(From, To);
+	float Arc = Net.bThread ? 8.f : FMath::Clamp(Flat * 0.06f, 15.f, 70.f);
+	FVector P = FMath::Lerp(From, To, S);
+	if (Net.Style == 3)
+	{
+		Arc = FMath::Max(190.f, Flat * 0.2f); // the lob sails over everyone
+	}
+	else if (Net.Style == 2)
+	{
+		// The curve bends wide around the defenders and comes back to the receiver
+		const FVector Side = FVector::CrossProduct(FVector::UpVector, (To - From).GetSafeNormal2D());
+		P += Side * FMath::Min(150.f, Flat * 0.22f) * FMath::Sin(UE_PI * S);
+	}
+	return P + FVector(0.f, 0.f, 4.f * Arc * S * (1.f - S));
 }
 
 // ================================================================ Tick
@@ -398,6 +413,9 @@ void ATaGBall::Tick(float DeltaSeconds)
 		const float Pulse = 0.6f + 0.4f * FMath::Sin(GetWorld()->GetTimeSeconds() * (4.f + Chain * 2.f));
 		TaGArt::SetGlow(GlowMat, FLinearColor(1.f, 0.55f + 0.1f * Chain, 0.15f + 0.15f * Chain), Chain > 0 ? (1.5f + Chain * 2.5f) * Pulse : 0.f);
 	}
+	// The shadow shrinks and fades as the ball rises, which makes rebounds and lobs easier to judge in first person
+	const FVector BallAt = GetActorLocation();
+	TaGArt::PlaceBlobShadow(BlobShadow, BallAt, TaG::BallRadius * 2.2f, BallAt.Z - TaG::BallRadius, 0.42f);
 	TickTrail(DeltaSeconds);
 }
 
@@ -551,8 +569,10 @@ void ATaGBall::TickPass(float Dt, bool bAuthority)
 	ATaGCharacter* Receiver = Net.Receiver;
 	const int32 PassTeam = LastTouchTeam;
 
-	// Interceptions: a defender's hand on the lane (thread passes only on the thread itself)
-	if (FlightTime > 0.08f)
+	// Interceptions: a defender's hand on the lane (thread passes only on the thread itself).
+	// Curves and lobs cannot be cut, nor a pass inside the passer's own mist.
+	const bool bSafe = Net.Style >= 2 || ATaGFieldActor::FindAt(GetWorld(), ETaGFieldKind::Mist, PassTeam, P) != nullptr;
+	if (FlightTime > 0.08f && !bSafe)
 	{
 		for (TActorIterator<ATaGCharacter> It(GetWorld()); It; ++It)
 		{
@@ -577,14 +597,16 @@ void ATaGBall::TickPass(float Dt, bool bAuthority)
 			{
 				const FVector Hand = D->GetBlockHandLocation();
 				const FVector Body = D->GetActorLocation();
-				const float Reach = TaG::PassInterceptRadius * D->GetHeroDef().ReachMul;
+				// Koyomi's forecast doubles the reach; Hibana's sparks halve it
+				const float Boost = D->HasInterceptBoost() ? 1.7f : 1.f;
+				const float Reach = TaG::PassInterceptRadius * D->GetHeroDef().ReachMul * Boost * D->GetReachFactor();
 				const FVector CH = FMath::ClosestPointOnSegment(Hand, Prev, P);
 				const FVector CB = FMath::ClosestPointOnSegment(Body, Prev, P);
 				if (FVector::Dist(Hand, CH) < Reach)
 				{
 					// A hand in the lane: one try per defender per pass
 					PassRolled.Add(D);
-					bHit = FMath::FRand() < 0.5f * D->GetHeroDef().ReachMul;
+					bHit = FMath::FRand() < FMath::Min(0.5f * D->GetHeroDef().ReachMul + (D->HasInterceptBoost() ? 0.25f : 0.f), 0.9f);
 				}
 				else if (FVector::Dist2D(Body, CB) < D->GetHeroDef().CapsuleRadius + TaG::BallRadius && FMath::Abs(Body.Z - CB.Z) < D->GetHeroDef().CapsuleHalfHeight)
 				{
@@ -695,7 +717,7 @@ void ATaGBall::CheckBlocks()
 			continue;
 		}
 		const FVector Hand = C->GetBlockHandLocation();
-		if (FVector::Dist(Hand, Sim.Pos) < 45.f * C->GetHeroDef().ReachMul)
+		if (FVector::Dist(Hand, Sim.Pos) < 45.f * C->GetHeroDef().ReachMul * C->GetReachFactor())
 		{
 			BlockRolled.Add(C);
 			const float Chance = FMath::Clamp(0.85f * ShotBlockMult, 0.f, 1.f);

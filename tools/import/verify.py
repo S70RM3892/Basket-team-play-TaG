@@ -24,17 +24,35 @@ TAGTYPES = os.path.join(REPO, "game", "Source", "BasketTaG", "Core", "TaGTypes.h
 REPORT = os.path.join(TOOLS, "art", "verify_report.txt")
 MANIFEST = os.path.join(TOOLS, "art", "manifest.json")
 
-SLOTS = ["Body", "Accent", "Skin", "Hair", "Dark", "Metal", "Team", "TaG", "Glow", "Jelly", "Window", "Net", "Board",
-         "Court", "Paint", "Apron", "Water"]
+SLOTS = ["Body", "Accent", "Extra", "Skin", "Hair", "Dark", "Metal", "White", "Outline", "Team", "TaG", "Glow", "Jelly",
+         "Window", "Net", "Board",
+         "Court", "Paint", "Apron", "Water", "Sky"]
 HERO_PARTS = ["Pelvis", "Torso", "Head", "UpperArm_L", "UpperArm_R", "LowerArm_L", "LowerArm_R", "Thigh_L", "Thigh_R",
-              "Shin_L", "Shin_R"]
+              "Shin_L", "Shin_R", "Foot_L", "Foot_R"]
 PART_SOCKETS = {"Pelvis": ["spine", "hip_l", "hip_r"], "Torso": ["neck", "shoulder_l", "shoulder_r"], "Head": ["eyes"],
                 "UpperArm_L": ["elbow"], "UpperArm_R": ["elbow"], "LowerArm_L": ["hand"], "LowerArm_R": ["hand"],
-                "Thigh_L": ["knee"], "Thigh_R": ["knee"], "Shin_L": ["sole"], "Shin_R": ["sole"]}
+                "Thigh_L": ["knee"], "Thigh_R": ["knee"], "Shin_L": ["ankle"], "Shin_R": ["ankle"],
+                "Foot_L": ["sole", "toe"], "Foot_R": ["sole", "toe"]}
+HERO_TRI_BUDGET = 9000
 SFX_NAMES = ["Bounce", "Swish", "Rim", "Board", "ShotRelease", "Pass", "Catch", "Tackle", "Block", "Steal", "ReadWin",
              "ReadLose", "Whistle", "Buzzer", "Score", "Drive", "Dodge", "ContestHum", "TackleCue", "Step", "Down",
              "Revive", "ArtCue", "UIMove", "UIConfirm", "CityPowerUp", "AmbientLoop"]
-RUNTIME_SLOTS = ["Team", "TaG", "Glow", "Window"]
+RUNTIME_SLOTS = ["Team", "TaG", "Glow", "Window", "Outline"]
+SKY_RADIUS = 160000.0
+SKY_CENTRE = (550.0, 0.0, 0.0)
+# toon material contract (import_all.py): name -> (blend mode, vector params, {scalar: default})
+MATERIALS = {
+    "M_TaGBase": ("BLEND_OPAQUE", ["Color", "Emissive"], {"EmissiveStrength": 0.0, "Metallic": 0.0, "Roughness": 0.6}),
+    "M_TaGTranslucent": ("BLEND_TRANSLUCENT", ["Color", "Emissive"],
+                         {"EmissiveStrength": 0.0, "Metallic": 0.0, "Opacity": 0.5, "Roughness": 0.6}),
+    "M_TaGWater": ("BLEND_OPAQUE", ["Color"], {"Roughness": 0.06}),
+    "M_TaGOutline": ("BLEND_OPAQUE", ["Color"], {}),
+    "M_TaGSky": ("BLEND_OPAQUE", [], {}),
+    "M_TaGParticle": ("BLEND_ADDITIVE", [], {"Falloff": 1.6, "Intensity": 2.0}),
+    "M_TaGParticleAlpha": ("BLEND_TRANSLUCENT", [], {"Falloff": 0.8, "Intensity": 1.0}),
+}
+MPC_VECTORS = ["Ambient", "RimColor", "ShadeColor", "SkyGround", "SkyHorizon", "SkyZenith", "SunColor", "SunDir"]
+MPC_SCALARS = ["BandOffset", "BandSharpness", "RimPower", "RimStrength"]
 
 lines = []
 stats = {"pass": 0, "fail": 0, "warn": 0}
@@ -76,13 +94,17 @@ def ename(v):
 def mi_params(mi):
     mel = unreal.MaterialEditingLibrary
     out = {"parent": mi.get_editor_property("parent").get_path_name().split(".")[0]}
-    for n in (("Color",) if out["parent"].endswith("M_TaGWater") else ("Color", "Emissive")):
+    base = out["parent"].rsplit("/", 1)[-1]
+    if base in ("M_TaGSky",):
+        return out
+    for n in (("Color",) if base in ("M_TaGWater", "M_TaGOutline") else ("Color", "Emissive")):
         try:
             c = mel.get_material_instance_vector_parameter_value(mi, n)
             out[n] = [round(c.r, 4), round(c.g, 4), round(c.b, 4)]
         except Exception:
             pass
-    names = ["Roughness"] if out["parent"].endswith("M_TaGWater") else ["Roughness", "Metallic", "EmissiveStrength"]
+    names = (["Roughness"] if base == "M_TaGWater" else [] if base == "M_TaGOutline"
+             else ["Roughness", "Metallic", "EmissiveStrength"])
     if out["parent"].endswith("M_TaGTranslucent"):
         names.append("Opacity")
     for n in names:
@@ -160,9 +182,9 @@ def main():
     out("")
 
     # ------------------------------------------------------------------------------------------- base materials
-    out("== Base materials (/Game/Art/Materials) ==")
+    out("== Toon materials (/Game/Art/Materials) ==")
     mel = unreal.MaterialEditingLibrary
-    for name, kind in (("M_TaGBase", "opaque"), ("M_TaGTranslucent", "translucent"), ("M_TaGWater", "water")):
+    for name, (blend, want_v, want_s) in MATERIALS.items():
         path = "/Game/Art/Materials/" + name
         m = unreal.load_asset(path)
         if not check(m is not None, "%s loads" % path):
@@ -170,31 +192,31 @@ def main():
         sc = sorted(str(x) for x in mel.get_scalar_parameter_names(m))
         ve = sorted(str(x) for x in mel.get_vector_parameter_names(m))
         info = {"path": path, "blend_mode": ename(m.get_editor_property("blend_mode")),
-                "scalar_parameters": {n: mel.get_material_default_scalar_parameter_value(m, n) for n in sc},
+                "shading_model": ename(m.get_editor_property("shading_model")),
+                "scalar_parameters": {n: round(mel.get_material_default_scalar_parameter_value(m, n), 4) for n in sc},
                 "vector_parameters": {n: [round(c, 4) for c in (lambda c: (c.r, c.g, c.b))(
                     mel.get_material_default_vector_parameter_value(m, n))] for n in ve}}
-        if kind == "water":
-            check(sc == ["Roughness"] and ve == ["Color"], "%s parameters Color, Roughness (got %s %s)" % (name, ve, sc))
-        else:
-            want_s = ["EmissiveStrength", "Metallic", "Roughness"] + (["Opacity"] if kind == "translucent" else [])
-            check(sorted(want_s) == sc and ve == ["Color", "Emissive"],
-                  "%s parameters Color, Emissive, EmissiveStrength, Roughness, Metallic%s (got %s %s)"
-                  % (name, ", Opacity" if kind == "translucent" else "", ve, sc))
-            d = info["scalar_parameters"]
-            check(abs(d.get("Roughness", -1) - 0.6) < 1e-4 and abs(d.get("Metallic", -1)) < 1e-6 and
-                  abs(d.get("EmissiveStrength", -1)) < 1e-6,
-                  "%s defaults Roughness 0.6, Metallic 0, EmissiveStrength 0" % name)
-            if kind == "translucent":
-                check(abs(d.get("Opacity", -1) - 0.5) < 1e-4, "%s Opacity default 0.5" % name)
-                lm = m.get_editor_property("translucency_lighting_mode")
-                info["translucency_lighting_mode"] = ename(lm)
-                check(m.get_editor_property("blend_mode") == unreal.BlendMode.BLEND_TRANSLUCENT and
-                      lm == unreal.TranslucencyLightingMode.TLM_SURFACE,
-                      "%s is translucent with lighting mode Surface Translucency Volume (Lumen)" % name)
-            else:
-                check(m.get_editor_property("blend_mode") == unreal.BlendMode.BLEND_OPAQUE, "%s is opaque" % name)
+        check(ve == sorted(want_v) and sc == sorted(want_s),
+              "%s parameters vectors %s scalars %s (got %s %s)" % (name, sorted(want_v), sorted(want_s), ve, sc))
+        d = info["scalar_parameters"]
+        check(all(abs(d.get(k, -99) - v) < 1e-3 for k, v in want_s.items()),
+              "%s scalar defaults %s (got %s)" % (name, want_s, d))
+        check(info["blend_mode"] == blend and info["shading_model"] == "MSM_UNLIT",
+              "%s %s, unlit (toon lighting from MPC_TaG) (got %s %s)" % (name, blend, info["blend_mode"],
+                                                                        info["shading_model"]))
         manifest["materials"][name] = info
         manifest["all_assets"].append(path)
+    mpc = unreal.load_asset("/Game/Art/Materials/MPC_TaG")
+    if check(mpc is not None, "/Game/Art/Materials/MPC_TaG loads"):
+        vp = {str(p.get_editor_property("parameter_name")): [round(c, 4) for c in (lambda c: (c.r, c.g, c.b))(
+            p.get_editor_property("default_value"))] for p in mpc.get_editor_property("vector_parameters")}
+        sp = {str(p.get_editor_property("parameter_name")): round(p.get_editor_property("default_value"), 4)
+              for p in mpc.get_editor_property("scalar_parameters")}
+        check(sorted(vp) == MPC_VECTORS and sorted(sp) == MPC_SCALARS,
+              "MPC_TaG vectors %s scalars %s" % (sorted(vp), sorted(sp)))
+        manifest["materials"]["MPC_TaG"] = {"path": "/Game/Art/Materials/MPC_TaG", "vector_parameters": vp,
+                                            "scalar_parameters": sp}
+        manifest["all_assets"].append("/Game/Art/Materials/MPC_TaG")
     out("")
 
     # ------------------------------------------------------------------------------------------- every mesh
@@ -248,7 +270,7 @@ def main():
                   "SM_%s_%s sockets %s present (rotation 0, scale 1): %s" %
                   (hid, pn, PART_SOCKETS[pn], ", ".join("%s%s" % (k, fmt(v3(s.relative_location))) for k, s in ss.items())))
             socks[pn] = {k: v3(s.relative_location) for k, s in ss.items()}
-        if len(parts) != 11:
+        if len(parts) != len(HERO_PARTS):
             continue
         S = socks
         # rest chain, pelvis at the origin first
@@ -260,8 +282,9 @@ def main():
             o["LowerArm_" + sd] = add(o["UpperArm_" + sd], S["UpperArm_" + sd]["elbow"])
             o["Thigh_" + sd] = add(o["Pelvis"], S["Pelvis"]["hip_" + s])
             o["Shin_" + sd] = add(o["Thigh_" + sd], S["Thigh_" + sd]["knee"])
-        sole_l = add(o["Shin_L"], S["Shin_L"]["sole"])
-        sole_r = add(o["Shin_R"], S["Shin_R"]["sole"])
+            o["Foot_" + sd] = add(o["Shin_" + sd], S["Shin_" + sd]["ankle"])
+        sole_l = add(o["Foot_L"], S["Foot_L"]["sole"])
+        sole_r = add(o["Foot_R"], S["Foot_R"]["sole"])
         floor = 0.5 * (sole_l[2] + sole_r[2])
         o = {k: [v[0], v[1], v[2] - floor] for k, v in o.items()}       # put the soles on z = 0
         eyes = add(o["Head"], S["Head"]["eyes"])
@@ -279,11 +302,11 @@ def main():
         width = hi[1] - lo[1]
         check(abs(sole_l[2] - sole_r[2]) < 0.01 and abs(sole_l[2] - floor) < 0.01,
               "soles level: left z %.2f right z %.2f (floor)" % (sole_l[2], sole_r[2]))
-        check(abs(eye_h - hexp["target_eye_height"]) <= 5.0,
-              "floor-to-eyes %.2f cm (target %.0f +-5)" % (eye_h, hexp["target_eye_height"]))
-        check(abs(width - hexp["target_width"]) <= 5.0,
-              "overall width %.2f cm (target %.0f, +-5 tolerance)" % (width, hexp["target_width"]), warn_only=True)
-        check(tris <= 8000, "triangles %d <= 8000" % tris)
+        check(abs(eye_h - hexp["target_eye_height"]) <= 0.03 * hexp["target_eye_height"],
+              "floor-to-eyes %.2f cm (target %.0f +-3%%)" % (eye_h, hexp["target_eye_height"]))
+        check(abs(width - hexp["target_width"]) <= 0.03 * hexp["target_width"],
+              "overall width %.2f cm (target %.0f +-3%%)" % (width, hexp["target_width"]))
+        check(tris <= HERO_TRI_BUDGET, "triangles %d <= %d" % (tris, HERO_TRI_BUDGET))
         check(S["Pelvis"]["hip_l"][1] < 0 and S["Pelvis"]["hip_r"][1] > 0 and S["Torso"]["shoulder_l"][1] < 0 and
               S["Torso"]["shoulder_r"][1] > 0,
               "left sockets negative Y: hip_l.y %.2f shoulder_l.y %.2f (right: %.2f, %.2f)" %
@@ -293,17 +316,24 @@ def main():
                   hands[sd][2] < o["LowerArm_" + sd][2] < o["UpperArm_" + sd][2],
                   "%s arm hangs down: shoulder z %.1f > elbow z %.1f > hand z %.1f" %
                   (sd, o["UpperArm_" + sd][2], o["LowerArm_" + sd][2], hands[sd][2]))
-            shin_min = parts["Shin_" + sd].get_bounding_box().min.z
-            check(abs(shin_min - S["Shin_" + sd]["sole"][2]) < 0.5,
-                  "%s sole socket on the bottom of the foot: sole z %.2f, foot min z %.2f (rel. knee)" %
-                  (sd, S["Shin_" + sd]["sole"][2], shin_min))
+            foot_min = parts["Foot_" + sd].get_bounding_box().min.z
+            outline = 1.0   # the outline hull may reach a little below the sole
+            check(-outline - 0.1 < foot_min - S["Foot_" + sd]["sole"][2] < 0.5,
+                  "%s sole socket on the bottom of the foot: sole z %.2f, foot min z %.2f (rel. ankle)" %
+                  (sd, S["Foot_" + sd]["sole"][2], foot_min))
+            check(abs(S["Foot_" + sd]["toe"][2] - S["Foot_" + sd]["sole"][2]) < 0.01 and
+                  S["Foot_" + sd]["toe"][0] > S["Foot_" + sd]["sole"][0],
+                  "%s toe socket on the floor in front of the sole (toe x %.1f, sole x %.1f)" %
+                  (sd, S["Foot_" + sd]["toe"][0], S["Foot_" + sd]["sole"][0]))
+            check(S["Shin_" + sd]["ankle"][2] < 0, "%s ankle below knee (%.1f)" % (sd, S["Shin_" + sd]["ankle"][2]))
             check(S["Thigh_" + sd]["knee"][2] < 0, "%s knee below hip (%.1f)" % (sd, S["Thigh_" + sd]["knee"][2]))
-        tag_ok = any("TaG" in mesh_info(sm)["slots"] for sm in parts.values())
-        team_ok = any("Team" in mesh_info(sm)["slots"] for sm in parts.values())
-        check(tag_ok and team_ok, "uses slots TaG and Team")
+        tag_ok = all("TaG" in mesh_info(parts[pn])["slots"] for pn in ("LowerArm_L", "LowerArm_R", "Shin_L", "Shin_R"))
+        out_ok = all("Outline" in mesh_info(sm)["slots"] for sm in parts.values())
+        check(tag_ok, "TaG slot on both wrists (LowerArm) and both ankles (Shin)")
+        check(out_ok, "Outline slot on every part")
         # forward check: the eyes / toes point to +X
-        check(S["Head"]["eyes"][0] > 0 and S["Shin_L"]["sole"][0] > 0, "faces +X (eyes x %.1f, sole x %.1f)" %
-              (S["Head"]["eyes"][0], S["Shin_L"]["sole"][0]))
+        check(S["Head"]["eyes"][0] > 0 and S["Foot_L"]["toe"][0] > 0, "faces +X (eyes x %.1f, toe x %.1f)" %
+              (S["Head"]["eyes"][0], S["Foot_L"]["toe"][0]))
         hm = {"class": hexp["class"], "target_eye_height": hexp["target_eye_height"], "eye_height": round(eye_h, 2),
               "target_width": hexp["target_width"], "width": round(width, 2), "height": round(hi[2], 2),
               "depth": round(hi[0] - lo[0], 2), "triangles": tris, "pelvis_height": round(o["Pelvis"][2], 2),
@@ -321,6 +351,18 @@ def main():
         manifest["heroes"][hid] = hm
         out("   eye height %.2f  width %.2f  height %.2f  triangles %d  pelvis height %.2f" %
             (eye_h, width, hi[2], tris, o["Pelvis"][2]))
+    out("")
+    out("== Portraits (/Game/Art/UI) ==")
+    for hid in doc["heroes"]:
+        path = "/Game/Art/UI/T_Portrait_" + hid
+        tx = unreal.load_asset(path)
+        ok = tx is not None and isinstance(tx, unreal.Texture2D)
+        size = (tx.blueprint_get_size_x(), tx.blueprint_get_size_y()) if ok else (0, 0)
+        check(ok and size == (256, 256), "%s loads, %dx%d" % (path, size[0], size[1]))
+        if ok and hid in manifest["heroes"]:
+            manifest["heroes"][hid]["portrait"] = path
+        if ok:
+            manifest["all_assets"].append(path)
     out("")
 
     # ------------------------------------------------------------------------------------------- ball
@@ -447,7 +489,32 @@ def main():
         mi = mesh_info(sm)
         check(wz == {-4000.0}, "SM_Sea water plane z %s" % sorted(wz))
         manifest["sea"] = dict(mi, water_z=-4000.0, boats=entries["SM_Sea"]["meta"]["boats"],
-                               piers=entries["SM_Sea"]["meta"]["piers"])
+                               piers=entries["SM_Sea"]["meta"]["piers"],
+                               lanterns=entries["SM_Sea"]["meta"].get("lanterns", 0))
+    out("")
+
+    # ------------------------------------------------------------------------------------------- sky
+    out("== Sky (spawn at identity, no collision, no shadows) ==")
+    manifest["sky"] = {}
+    sm = meshes.get("SM_SkyDome")
+    if sm:
+        mi = mesh_info(sm)
+        c = [(mi["bounds_min"][i] + mi["bounds_max"][i]) / 2 for i in range(3)]
+        r = [(mi["bounds_max"][i] - mi["bounds_min"][i]) / 2 for i in range(3)]
+        check(all(abs(c[i] - SKY_CENTRE[i]) < 0.01 * SKY_RADIUS for i in range(3)) and
+              all(abs(x - SKY_RADIUS) < 0.01 * SKY_RADIUS for x in r) and mi["slots"] == ["Sky"],
+              "SM_SkyDome centre %s radius %s slot %s (M_TaGSky)" % (fmt(c), fmt(r), mi["slots"]))
+        manifest["sky"]["SM_SkyDome"] = dict(mi, radius=SKY_RADIUS, centre=list(SKY_CENTRE))
+    sm = meshes.get("SM_Clouds")
+    if sm:
+        mi = mesh_info(sm)
+        pos, ng, ns = slot_vertex_sets(sm)
+        reach = max(math.sqrt((p.x - SKY_CENTRE[0]) ** 2 + (p.y - SKY_CENTRE[1]) ** 2 + (p.z - SKY_CENTRE[2]) ** 2)
+                    for ps in pos.values() for p in ps)
+        check(mi["bounds_min"][2] > -4000.0 and reach < 0.98 * SKY_RADIUS,
+              "SM_Clouds above the sea (z min %.0f) and inside the dome (farthest vertex %.0f of %.0f)" %
+              (mi["bounds_min"][2], reach, SKY_RADIUS))
+        manifest["sky"]["SM_Clouds"] = dict(mi, **entries["SM_Clouds"].get("meta", {}))
     out("")
 
     # ------------------------------------------------------------------------------------------- sounds
@@ -479,14 +546,25 @@ def main():
         "Hero parts rotate rigidly around their pivots; every socket has zero rotation and unit scale.",
         "Rest pose: pelvis pivot at pelvis_height above the floor; chain Pelvis.spine -> Torso, Torso.neck -> Head, "
         "Torso.shoulder_l/r -> UpperArm_L/R, UpperArm.elbow -> LowerArm, Pelvis.hip_l/r -> Thigh_L/R, "
-        "Thigh.knee -> Shin. Shin.sole lies on the floor plane.",
+        "Thigh.knee -> Shin, Shin.ankle -> Foot_L/R. Foot pivot = ankle; Foot.sole (sole centre) and Foot.toe "
+        "(front tip) lie on the floor plane in rest pose (sole flat on z = 0).",
         "LowerArm hand socket = palm surface centre; palms face the body midline in rest pose "
         "(left palm normal +Y, right palm normal -Y) so arms raised forward hold the ball between the palms.",
         "Head eyes socket = point between the eyes (first-person camera).",
         "Runtime-overridden slots: Team (Color), TaG (Emissive/EmissiveStrength), Glow (Emissive/EmissiveStrength), "
-        "Window (EmissiveStrength; default 0 = lights off).",
-        "M_TaGBase EmissiveColor = Emissive * EmissiveStrength * VertexColor.R. Only window quads carry vertex "
-        "colours (R 0.15..1.0, per-window variation); every other mesh reads 1.0.",
+        "Window (EmissiveStrength; default 0 = lights off), Outline (Color: team tint of the inverted-hull outline).",
+        "All materials are unlit toon materials lit from MPC_TaG (SunDir, SunColor, ShadeColor, RimColor, Ambient, "
+        "BandSharpness, BandOffset, RimStrength, RimPower; sky: SkyZenith, SkyHorizon, SkyGround). Use manual "
+        "exposure (EV100 0 / exposure compensation so an unlit 1.0 shows as 1.0); dynamic shadows are not received.",
+        "M_TaGBase emissive = Color*(lerp(ShadeColor, SunColor, band)+Ambient) + rim + Emissive * EmissiveStrength * "
+        "VertexColor.R. Only window quads carry vertex colours (R 0.15..1.0, per-window variation); every other mesh "
+        "reads 1.0.",
+        "Every hero part has an Outline slot (inverted hull, M_TaGOutline, faces point inward): keep it in the same "
+        "mesh component; it renders back faces only via its reversed winding.",
+        "M_TaGParticle (additive) / M_TaGParticleAlpha (translucent) read PerInstanceCustomData 0..2 = RGB, 3 = alpha: "
+        "set NumCustomDataFloats = 4 on the instanced static mesh component.",
+        "SM_SkyDome (radius 160000 cm, centre (550, 0, 0)) and SM_Clouds are authored in court coordinates: spawn at "
+        "identity, no collision, cast shadows off.",
         "Rim: torus with tube centre-line radius RimRadius (22.5) and tube radius RimTube (1.0), exactly the "
         "torus TaGBallSim collides against; inner edge radius is therefore 21.5.",
         "Court/city meshes are authored in court coordinates: spawn them at the identity transform.",
@@ -500,18 +578,20 @@ def main():
            "court": {k: v["triangles"] for k, v in manifest["court"].items()},
            "city_A": sum(v["triangles"] for v in manifest["city"]["clusters"].values() if v["side"] == "A"),
            "city_B": sum(v["triangles"] for v in manifest["city"]["clusters"].values() if v["side"] == "B"),
-           "sea": manifest["sea"].get("triangles", 0)}
+           "sea": manifest["sea"].get("triangles", 0),
+           "sky": {k: v["triangles"] for k, v in manifest["sky"].items()}}
     tri["court_city_total"] = sum(tri["court"].values()) + tri["city_A"] + tri["city_B"] + tri["sea"]
     tri["heroes_total"] = sum(tri["heroes"].values())
     manifest["triangles"] = tri
     out("== Triangle totals (LOD0, read from UE) ==")
     for h, n in tri["heroes"].items():
         out("  %-9s %6d" % (h, n))
-    out("  heroes total %d (budget 8000 each)" % tri["heroes_total"])
+    out("  heroes total %d (budget %d each)" % (tri["heroes_total"], HERO_TRI_BUDGET))
     out("  ball %d" % tri["ball"])
     for k, n in tri["court"].items():
         out("  %-24s %6d" % (k, n))
     out("  city A (12 meshes) %d, city B (12 meshes) %d, sea %d" % (tri["city_A"], tri["city_B"], tri["sea"]))
+    out("  sky %s" % tri["sky"])
     check(tri["court_city_total"] <= 150000, "court + city + sea total %d (budget ~150k)" % tri["court_city_total"])
     out("")
     hdr = ["SUMMARY: %d checks, %d passed, %d failed, %d warnings  (%.1fs)" %

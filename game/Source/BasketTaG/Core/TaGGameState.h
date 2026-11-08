@@ -116,6 +116,10 @@ public:
 	UFUNCTION(NetMulticast, Reliable)
 	void MulticastBasket(int32 Team, int32 Points);
 
+	/** Small world effects for events the server sees: 1 perfect release, 2 block, 3 steal. */
+	UFUNCTION(NetMulticast, Unreliable)
+	void MulticastWorldFx(uint8 Kind, FVector_NetQuantize At, int32 Team);
+
 	const TArray<FTaGPopup>& GetPopups() const { return Popups; }
 	const FTaGBanner& GetBanner() const { return Banner; }
 	float GetFlash() const { return FlashTime; }

@@ -1,5 +1,6 @@
 #include "Core/TaGGameState.h"
 #include "Core/TaGAudio.h"
+#include "Core/TaGFx.h"
 #include "Core/TaGPlayerState.h"
 #include "Core/TaGStage.h"
 #include "Core/TaGTutorial.h"
@@ -145,6 +146,14 @@ void ATaGGameState::MulticastReadWin_Implementation(int32 InWinnerTeam, ATaGChar
 	FlashTime = 0.25f;
 	FlashColor = bGood ? FLinearColor(0.3f, 1.f, 0.9f, 0.35f) : FLinearColor(1.f, 0.25f, 0.15f, 0.3f);
 	TaGAudio::Play2D(this, bGood ? TEXT("ReadWin") : TEXT("ReadLose"), 0.9f);
+	if (Winner)
+	{
+		TaGFx::ReadWin(this, Winner->GetActorLocation(), TeamColorFor(InWinnerTeam));
+	}
+	if (Loser)
+	{
+		TaGFx::Impact(this, Loser->GetActorLocation(), TeamColorFor(1 - InWinnerTeam), 0.8f);
+	}
 	// The two players in the read feel it: a short tap for the winner, a heavy hit for the one who was read.
 	if (ATaGPlayerController* PC = LocalTaGPC(GetWorld()))
 	{
@@ -163,6 +172,38 @@ void ATaGGameState::MulticastReadWin_Implementation(int32 InWinnerTeam, ATaGChar
 void ATaGGameState::MulticastSfx_Implementation(FName Sound, FVector_NetQuantize Location, float Volume)
 {
 	TaGAudio::PlayAt(this, Sound, Location, Volume);
+	if (GetNetMode() == NM_DedicatedServer)
+	{
+		return;
+	}
+	if (Sound == TEXT("Tackle"))
+	{
+		TaGFx::Impact(this, FVector(Location), FLinearColor(1.f, 0.6f, 0.25f), 1.f);
+	}
+	else if (Sound == TEXT("Steal"))
+	{
+		TaGFx::Sparkle(this, FVector(Location), FLinearColor(0.6f, 1.f, 0.9f), 16);
+	}
+}
+
+void ATaGGameState::MulticastWorldFx_Implementation(uint8 Kind, FVector_NetQuantize At, int32 Team)
+{
+	const FLinearColor C = TeamColorFor(Team);
+	switch (Kind)
+	{
+	case 1: // perfect release: a golden flash from the hands
+		TaGFx::Sparkle(this, FVector(At), TaG::GoldColor(), 22);
+		TaGFx::Ring(this, FVector(At), TaG::GoldColor(), 110.f, 0.35f, 18, 8.f);
+		break;
+	case 2: // block
+		TaGFx::Impact(this, FVector(At), C, 0.9f);
+		break;
+	case 3: // steal / interception
+		TaGFx::Sparkle(this, FVector(At), C, 18);
+		break;
+	default:
+		break;
+	}
 }
 
 void ATaGGameState::MulticastBasket_Implementation(int32 Team, int32 Points)
@@ -171,6 +212,9 @@ void ATaGGameState::MulticastBasket_Implementation(int32 Team, int32 Points)
 	{
 		Stage->OnBasket(Team, GetScore(Team));
 	}
+	// The goal furnace takes the charge: sparks through the net and fireworks over the hoop
+	TaGFx::Burst(this, TaG::RimCenter() - FVector(0.f, 0.f, 20.f), TaG::GoldColor(), 30, 380.f, 0.7f, 9.f, 600.f, ETaGFxShape::Spark);
+	TaGFx::Fireworks(this, TaG::RimCenter() + FVector(-60.f, 0.f, 120.f), TeamColorFor(Team));
 	if (ATaGPlayerController* PC = LocalTaGPC(GetWorld()))
 	{
 		if (PC->GetPawn() && Team == GetLocalTeam())

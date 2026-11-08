@@ -10,6 +10,30 @@
 
 namespace
 {
+	bool ResyncWorth(const ATaGCharacter* Me)
+	{
+		const ATaGCharacter* Near = nullptr;
+		float NearD = 1000.f; // the same 10 m as the art (ATaGCharacter::ExecuteArt, Resync)
+		for (TActorIterator<ATaGCharacter> It(Me->GetWorld()); It; ++It)
+		{
+			if (*It == Me || It->GetTeam() != Me->GetTeam())
+			{
+				continue;
+			}
+			if (It->IsDown())
+			{
+				return true;
+			}
+			const float D = FVector::Dist2D(It->GetActorLocation(), Me->GetActorLocation());
+			if (D < NearD)
+			{
+				NearD = D;
+				Near = *It;
+			}
+		}
+		return Near && Near->GetCooldownLeft(ETaGSlot::Art1) > 4.f && Near->GetCooldownLeft(ETaGSlot::Art2) > 4.f;
+	}
+
 	const TCHAR* HandLabel(uint8 H)
 	{
 		switch (H)
@@ -151,6 +175,40 @@ ATaGBotController::EHand ATaGBotController::Pick(const TMap<EHand, float>& Weigh
 		}
 	}
 	return EHand::Wait;
+}
+
+bool ATaGBotController::TryArts(ATaGCharacter* Me, ETaGArtAI Situation, float RatePerSec, float Dt)
+{
+	const FTaGHeroDef& H = Me->GetHeroDef();
+	for (int32 i = 1; i <= 2; ++i)
+	{
+		const FTaGArtDef& A = TaGHeroes::GetArt(i == 1 ? H.Art1 : H.Art2);
+		if (A.Kind == ETaGArtKind::Custom || A.AI != Situation)
+		{
+			continue;
+		}
+		// Support arts wait until they matter: heals for hurt or downed teammates
+		if (A.Fx == ETaGArtFx::Heal)
+		{
+			bool bNeed = false;
+			for (TActorIterator<ATaGCharacter> It(GetWorld()); It && !bNeed; ++It)
+			{
+				bNeed = It->GetTeam() == Me->GetTeam() && (It->IsDown() || It->GetGuard() < It->GetMaxGuard() * 0.75f)
+					&& FVector::Dist2D(It->GetActorLocation(), Me->GetActorLocation()) < A.Radius;
+			}
+			if (!bNeed)
+			{
+				continue;
+			}
+		}
+		const ETaGInput In = i == 1 ? ETaGInput::Art1 : ETaGInput::Art2;
+		if (!Me->CanUseInput(In) || FMath::FRand() > RatePerSec * Dt)
+		{
+			continue;
+		}
+		return Press(Me, In);
+	}
+	return false;
 }
 
 bool ATaGBotController::UseArtIf(ATaGCharacter* Me, int32 Index, bool bCondition)
@@ -590,6 +648,25 @@ void ATaGBotController::Offense(ATaGCharacter* Me, ATaGBall* Ball, float Dt)
 		ReactedTo = 255;
 	}
 
+	// Data-driven arts: make room when crowded, slip a tackle that is coming
+	uint8 OppTell = 0;
+	const bool bTackleComing = Opp && (Opp->GetAction() == ETaGAction::TackleStart || (Opp->IsPretelling(OppTell) && OppTell == 1));
+	if (bTackleComing && DOpp < 280.f && TryArts(Me, ETaGArtAI::OffenseEvade, 1000.f, Dt))
+	{
+		return;
+	}
+	if (DOpp < 220.f && TryArts(Me, ETaGArtAI::OffenseEvade, 0.3f, Dt))
+	{
+		return;
+	}
+	if (DOpp < 200.f && TryArts(Me, ETaGArtAI::OffenseSpace, 0.9f, Dt))
+	{
+		return;
+	}
+	if (!bBetween && Nd > 3.5f && Nd < 9.f && TryArts(Me, ETaGArtAI::OffenseDrive, 0.6f, Dt))
+	{
+		return;
+	}
 	if (GM->GetShotClockLeft() < 2.f || ToRim.Size() < 150.f)
 	{
 		PlanShot(Me, Nd, DOpp);
@@ -643,10 +720,16 @@ void ATaGBotController::Offense(ATaGCharacter* Me, ATaGBall* Ball, float Dt)
 	switch (Pick(W))
 	{
 	case EHand::Drive:
-		Do(Me, EHand::Drive);
+		if (FMath::FRand() > 0.5f || !TryArts(Me, ETaGArtAI::OffenseDrive, 1000.f, Dt))
+		{
+			Do(Me, EHand::Drive);
+		}
 		break;
 	case EHand::Dodge:
-		Do(Me, EHand::Dodge);
+		if (FMath::FRand() > 0.5f || !TryArts(Me, ETaGArtAI::OffenseEvade, 1000.f, Dt))
+		{
+			Do(Me, EHand::Dodge);
+		}
 		break;
 	case EHand::Shoot:
 		PlanShot(Me, Nd, DOpp);
@@ -716,7 +799,12 @@ bool ATaGBotController::TryPass(ATaGCharacter* Me, bool bPressured)
 	}
 	Face(Me, Best->GetActorLocation(), 1.f, 1000.f);
 	// Tsumugi threads risky lanes
-	if (bLaneRisky && Me->GetHeroDef().Art1 == ETaGArt::ThreadPass && Press(Me, ETaGInput::Art1))
+	if ((bLaneRisky || FMath::FRand() < 0.35f) && Me->GetHeroDef().Art1 == ETaGArt::ThreadPass && Me->CanUseInput(ETaGInput::Art1) && Press(Me, ETaGInput::Art1))
+	{
+		return true;
+	}
+	// Curves and lobs go over a risky lane
+	if ((bLaneRisky || FMath::FRand() < 0.3f) && TryArts(Me, ETaGArtAI::OffensePass, 1000.f, 1.f))
 	{
 		return true;
 	}
@@ -768,6 +856,7 @@ void ATaGBotController::PlanShot(ATaGCharacter* Me, float Nd, float DefDist)
 
 void ATaGBotController::StartShot(ATaGCharacter* Me)
 {
+	TryArts(Me, ETaGArtAI::OffenseShoot, 1000.f, 1.f); // shot buffs go up right before the shot
 	ReleaseAt = FMath::Clamp(0.74f + FMath::FRandRange(-1.f, 1.f) * 0.22f * (1.15f - Skill), 0.35f, 1.3f);
 	Press(Me, ETaGInput::Shoot);
 }
@@ -806,6 +895,8 @@ void ATaGBotController::OffBall(ATaGCharacter* Me, ATaGCharacter* Handler, float
 	Face(Me, Handler->GetActorLocation(), Dt, 8.f);
 
 	// Arts that help without the ball
+	TryArts(Me, ETaGArtAI::OffBall, 0.35f, Dt);
+	TryArts(Me, ETaGArtAI::SupportAllies, 0.25f, Dt);
 	const bool bSettled = FVector::Dist2D(Spot, Me->GetFeetLocation()) < 80.f;
 	if (H.Art2 == ETaGArt::SpotUp)
 	{
@@ -817,12 +908,7 @@ void ATaGBotController::OffBall(ATaGCharacter* Me, ATaGCharacter* Handler, float
 	}
 	if (H.Art2 == ETaGArt::Resync)
 	{
-		bool bMateDown = false;
-		for (TActorIterator<ATaGCharacter> It(GetWorld()); It; ++It)
-		{
-			bMateDown |= It->GetTeam() == Me->GetTeam() && It->IsDown();
-		}
-		UseArtIf(Me, 2, bMateDown);
+		UseArtIf(Me, 2, ResyncWorth(Me) && FMath::FRand() < Dt * 2.f);
 	}
 	if (H.Art2 == ETaGArt::IronWall)
 	{
@@ -905,6 +991,29 @@ void ATaGBotController::DefendBall(ATaGCharacter* Me, ATaGCharacter* Hd, float D
 		}
 	}
 
+	// Data-driven arts by distance: up close, at the shot, from range, near the rim
+	if (Hd->IsChargingShot() && D < 340.f && TryArts(Me, ETaGArtAI::DefendShooter, 1000.f, Dt))
+	{
+		return;
+	}
+	if (D < 240.f && Me->GetAction() == ETaGAction::None && TryArts(Me, ETaGArtAI::DefendHandler, 0.4f + Skill, Dt))
+	{
+		return;
+	}
+	if (D > 260.f && D < 780.f && Me->GetAction() == ETaGAction::None)
+	{
+		Face(Me, Hd->GetActorLocation(), 1.f, 1000.f);
+		if (TryArts(Me, ETaGArtAI::DefendRanged, 0.5f + Skill * 0.5f, Dt))
+		{
+			return;
+		}
+	}
+	if (TaG::DistToRim(Hp) < 480.f && D < 420.f && TryArts(Me, ETaGArtAI::DefendPaint, 0.7f, Dt))
+	{
+		return;
+	}
+	TryArts(Me, ETaGArtAI::SupportAllies, 0.15f, Dt);
+
 	// Area arts near the paint
 	if (H.Art2 == ETaGArt::SlowField && TaG::DistToRim(Hp) < 450.f && D < 350.f)
 	{
@@ -969,6 +1078,16 @@ void ATaGBotController::DefendOffBall(ATaGCharacter* Me, ATaGCharacter* Man, ATa
 	}
 	Steer(Me, Spot, 30.f);
 	Face(Me, Hd->GetActorLocation(), Dt, 8.f);
+	TryArts(Me, ETaGArtAI::SupportAllies, 0.2f, Dt);
+	if (TaG::DistToRim(Hd->GetFeetLocation()) < 480.f)
+	{
+		TryArts(Me, ETaGArtAI::DefendPaint, 0.3f, Dt);
+	}
+	const float DH = FVector::Dist2D(Hd->GetActorLocation(), Me->GetActorLocation());
+	if (DH > 260.f && DH < 780.f && Me->GetAction() == ETaGAction::None)
+	{
+		TryArts(Me, ETaGArtAI::DefendRanged, 0.25f, Dt);
+	}
 
 	// Jump into the passing lane to my man now and then (handled by the ball as an interception)
 	const FTaGHeroDef& H = Me->GetHeroDef();
@@ -983,12 +1102,7 @@ void ATaGBotController::DefendOffBall(ATaGCharacter* Me, ATaGCharacter* Man, ATa
 	}
 	if (H.Art2 == ETaGArt::Resync)
 	{
-		bool bMateDown = false;
-		for (TActorIterator<ATaGCharacter> It(GetWorld()); It; ++It)
-		{
-			bMateDown |= It->GetTeam() == Me->GetTeam() && It->IsDown();
-		}
-		UseArtIf(Me, 2, bMateDown);
+		UseArtIf(Me, 2, ResyncWorth(Me) && FMath::FRand() < Dt * 2.f);
 	}
 }
 

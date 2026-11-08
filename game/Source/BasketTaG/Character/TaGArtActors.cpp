@@ -1,6 +1,7 @@
 #include "Character/TaGArtActors.h"
 #include "Character/TaGCharacter.h"
 #include "Core/TaGArtLib.h"
+#include "Core/TaGFx.h"
 #include "Core/TaGGameState.h"
 #include "Core/TaGTypes.h"
 #include "Components/BoxComponent.h"
@@ -35,11 +36,13 @@ void ATaGWallActor::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLif
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 	DOREPLIFETIME(ATaGWallActor, Team);
+	DOREPLIFETIME(ATaGWallActor, Style);
 }
 
-void ATaGWallActor::Init(int32 InTeam, float Lifetime)
+void ATaGWallActor::Init(int32 InTeam, float Lifetime, uint8 InStyle)
 {
 	Team = InTeam;
+	Style = InStyle;
 	SetLifeSpan(Lifetime);
 	OnRep_Team();
 }
@@ -48,8 +51,10 @@ void ATaGWallActor::OnRep_Team()
 {
 	const ATaGGameState* GS = GetWorld() ? GetWorld()->GetGameState<ATaGGameState>() : nullptr;
 	const FLinearColor C = GS ? GS->TeamColorFor(Team) : TaG::AllyColor();
-	Mat = TaGArt::PaintSlot(Mesh, NAME_None, FLinearColor(0.35f, 0.3f, 0.25f) * 0.6f + C * 0.25f, 3.f, true, 0.75f);
-	TaGArt::SetGlow(Mat, C, 2.5f);
+	// Each art keeps its own colour (hull wood, welded light, roof tiles, a shield); the team colour edges it.
+	const FLinearColor ArtC = Style != 0 && Style < static_cast<uint8>(ETaGArt::Count) ? TaGHeroes::GetArt(static_cast<ETaGArt>(Style)).Color : FLinearColor(0.35f, 0.3f, 0.25f);
+	Mat = TaGArt::PaintSlot(Mesh, NAME_None, ArtC * 0.6f + C * 0.25f, 3.f, true, 0.75f);
+	TaGArt::SetGlow(Mat, ArtC * 0.5f + C * 0.5f, 2.5f);
 }
 
 void ATaGWallActor::Tick(float DeltaSeconds)
@@ -135,6 +140,41 @@ void ATaGFieldActor::Init(ETaGFieldKind InKind, int32 InTeam, float InRadius, fl
 	SetLifeSpan(Lifetime);
 }
 
+const ATaGFieldActor* ATaGFieldActor::FindAt(const UWorld* World, ETaGFieldKind InKind, int32 OwnerTeam, const FVector& P)
+{
+	if (!World)
+	{
+		return nullptr;
+	}
+	for (TActorIterator<ATaGFieldActor> It(World); It; ++It)
+	{
+		if (It->Kind == InKind && (OwnerTeam < 0 || It->Team == OwnerTeam) && It->Contains(P))
+		{
+			return *It;
+		}
+	}
+	return nullptr;
+}
+
+namespace
+{
+	FLinearColor FieldColor(ETaGFieldKind K)
+	{
+		switch (K)
+		{
+		case ETaGFieldKind::Slow: return FLinearColor(0.2f, 0.6f, 1.f);
+		case ETaGFieldKind::Sonic: return FLinearColor(0.8f, 0.4f, 1.f);
+		case ETaGFieldKind::Spore: return FLinearColor(0.6f, 0.95f, 0.35f);
+		case ETaGFieldKind::Wind: return FLinearColor(0.7f, 0.92f, 1.f);
+		case ETaGFieldKind::Feast: return FLinearColor(1.f, 0.62f, 0.25f);
+		case ETaGFieldKind::Mist: return FLinearColor(0.78f, 0.72f, 0.95f);
+		case ETaGFieldKind::Ice: return FLinearColor(0.65f, 0.88f, 1.f);
+		case ETaGFieldKind::Swarm: return FLinearColor(0.88f, 1.f, 0.4f);
+		default: return FLinearColor(0.55f, 0.95f, 0.7f);
+		}
+	}
+}
+
 void ATaGFieldActor::Tick(float DeltaSeconds)
 {
 	Super::Tick(DeltaSeconds);
@@ -144,27 +184,78 @@ void ATaGFieldActor::Tick(float DeltaSeconds)
 		const FVector F = FollowTarget->GetFeetLocation();
 		SetActorLocation(FVector(F.X, F.Y, 2.f));
 	}
+	const FLinearColor KindC = FieldColor(Kind);
 	if (!Mat)
 	{
 		const ATaGGameState* GS = GetWorld()->GetGameState<ATaGGameState>();
-		const FLinearColor Base = Kind == ETaGFieldKind::Slow ? FLinearColor(0.1f, 0.45f, 0.9f) : FLinearColor(0.7f, 0.35f, 1.f);
 		const FLinearColor TeamC = GS ? GS->TeamColorFor(Team) : TaG::AllyColor();
-		Mat = TaGArt::PaintSlot(Disc, NAME_None, Base * 0.7f + TeamC * 0.3f, 2.f, true, 0.35f);
+		const float Opacity = Kind == ETaGFieldKind::Mist ? 0.5f : 0.35f;
+		Mat = TaGArt::PaintSlot(Disc, NAME_None, KindC * 0.7f + TeamC * 0.3f, 2.f, true, Opacity);
 	}
-	// Sonic pulses; the slow field ripples
-	const float Pulse = Kind == ETaGFieldKind::Sonic ? (0.85f + 0.15f * FMath::Sin(Age * 25.f)) : (0.97f + 0.03f * FMath::Sin(Age * 4.f));
-	Disc->SetWorldScale3D(FVector(Radius * 2.f * Pulse / 100.f, Radius * 2.f * Pulse / 100.f, 0.03f));
-	TaGArt::SetGlow(Mat, Kind == ETaGFieldKind::Slow ? FLinearColor(0.2f, 0.6f, 1.f) : FLinearColor(0.8f, 0.4f, 1.f), 1.5f + Pulse);
+	// Sonic and swarm pulse fast; the others ripple slowly
+	const bool bFast = Kind == ETaGFieldKind::Sonic || Kind == ETaGFieldKind::Swarm;
+	const float Pulse = bFast ? (0.85f + 0.15f * FMath::Sin(Age * 25.f)) : (0.97f + 0.03f * FMath::Sin(Age * 4.f));
+	const float Grow = FMath::Min(1.f, Age * 6.f);
+	Disc->SetWorldScale3D(FVector(Radius * 2.f * Pulse * Grow / 100.f, Radius * 2.f * Pulse * Grow / 100.f, Kind == ETaGFieldKind::Mist ? 0.6f : 0.03f));
+	TaGArt::SetGlow(Mat, KindC, 1.5f + Pulse);
+
+	// Ambient particles: spores, snow, steam, mist, wind, fireflies over the field
+	if (GetNetMode() != NM_DedicatedServer)
+	{
+		FxT -= DeltaSeconds;
+		if (FxT <= 0.f)
+		{
+			FxT = 0.05f;
+			const float A = FMath::FRandRange(0.f, 2.f * UE_PI);
+			const float R = Radius * FMath::Sqrt(FMath::FRand());
+			const FVector P = GetActorLocation() + FVector(FMath::Cos(A) * R, FMath::Sin(A) * R, 6.f);
+			switch (Kind)
+			{
+			case ETaGFieldKind::Slow: TaGFx::Burst(this, P, FLinearColor(0.35f, 0.75f, 1.f), 1, 20.f, 0.8f, 6.f, -80.f); break;
+			case ETaGFieldKind::Spore: TaGFx::Burst(this, P, FLinearColor(0.7f, 1.f, 0.4f), 1, 25.f, 1.4f, 6.f, -45.f); break;
+			case ETaGFieldKind::Wind: TaGFx::Burst(this, P + FVector(0.f, 0.f, 50.f), FLinearColor(0.95f, 1.f, 1.f, 0.8f), 1, 80.f, 0.35f, 4.f, 0.f, ETaGFxShape::Spark, FVector(-260.f, 120.f, 30.f)); break;
+			case ETaGFieldKind::Feast: TaGFx::Burst(this, P, FLinearColor(1.f, 0.65f, 0.3f), 1, 25.f, 1.1f, 6.f, -70.f); break;
+			case ETaGFieldKind::Mist: TaGFx::Burst(this, P + FVector(0.f, 0.f, 40.f), FLinearColor(0.82f, 0.78f, 0.95f, 0.3f), 1, 30.f, 1.6f, 70.f, -8.f, ETaGFxShape::Puff); break;
+			case ETaGFieldKind::Ice: TaGFx::Burst(this, P + FVector(0.f, 0.f, 120.f), FLinearColor(0.92f, 0.97f, 1.f), 1, 15.f, 1.5f, 5.f, 60.f); break;
+			case ETaGFieldKind::Swarm: TaGFx::Burst(this, P + FVector(0.f, 0.f, FMath::FRandRange(40.f, 200.f)), FLinearColor(0.9f, 1.f, 0.45f), 1, 60.f, 0.6f, 6.f, 0.f); break;
+			case ETaGFieldKind::Root: TaGFx::Burst(this, P, FLinearColor(0.55f, 0.95f, 0.65f), 1, 20.f, 1.f, 6.f, -30.f); break;
+			default: break;
+			}
+		}
+	}
 
 	if (HasAuthority())
 	{
 		for (TActorIterator<ATaGCharacter> It(GetWorld()); It; ++It)
 		{
-			if (It->GetTeam() == Team || FVector::Dist2D(It->GetActorLocation(), GetActorLocation()) > Radius)
+			if (FVector::Dist2D(It->GetActorLocation(), GetActorLocation()) > Radius)
 			{
 				continue;
 			}
-			It->ApplySlow(Kind == ETaGFieldKind::Slow ? 0.6f : 0.75f, Kind == ETaGFieldKind::Slow ? 0.6f : 0.5f, 0.25f);
+			const bool bAlly = It->GetTeam() == Team;
+			switch (Kind)
+			{
+			case ETaGFieldKind::Slow:
+				if (!bAlly) { It->ApplySlow(0.6f, 0.6f, 0.25f); }
+				break;
+			case ETaGFieldKind::Sonic:
+				if (!bAlly) { It->ApplySlow(0.75f, 0.5f, 0.25f); }
+				break;
+			case ETaGFieldKind::Ice:
+				if (!bAlly) { It->ApplySlow(0.72f, 0.75f, 0.3f); }
+				break;
+			case ETaGFieldKind::Spore:
+				if (!bAlly) { It->ApplyGuardDamage(9.f * DeltaSeconds); }
+				break;
+			case ETaGFieldKind::Wind:
+				if (bAlly) { It->AddSpeedBoost(0.25f); }
+				break;
+			case ETaGFieldKind::Feast:
+				if (bAlly) { It->ApplyArtStatus(ETaGArtFx::FieldFeast, 0.25f, 0.f); It->AddSpeedBoost(0.25f); }
+				break;
+			default:
+				break; // mist, swarm and root act through the shot and pass rules
+			}
 		}
 	}
 }

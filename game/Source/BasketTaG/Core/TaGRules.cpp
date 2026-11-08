@@ -91,9 +91,23 @@ FTaGShotEval FTaGRules::EvaluateShot(const ATaGCharacter* Shooter, float Charge,
 	{
 		Base += 0.12f; // Hayate: Scope
 	}
+	const ETaGArtFx Mod = Shooter->GetShotMod();
+	if (Shooter->IsShotDebuffed())
+	{
+		Base *= 0.65f; // Tomoshibi lit them up: dazzled
+	}
+	if (E.Distance > 500.f && ATaGFieldActor::FindAt(Shooter->GetWorld(), ETaGFieldKind::Wind, Shooter->GetTeam(), Feet))
+	{
+		Base *= 1.15f; // Kazami: a tailwind carries long shots
+	}
 
-	// Timing (Scope widens the perfect window; catch-and-shoot never punishes timing)
-	E.Timing = TimingQuality(Charge, Shooter->IsScoped() ? 1.6f : 1.f);
+	// Timing (Scope and Amagi widen the perfect window; catch-and-shoot never punishes timing)
+	const float Window = Mod == ETaGArtFx::ShotSure ? 2.2f : (Shooter->IsScoped() ? 1.6f : 1.f);
+	E.Timing = TimingQuality(Charge, Window);
+	if (Mod == ETaGArtFx::ShotSure)
+	{
+		E.Timing = FMath::Max(E.Timing, 1.f);
+	}
 	if (Shooter->IsCatchAndShoot() || Shooter->IsFreshCatch())
 	{
 		E.Timing = FMath::Max(E.Timing, 1.f); // catch and shoot: rhythm from the pass
@@ -125,7 +139,18 @@ FTaGShotEval FTaGRules::EvaluateShot(const ATaGCharacter* Shooter, float Charge,
 
 		float C = 1.f;
 		bool bThisContest = false;
-		if (Def->IsContesting() && Def->IsSonicContest() && D < 400.f)
+		const FTaGArtDef* Stance = Def->GetContestArt();
+		if (Stance && D < Stance->Range && Facing > 0.2f)
+		{
+			C = 0.22f;          // Ankou's gulp: a strong contest in front
+			bThisContest = true;
+		}
+		else if (Def->IsRootedWall() && D < Def->GetRootWallRadius())
+		{
+			C = 0.45f;          // Kokemaru rooted: every shot around him is contested
+			bThisContest = true;
+		}
+		else if (Def->IsContesting() && Def->IsSonicContest() && D < 400.f)
 		{
 			C = 0.5f;           // Hibiki's sonic wave: area contest
 			bThisContest = true;
@@ -151,6 +176,19 @@ FTaGShotEval FTaGRules::EvaluateShot(const ATaGCharacter* Shooter, float Charge,
 			// Shot types that resist closeouts (fadeaway, euro step, floater)
 			C = 1.f - (1.f - C) * St.Prox;
 		}
+		// Oboro's mist halves contests made from inside it; the high arc and the quick release resist them
+		if (C < 1.f && ATaGFieldActor::FindAt(Shooter->GetWorld(), ETaGFieldKind::Mist, Shooter->GetTeam(), DefFeet))
+		{
+			C = 1.f - (1.f - C) * 0.5f;
+		}
+		if (Mod == ETaGArtFx::ShotHigh)
+		{
+			C = 1.f - (1.f - C) * 0.5f;
+		}
+		else if (Mod == ETaGArtFx::ShotQuick)
+		{
+			C = 1.f - (1.f - C) * 0.75f;
+		}
 		if (C < Contest)
 		{
 			Contest = C;
@@ -175,7 +213,16 @@ FTaGShotEval FTaGRules::EvaluateShot(const ATaGCharacter* Shooter, float Charge,
 		}
 	}
 
+	// Hotaru's swarm around the shooter
+	if (const ATaGFieldActor* Swarm = ATaGFieldActor::FindAt(Shooter->GetWorld(), ETaGFieldKind::Swarm, 1 - Shooter->GetTeam(), Feet))
+	{
+		Contest = FMath::Min(Contest, 0.5f);
+	}
 	E.bOpen = !E.bContested && !E.bWalled && NearestDist > 230.f && NearestDist < 9000.f;
+	if (E.bOpen && Mod == ETaGArtFx::ShotShoulder)
+	{
+		Base *= 1.1f;
+	}
 	E.Contest = Contest * (bContact ? TaG::ContactShotMult : 1.f);
 	const float Zone = bZone ? 1.15f : 1.f;
 	E.Chance = FMath::Clamp(Base * E.Timing * E.Contest * Zone, 0.02f, 0.97f);

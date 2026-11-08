@@ -15,8 +15,8 @@ import bmesh
 from mathutils import Vector, Matrix
 
 # Canonical slot order (meshes list their slots in this order).
-SLOT_ORDER = ["Body", "Accent", "Skin", "Hair", "Dark", "Metal", "Team", "TaG", "Glow", "Jelly",
-              "Window", "Net", "Board", "Court", "Paint", "Apron", "Water"]
+SLOT_ORDER = ["Body", "Accent", "Extra", "Skin", "Hair", "Dark", "Metal", "White", "Team", "TaG", "Glow", "Jelly",
+              "Window", "Net", "Board", "Court", "Paint", "Apron", "Water", "Sky", "Outline"]
 
 
 def vec(v):

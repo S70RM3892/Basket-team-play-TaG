@@ -15,7 +15,7 @@ import re
 import bmesh
 from mathutils import Vector, Matrix
 from tagmesh import (Part, frame, T, R, S, box, cylinder, torus, band, lathe, tube, prism, se_points, add_box,
-                     add_cyl, add_sphere, add_band, add_torus, add_tube, add_prism, quad)
+                     add_cyl, add_sphere, add_band, add_torus, add_tube, add_prism, quad, sphere)
 
 # ---------------------------------------------------------------- numbers mirrored from TaGTypes.h (cm)
 TAG = dict(CourtDepth=1100.0, CourtHalfWidth=750.0, RimX=157.5, RimZ=305.0, RimRadius=22.5, RimTube=1.0,
@@ -343,7 +343,67 @@ def build_props():
             P.add(quad(a, b, b + Vector((0, 0, 150)), a + Vector((0, 0, 150))), "Window", False,
                   color=(rng.uniform(0.2, 1.0),) * 3 + (1.0,))
         z -= 400.0
+    fantasy_dressing(P)
     return P
+
+
+# ================================================================================================================
+# Fantasy dressing (2026-11-08): a shrine gate framing the hoop, paper-lantern strings between the light towers,
+# nobori banners along the sidelines. Everything stays outside the play box (KEEP_OUT).
+# ================================================================================================================
+def lantern(P, c, r=20.0, h=30.0):
+    x, y, z = c
+    P.add(sphere(r, 10, 6), "White", True, T(x, y, z) @ S(1, 1, h / r))
+    P.add(cylinder(5, r * 0.55, r * 0.55, 8), "Dark", True, T(x, y, z + h - 2))
+    P.add(cylinder(5, r * 0.5, r * 0.5, 8), "Dark", True, T(x, y, z - h - 3))
+
+
+def lantern_string(P, a, b, sag, spacing=150.0):
+    a, b = Vector(a), Vector(b)
+    L = (b - a).length
+    n = max(2, int(L / spacing))
+    pts = []
+    for i in range(n + 1):
+        t = i / n
+        p = a.lerp(b, t)
+        p.z -= sag * 4 * t * (1 - t)
+        pts.append(p)
+    for p0, p1 in zip(pts[:-1], pts[1:]):
+        beam(P, p0, p1, 1.6, 1.6, "Dark")
+    for p in pts[1:-1]:
+        add_cyl(P, p, p - Vector((0, 0, 18)), 0.8, 0.8, "Dark", segs=4)
+        lantern(P, (p.x, p.y, p.z - 50))
+
+
+def torii(P, x, half_w, height):
+    """Shrine gate behind the hoop (vermilion posts and beams, dark top beam with upturned ends)."""
+    for s in (1, -1):
+        add_cyl(P, (x, s * half_w, 0), (x, s * half_w, height), 32, 28, "Extra", segs=14)
+        add_cyl(P, (x, s * half_w, 0), (x, s * half_w, 45), 40, 40, "Dark", segs=14)
+    beam(P, (x, -half_w - 90, height * 0.83), (x, half_w + 90, height * 0.83), 26, 30, "Extra")
+    beam(P, (x, -half_w - 180, height + 12), (x, half_w + 180, height + 12), 40, 34, "Extra")
+    beam(P, (x, -half_w - 200, height + 44), (x, half_w + 200, height + 44), 48, 22, "Dark")
+    for s in (1, -1):
+        beam(P, (x, s * (half_w + 200), height + 44), (x, s * (half_w + 290), height + 92), 46, 20, "Dark")
+    open_box(P, (x - 14, -55, height * 0.83 + 18), (x + 14, 55, height - 6), "Dark")        # plaque (gakuzuka)
+    open_box(P, (x + 14, -38, height * 0.83 + 30), (x + 16, 38, height - 18), "Accent")    # gold face
+
+
+def nobori(P, x, y, h=430.0, slot="Extra"):
+    add_cyl(P, (x, y, 0), (x, y, h), 4, 4, "Metal", segs=6)
+    add_cyl(P, (x, y - 2, h - 12), (x, y + 62, h - 12), 2.5, 2.5, "Metal", segs=6)
+    open_box(P, (x - 1.5, y + 4, h - 300), (x + 1.5, y + 62, h - 14), slot)
+
+
+def fantasy_dressing(P):
+    torii(P, -260.0, 440.0, 700.0)
+    # lantern strings between the light towers (sides and behind the hoop), sagging between the masts
+    for (a, b) in (((-430, -1120, 960), (1530, -1120, 960)), ((-430, 1120, 960), (1530, 1120, 960)),
+                   ((-430, -1120, 960), (-430, 1120, 960))):
+        lantern_string(P, a, b, 260.0)
+    for i, x in enumerate((60.0, 360.0, 660.0, 960.0)):
+        nobori(P, x, -1000.0, slot="Extra" if i % 2 == 0 else "Accent")
+        nobori(P, x, 940.0, slot="Accent" if i % 2 == 0 else "Extra")
 
 
 # ================================================================================================================

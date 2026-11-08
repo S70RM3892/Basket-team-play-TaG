@@ -52,6 +52,8 @@ public:
 	bool IsPauseMenuOpen() const { return bPauseMenu; }
 	void TogglePauseMenu();
 	void SetUIMode(bool bUI);
+	/** Test scenes that place their own camera (no orbiting spectator view). */
+	bool bExternalView = false;
 
 	// --- Settings (menu "設定")
 	float GetLookSensitivity() const { return LookSensitivity; }

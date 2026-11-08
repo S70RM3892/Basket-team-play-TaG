@@ -9,6 +9,7 @@
 #include "Character/TaGRig.h"
 #include "Core/TaGArtLib.h"
 #include "Core/TaGAudio.h"
+#include "Core/TaGFx.h"
 #include "Core/TaGGameMode.h"
 #include "Core/TaGGameState.h"
 #include "Core/TaGPlayerState.h"
@@ -155,6 +156,22 @@ void ATaGCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLif
 	DOREPLIFETIME(ATaGCharacter, TetherPartner);
 	DOREPLIFETIME(ATaGCharacter, PretellKind);
 	DOREPLIFETIME(ATaGCharacter, PretellEnd);
+	DOREPLIFETIME(ATaGCharacter, InvulnEnd);
+	DOREPLIFETIME(ATaGCharacter, PhaseEnd);
+	DOREPLIFETIME(ATaGCharacter, RootEnd);
+	DOREPLIFETIME(ATaGCharacter, RootWallEnd);
+	DOREPLIFETIME(ATaGCharacter, RootWallRadius);
+	DOREPLIFETIME(ATaGCharacter, CounterEnd);
+	DOREPLIFETIME(ATaGCharacter, CounterKind);
+	DOREPLIFETIME(ATaGCharacter, ShotModEnd);
+	DOREPLIFETIME(ATaGCharacter, ShotMod);
+	DOREPLIFETIME(ATaGCharacter, BlindEnd);
+	DOREPLIFETIME(ATaGCharacter, ShotDebuffEnd);
+	DOREPLIFETIME(ATaGCharacter, InterceptEnd);
+	DOREPLIFETIME(ATaGCharacter, MarkEnd);
+	DOREPLIFETIME(ATaGCharacter, MarkPower);
+	DOREPLIFETIME(ATaGCharacter, RegenEnd);
+	DOREPLIFETIME(ATaGCharacter, ShieldEnd);
 }
 
 UAbilitySystemComponent* ATaGCharacter::GetAbilitySystemComponent() const
@@ -261,6 +278,9 @@ void ATaGCharacter::BuildVisuals()
 	UStaticMesh* LowerL = TaGArt::LoadMesh(Base + TEXT("LowerArm_L"));
 	UStaticMesh* LowerR = TaGArt::LoadMesh(Base + TEXT("LowerArm_R"));
 	const float S = H.EyeHeight / 175.f;
+	// A new hero brings new meshes: drop the material overrides painted for the previous one
+	FPArmL->EmptyOverrideMaterials();
+	FPArmR->EmptyOverrideMaterials();
 	if (LowerL && LowerR)
 	{
 		FPArmL->SetStaticMesh(LowerL);
@@ -285,6 +305,10 @@ void ATaGCharacter::BuildVisuals()
 
 	ContestField->SetStaticMesh(TaGArt::EngineCube());
 	ContestMat = TaGArt::PaintSlot(ContestField, NAME_None, FLinearColor(1.f, 0.2f, 0.15f), 3.f, true, 0.18f);
+	if (!BlobShadow)
+	{
+		BlobShadow = TaGArt::MakeBlobShadow(this);
+	}
 	bVisualsBuilt = true;
 }
 
@@ -583,10 +607,24 @@ float ATaGCharacter::GetDesiredMaxSpeed() const
 	if (Now < TetherEnd) { Base *= 1.2f; }
 	if (Now < SpeedBoostEnd) { Base *= 1.25f; }
 	if (Now < SlowEnd) { Base *= SlowSpeedFactor; }
+	if (Now < ShieldEnd) { Base *= 0.6f; }
+	if (Now < RootEnd && Action != ETaGAction::Down)
+	{
+		return 0.f; // rooted (bound, shelled, rooted wall)
+	}
 
 	switch (Action)
 	{
 	case ETaGAction::Drive:
+		if (ActionVariant > static_cast<uint8>(ETaGArt::Resync) && ActionVariant < static_cast<uint8>(ETaGArt::Count))
+		{
+			const FTaGArtDef& Art = TaGHeroes::GetArt(static_cast<ETaGArt>(ActionVariant));
+			if (Art.Kind == ETaGArtKind::Leap)
+			{
+				return 1200.f; // the launch carries it, no braking mid-air
+			}
+			return TaG::DriveSpeed * H.SpeedMul * ActionFactor() * Art.Power;
+		}
 		return TaG::DriveSpeed * H.SpeedMul * ActionFactor();
 	case ETaGAction::Dodge:
 		return TaG::DodgeSpeed * 1.05f * ActionFactor();
@@ -729,6 +767,11 @@ void ATaGCharacter::SetAction(ETaGAction NewAction, uint8 Variant, const FVector
 			TaGAudio::PlayAt(this, Sound, GetActorLocation(), NewAction == ETaGAction::TackleStart ? 1.f : 0.7f);
 		}
 		OnLocalActionChanged(NewAction);
+		if (NewAction == ETaGAction::Down)
+		{
+			TaGFx::Dust(this, GetFeetLocation(), 2.6f);
+			TaGFx::Burst(this, GetEyeLocation(), FLinearColor(1.f, 0.9f, 0.4f), 8, 120.f, 0.8f, 7.f, -50.f);
+		}
 	}
 }
 
@@ -792,6 +835,11 @@ void ATaGCharacter::OnRep_NetAction()
 			TaGAudio::PlayAt(this, Sound, GetActorLocation(), 0.7f);
 		}
 		OnLocalActionChanged(Action);
+		if (Action == ETaGAction::Down)
+		{
+			TaGFx::Dust(this, GetFeetLocation(), 2.6f);
+			TaGFx::Burst(this, GetEyeLocation(), FLinearColor(1.f, 0.9f, 0.4f), 8, 120.f, 0.8f, 7.f, -50.f);
+		}
 	}
 }
 
@@ -816,7 +864,10 @@ void ATaGCharacter::TickAction(float Dt)
 				Dir = GetActorForwardVector();
 			}
 			bDriveBeatDone = false;
-			SetAction(ETaGAction::Drive, 0, Dir, TaG::DriveT * AF);
+			// Art drives (sparks, skate, double beat) keep their art as the variant and stretch the length.
+			const bool bArtDrive = ActionVariant > static_cast<uint8>(ETaGArt::Resync) && ActionVariant < static_cast<uint8>(ETaGArt::Count);
+			const float LengthMul = bArtDrive ? FMath::Max(TaGHeroes::GetArt(static_cast<ETaGArt>(ActionVariant)).Duration, 0.5f) : 1.f;
+			SetAction(ETaGAction::Drive, bArtDrive ? ActionVariant : 0, Dir, TaG::DriveT * AF * LengthMul);
 		}
 		break;
 	case ETaGAction::Drive:
@@ -826,6 +877,15 @@ void ATaGCharacter::TickAction(float Dt)
 			if (bAuth && GM)
 			{
 				GM->OnDriveEnd(this);
+			}
+			// Ushio: the double beat makes the drive ready again at once
+			if (ActionVariant == static_cast<uint8>(ETaGArt::DoubleBeat))
+			{
+				CooldownEnd[static_cast<int32>(ETaGSlot::Drive)] = 0.f;
+				if (bAuth && CooldownEndRep.IsValidIndex(static_cast<int32>(ETaGSlot::Drive)))
+				{
+					CooldownEndRep[static_cast<int32>(ETaGSlot::Drive)] = 0.f;
+				}
 			}
 			if (bHadBallOnDrive && HasBall())
 			{
@@ -877,12 +937,13 @@ void ATaGCharacter::TickAction(float Dt)
 		if (ActionT >= TaG::TackleStartT)
 		{
 			bTackleResolved = false;
-			SetAction(ETaGAction::Tackle, 0, GetActorForwardVector(), TaG::TackleRecoverT);
+			SetAction(ETaGAction::Tackle, ActionVariant, GetActorForwardVector(), TaG::TackleRecoverT);
 		}
 		break;
 	case ETaGAction::Tackle:
 		if (ActionT >= TaG::TackleT)
 		{
+			TackleArt = ETaGArt::None;
 			SetAction(ETaGAction::TackleRecover, 0, FVector::ZeroVector, bTackleResolved ? 0.3f : TaG::TackleRecoverT);
 		}
 		break;
@@ -895,14 +956,19 @@ void ATaGCharacter::TickAction(float Dt)
 	case ETaGAction::Contest:
 	{
 		const bool bSonic = IsSonicContest();
+		const bool bStance = GetContestArt() != nullptr;
 		bool bRelease = bSonic ? ActionT >= 1.2f : ((!bContestHeld && ActionT > 0.25f) || ActionT >= TaG::ContestMaxT);
-		if (!bSonic && GetRole() != 2 && ActionT > 0.5f)
+		if (bStance)
+		{
+			bRelease = ActionT >= ActionLength; // Ankou: the gulp is held for its full length
+		}
+		else if (!bSonic && GetRole() != 2 && ActionT > 0.5f)
 		{
 			bRelease = true;
 		}
 		if (bRelease && bSim)
 		{
-			if (!bSonic)
+			if (!bSonic && !bStance)
 			{
 				StartCooldown(ETaGSlot::Contest, TaG::ContestCD);
 			}
@@ -947,7 +1013,7 @@ void ATaGCharacter::TickAction(float Dt)
 	case ETaGAction::Shoot:
 	{
 		const FTaGShotTypeDef& St = FTaGRules::ShotType(ShotType);
-		const float MeterSpeed = IsCatchAndShoot() ? 1.6f : 1.f;
+		const float MeterSpeed = (IsCatchAndShoot() ? 1.6f : 1.f) * (GetShotMod() == ETaGArtFx::ShotQuick ? 1.7f : 1.f);
 		ShotCharge += Dt * MeterSpeed / (St.Meter * TaG::ShotMeterSeconds);
 		if (!bShotJumped && St.JumpAt >= 0.f && ActionT >= St.JumpAt && GetCharacterMovement()->IsMovingOnGround())
 		{
@@ -1019,7 +1085,8 @@ void ATaGCharacter::TickServerChecks(float Dt)
 			FVector To = It->GetActorLocation() - GetActorLocation();
 			To.Z = 0.f;
 			// A dodge that slid out of the tackle's path still beat it (evade > tackle): reach the dodger a bit farther.
-			const float Reach = TaG::TackleRange + It->GetCapsuleComponent()->GetScaledCapsuleRadius() - 25.f + (It->IsDodging() ? 90.f : 0.f);
+			const float Bash = TackleArt == ETaGArt::ShieldBash ? 60.f : 0.f;
+			const float Reach = TaG::TackleRange + It->GetCapsuleComponent()->GetScaledCapsuleRadius() - 25.f + (It->IsDodging() ? 90.f : 0.f) + Bash;
 			if (To.Size() < Reach && (To.Size() < 40.f || FVector::DotProduct(To.GetSafeNormal(), GetActorForwardVector()) > 0.2f))
 			{
 				bTackleResolved = true;
@@ -1094,6 +1161,7 @@ void ATaGCharacter::Tick(float DeltaSeconds)
 	{
 		TickServerChecks(DeltaSeconds);
 	}
+	TickArtStatus(DeltaSeconds);
 
 	// Forced movement (drive, dodge, tackle, step, shot motions) on the machine that owns the input.
 	if (IsLocallyControlled() && IsForcedMove())
@@ -1299,7 +1367,8 @@ void ATaGCharacter::TryPass(bool bThread)
 	{
 		if (ATaGGameMode* GM = GetWorld()->GetAuthGameMode<ATaGGameMode>())
 		{
-			GM->LaunchPass(this, Target, bThread || IsTetheredWith(Target));
+			const uint8 Style = PendingPassStyle != 0 ? PendingPassStyle : ((bThread || IsTetheredWith(Target)) ? 1 : 0);
+			GM->LaunchPass(this, Target, Style);
 		}
 	}
 }
@@ -1378,6 +1447,11 @@ bool ATaGCharacter::CanUseArt(int32 Index) const
 	if (Art == ETaGArt::None || !IsReady(Slot))
 	{
 		return false;
+	}
+	const FTaGArtDef& GenericDef = TaGHeroes::GetArt(Art);
+	if (GenericDef.Kind != ETaGArtKind::Custom)
+	{
+		return CanUseGenericArt(GenericDef);
 	}
 	const bool bFree = Action == ETaGAction::None;
 	const bool bBall = HasBall();
@@ -1561,6 +1635,7 @@ void ATaGCharacter::ExecuteArt(ETaGArt Art)
 		}
 		break;
 	default:
+		ExecuteGenericArt(TaGHeroes::GetArt(Art));
 		break;
 	}
 }
@@ -1612,12 +1687,37 @@ void ATaGCharacter::ArtStartFinished()
 		}
 		break;
 	default:
-		SetAction(ETaGAction::None);
+	{
+		// Generic arts: a short startup (readable), then the effect, then a recovery (punishable)
+		const FTaGArtDef& Def = TaGHeroes::GetArt(Art);
+		if (Def.Kind == ETaGArtKind::Dash && Def.Fx == ETaGArtFx::DashHop)
+		{
+			if (ActionT >= 0.12f)
+			{
+				FinishBlink(Def.Range);
+			}
+		}
+		else if (Def.Kind == ETaGArtKind::Cone || Def.Kind == ETaGArtKind::Aura || Def.Kind == ETaGArtKind::Bolt)
+		{
+			if (ActionT >= Def.Startup)
+			{
+				FireGenericArt(Def);
+				if (Action == ETaGAction::ArtStart)
+				{
+					SetAction(ETaGAction::ArtRecover, 0, FVector::ZeroVector, 0.35f);
+				}
+			}
+		}
+		else if (ActionT >= 0.15f)
+		{
+			SetAction(ETaGAction::None);
+		}
 		break;
+	}
 	}
 }
 
-void ATaGCharacter::FinishBlink()
+void ATaGCharacter::FinishBlink(float Distance)
 {
 	const FVector Origin = GetActorLocation();
 	FVector Dir = WishDir();
@@ -1626,7 +1726,7 @@ void ATaGCharacter::FinishBlink()
 		Dir = GetActorForwardVector().GetSafeNormal2D();
 	}
 	// Step toward the target and stop at the first blocking surface.
-	FVector Dest = Origin + Dir * 450.f;
+	FVector Dest = Origin + Dir * Distance;
 	FHitResult Hit;
 	FCollisionQueryParams Q(SCENE_QUERY_STAT(TaGBlink), false, this);
 	const FCollisionShape Shape = FCollisionShape::MakeCapsule(GetCapsuleComponent()->GetScaledCapsuleRadius(), GetCapsuleComponent()->GetScaledCapsuleHalfHeight() * 0.9f);
@@ -1916,11 +2016,16 @@ void ATaGCharacter::TickVisuals(float Dt)
 	const FLinearColor TeamC = GS ? GS->TeamColorFor(Team) : TaG::AllyColor();
 	const int32 MyRole = GetRole();
 	const bool bOnFloor = GetCharacterMovement()->IsMovingOnGround();
+	{
+		const FVector Feet = GetFeetLocation();
+		TaGArt::PlaceBlobShadow(BlobShadow, Feet, GetHeroDef().CapsuleRadius * 2.f + 14.f, Feet.Z, 0.36f);
+	}
 
 	// --- Body pose
 	FTaGPoseInput In;
 	const FVector V = GetVelocity();
 	In.Speed = V.Size2D();
+	In.Velocity = V;
 	In.ForwardSpeed = FVector::DotProduct(V, GetActorForwardVector());
 	In.bOnFloor = bOnFloor;
 	In.Role = MyRole;
@@ -1939,9 +2044,45 @@ void ATaGCharacter::TickVisuals(float Dt)
 		In.bPretellDrive = Pretell == 3;
 		In.bPretellShot = Pretell == 4;
 	}
+	In.bBraced = IsInvulnerable() || IsRootedWall();
 	In.Dt = Dt;
 	Rig->Animate(In);
 	Rig->SetTeamColor(TeamC);
+
+	// Footfalls kick up dust when running; landings make a bigger puff
+	const int32 Steps = Rig->GetStepCount();
+	if (Steps != LastStepCount)
+	{
+		const float Run = FMath::Clamp((In.Speed - 250.f) / 450.f, 0.f, 1.f);
+		const float Weight = FMath::Clamp(GetHeroDef().Weight, 0.5f, 3.f);
+		if (Run > 0.f || Steps - LastStepCount > 1)
+		{
+			for (int32 Side = 0; Side < 2; ++Side)
+			{
+				if (Rig->IsFootPlanted(Side))
+				{
+					TaGFx::Dust(this, Rig->GetFootWorld(Side), (0.5f + Run) * FMath::Sqrt(Weight) * 0.6f);
+				}
+			}
+		}
+		LastStepCount = Steps;
+	}
+	// The zone: gold motes rising around the body
+	if (IsInZone())
+	{
+		ZoneFxT -= Dt;
+		if (ZoneFxT <= 0.f)
+		{
+			ZoneFxT = 0.05f;
+			TaGFx::Aura(this, GetFeetLocation(), GetHeroDef().EyeHeight, GetHeroDef().CapsuleRadius + 12.f, TaG::GoldColor(), 2);
+		}
+	}
+	// Drives leave streaks in the hero colour
+	if (Action == ETaGAction::Drive && V.Size2D() > 400.f)
+	{
+		TaGFx::Burst(this, GetActorLocation() - V.GetSafeNormal() * 40.f, GetHeroDef().SecondaryColor, 2, 60.f, 0.25f, 9.f, 0.f, ETaGFxShape::Spark, -V * 0.3f);
+	}
+	TickHeroAmbience(Dt);
 
 	// --- TaG glow: what you are doing (the tell), and whether each hand is ready (visible cooldowns)
 	FLinearColor Tell = TeamC;

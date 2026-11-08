@@ -26,6 +26,7 @@ import heroes  # noqa: E402
 import ball  # noqa: E402
 import court  # noqa: E402
 import city  # noqa: E402
+import sky  # noqa: E402
 
 TAGTYPES = os.path.normpath(os.path.join(HERE, "..", "..", "game", "Source", "BasketTaG", "Core", "TaGTypes.h"))
 
@@ -80,6 +81,14 @@ def build_everything(log=print):
     sea.uv_scale = 0.0001
     sea.finalize()
     assets.append(Asset(sea, "/Game/Art/City", "Sea", "sea", meta=sea.meta))
+    dome = sky.build_skydome()
+    dome.uv_scale = 0.00001
+    dome.finalize()
+    assets.append(Asset(dome, "/Game/Art/City", "SkyDome", "sky", radius=sky.SKY_RADIUS, centre=list(sky.CENTRE)))
+    clouds = sky.build_clouds()
+    clouds.uv_scale = 0.0001
+    clouds.finalize()
+    assets.append(Asset(clouds, "/Game/Art/City", "Clouds", "sky", meta=clouds.meta))
     log("built %d meshes in %.1fs" % (len(assets), time.time() - t0))
     return rigs, assets
 

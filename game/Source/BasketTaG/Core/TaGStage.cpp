@@ -77,7 +77,8 @@ UStaticMeshComponent* ATaGStage::AddMesh(UStaticMesh* Mesh, const FTransform& Xf
 UStaticMeshComponent* ATaGStage::AddBox(const FVector& Center, const FVector& SizeCm, const FLinearColor& Color, bool bCollide, const FRotator& Rot)
 {
 	UStaticMeshComponent* C = AddMesh(CubeMesh, FTransform(Rot, Center, SizeCm / 100.f), bCollide);
-	C->SetMaterial(0, ShapeMaterial);
+	// With the art in place the court lines use the same unlit toon material as everything else (no scene lights)
+	C->SetMaterial(0, bHasArt ? TaGArt::BaseMaterial() : ShapeMaterial.Get());
 	if (UMaterialInstanceDynamic* M = C->CreateAndSetMaterialInstanceDynamic(0))
 	{
 		M->SetVectorParameterValue(TEXT("Color"), Color);
@@ -105,7 +106,9 @@ void ATaGStage::BuildFromArt()
 	// scanning at this point). Any extra meshes found under the same folders are added too.
 	TArray<FString> Paths = {
 		TEXT("/Game/Art/Court/SM_Rooftop"), TEXT("/Game/Art/Court/SM_Hoop"),
-		TEXT("/Game/Art/Court/SM_RooftopProps"), TEXT("/Game/Art/Court/SM_RooftopProps_Furnace"), TEXT("/Game/Art/City/SM_Sea") };
+		TEXT("/Game/Art/Court/SM_RooftopProps"), TEXT("/Game/Art/Court/SM_RooftopProps_Furnace"), TEXT("/Game/Art/City/SM_Sea"),
+		// Toon sky: a 1.6 km dome around the court, and clouds, floating islands and the moon inside it
+		TEXT("/Game/Art/City/SM_SkyDome"), TEXT("/Game/Art/City/SM_Clouds") };
 	for (int32 i = 1; i <= 12; ++i)
 	{
 		Paths.Add(FString::Printf(TEXT("/Game/Art/City/SM_CityA_%02d"), i));
@@ -139,6 +142,8 @@ void ATaGStage::BuildFromArt()
 		Path.Split(TEXT("/"), nullptr, &Name, ESearchCase::IgnoreCase, ESearchDir::FromEnd);
 		const bool bFloor = Name.Contains(TEXT("Rooftop")) && !Name.Contains(TEXT("Props"));
 		UStaticMeshComponent* C = AddMesh(Mesh, FTransform::Identity, bFloor);
+		// Every art material is unlit toon, so no surface could receive a shadow anyway
+		C->SetCastShadow(false);
 		bHasArt = true;
 
 		// District windows: SM_CityA_07 -> district A block 7
@@ -283,7 +288,41 @@ void ATaGStage::BuildLights()
 	FActorSpawnParameters Params;
 	Params.Owner = this;
 
-	// Evening sun, low and warm: the city's windows and the TaG glow carry the scene.
+	if (bHasArt)
+	{
+		// The art is unlit toon (tools/README.md): MPC_TaG carries the light and M_TaGSky draws the sky, so the scene
+		// needs no lights, atmosphere or fog. Manual exposure at 0 EV with the physical camera and the tone curve off
+		// shows an unlit 1.0 as 1.0 (PostProcessEyeAdaptation.cpp: "AEM_Manual ExposureCompensation is already
+		// calibrated to 1.0"; Scene.h: "Set ToneCurveAmount and ExpandGamut to 0.0 to fully disable tone curve"),
+		// so the colours match the Blender previews and look the same on PC and Android.
+		if (APostProcessVolume* PP = GetWorld()->SpawnActor<APostProcessVolume>(APostProcessVolume::StaticClass(), FTransform::Identity, Params))
+		{
+			PP->bUnbound = true;
+			FPostProcessSettings& S = PP->Settings;
+			S.bOverride_AutoExposureMethod = true;
+			S.AutoExposureMethod = AEM_Manual;
+			S.bOverride_AutoExposureBias = true;
+			S.AutoExposureBias = 0.f;
+			S.bOverride_AutoExposureApplyPhysicalCameraExposure = true;
+			S.AutoExposureApplyPhysicalCameraExposure = 0;
+			S.bOverride_ToneCurveAmount = true;
+			S.ToneCurveAmount = 0.f;
+			S.bOverride_ExpandGamut = true;
+			S.ExpandGamut = 0.f;
+			// Only what glows above 1.0 blooms: lanterns, windows, TaG bands, particles
+			S.bOverride_BloomIntensity = true;
+			S.BloomIntensity = 0.55f;
+			S.bOverride_BloomThreshold = true;
+			S.BloomThreshold = 1.f;
+			S.bOverride_LensFlareIntensity = true;
+			S.LensFlareIntensity = 0.f;
+			S.bOverride_VignetteIntensity = true;
+			S.VignetteIntensity = 0.25f;
+		}
+		return;
+	}
+
+	// Fallback (engine shapes, lit): evening sun, low and warm; the city's windows and the TaG glow carry the scene.
 	// Sunset over the bay: the sun sits just above the horizon behind the city, so the windows and TaG glow read.
 	if (ADirectionalLight* Sun = GetWorld()->SpawnActor<ADirectionalLight>(ADirectionalLight::StaticClass(), FVector(0.f, 0.f, 1000.f), FRotator(-2.5f, 150.f, 0.f), Params))
 	{

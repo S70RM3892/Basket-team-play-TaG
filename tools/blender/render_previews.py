@@ -1,15 +1,15 @@
 """
-render_previews.py - preview renders (Blender EEVEE, 1280x720) into tools/art/previews/:
+render_previews.py - preview renders (Blender EEVEE, cel-shaded preview materials) into tools/art/previews/:
 
-  heroes_front.png   six heroes, orthographic front view, same scale, 1.75 m reference line
-  heroes_34.png      same lineup, 3/4 view
-  heroes_lineup.png  both views stacked (1280x1440)
+  heroes_lineup.png  all 30 heroes, one row per role (walls / scorers / playmakers), 3/4 view, same scale
+  heroes/<Key>.png   front, 3/4 and back of each hero
+  portraits.png      the 30 UI portraits (also written to tools/build/portraits for import_all.py)
   ball.png           SM_Ball close-up
   court_view.png     player's eye (175 cm) at the top of the key looking at the hoop, evening; district A lit
   court_aerial.png   overview of the rooftop, furnace complex and both districts
 
-Run:
-  "C:/Program Files/Blender Foundation/Blender 5.2/blender.exe" -b --factory-startup -P C:/TaG/tools/blender/render_previews.py
+Run (optionally only some of heroes,portraits,turnarounds,ball,court):
+  "C:/Program Files/Blender Foundation/Blender 5.2/blender.exe" -b --factory-startup -P C:/TaG/tools/blender/render_previews.py [-- portraits]
 Court lines, hero placement on the court and the lights are preview-only (C++ draws lines and spawns lights).
 """
 import math
@@ -32,7 +32,7 @@ from tagmesh import Part, quad, T  # noqa: E402
 
 OUT = os.path.normpath(os.path.join(HERE, "..", "art", "previews"))
 W, H = 1280, 720
-LINEUP = ["Tsumugi", "Rei", "Hibiki", "Hayate", "Minamo", "Gantetsu"]
+LINEUP = ["Tsumugi", "Rei", "Hibiki", "Hayate", "Minamo", "Gantetsu"]   # heroes shown on the court preview
 
 
 # ------------------------------------------------------------------------------------------------ scene helpers
@@ -224,23 +224,27 @@ def box_obj(sc, c, size, mat, name="Box"):
 
 
 def window_vertex_colour_materials(owner_strength):
-    """Make preview 'Window' materials honour the per-window vertex colour like M_TaGBase does in UE."""
+    """Preview 'Window' materials: emission x per-window vertex colour like M_TaGBase does in UE."""
     for (owner, slot), m in list(scene_util._preview_mats.items()):
         if slot != "Window":
             continue
         nt = m.node_tree
-        b = nt.nodes.get("Principled BSDF")
+        em = nt.nodes.get("EMIS")
+        if em is None:
+            continue
         attr = nt.nodes.new("ShaderNodeVertexColor")
         attr.layer_name = "Col"
         sep = nt.nodes.new("ShaderNodeSeparateColor")
-        mul = nt.nodes.new("ShaderNodeMath")
-        mul.operation = 'MULTIPLY'
-        mul.inputs[1].default_value = owner_strength.get(owner, 0.0)
-        nt.links.new(attr.outputs["Color"], sep.inputs[0])
-        nt.links.new(sep.outputs[0], mul.inputs[0])
-        nt.links.new(mul.outputs[0], b.inputs["Emission Strength"])
+        mul = nt.nodes.new("ShaderNodeMix")
+        mul.data_type = 'RGBA'
+        mul.blend_type = 'MULTIPLY'
+        mul.inputs["Factor"].default_value = 1.0
         e = palette.params(owner, slot)["Emissive"]
-        b.inputs["Emission Color"].default_value = (*e, 1)
+        k = owner_strength.get(owner, 0.0) * 0.5
+        mul.inputs[6].default_value = (e[0] * k, e[1] * k, e[2] * k, 1)
+        nt.links.new(attr.outputs["Color"], sep.inputs[0])
+        nt.links.new(sep.outputs[0], mul.inputs[7])
+        nt.links.new(mul.outputs[2], em.inputs[7])
 
 
 def instantiate_with_colors(part, owner, name, loc=(0, 0, 0), sc=None):
@@ -249,64 +253,129 @@ def instantiate_with_colors(part, owner, name, loc=(0, 0, 0), sc=None):
 
 
 # ------------------------------------------------------------------------------------------------ renders
-def render(sc, filename):
-    os.makedirs(OUT, exist_ok=True)
-    sc.render.filepath = os.path.join(OUT, filename)
+def render(sc, filename, folder=None):
+    d = folder or OUT
+    os.makedirs(d, exist_ok=True)
+    sc.render.filepath = os.path.join(d, filename)
     bpy.ops.render.render(write_still=True, scene=sc.name)
     print("RENDERED", sc.render.filepath)
 
 
+def place_hero(sc, rig, hid, off, yaw=0.0, suffix=""):
+    o = rig.rest_origins()
+    par = bpy.data.objects.new("H_%s%s" % (hid, suffix), None)
+    link(sc, par)
+    par.location = off
+    par.rotation_euler = (0, 0, math.radians(yaw))
+    for pn, part in rig.parts.items():
+        ob = scene_util.instantiate(part, hid, "%s_%s%s" % (hid, pn, suffix), o[pn], collection=sc.collection)
+        ob.parent = par
+    return par
+
+
+def toon_lights(sc):
+    sun(sc, (50, 0, 145), 3.0, (1.0, 0.97, 0.92), 3.0, "Key")
+
+
 def hero_lineup(rigs):
+    """All 30 heroes, one row per role (walls / scorers / playmakers), 3/4 view, same scale."""
     sc = new_scene("Heroes")
-    gradient_world(sc, [(0.0, (0.16, 0.17, 0.20)), (1.0, (0.05, 0.055, 0.07))], 1.0)
-    # ground + reference
-    floor = flat_mat("Floor", (0.12, 0.12, 0.13), 0.9)
-    box_obj(sc, (0, 0, -1), (6000, 6000, 2), floor, "Floor")
-    white = emissive_mat("RefWhite", (1.0, 0.95, 0.85), 2.0)
-    teal = emissive_mat("RefTeal", (0.35, 0.95, 0.9), 2.0)
-    label = emissive_mat("Label", (0.92, 0.92, 0.95), 1.2)
-    gap = 45.0
-    ys = []
-    y = 0.0
-    widths = []
-    for hid in LINEUP:
+    sc.view_settings.view_transform = 'Standard'
+    sc.render.resolution_x, sc.render.resolution_y = 2400, 1500
+    gradient_world(sc, [(0.0, (0.36, 0.38, 0.47)), (1.0, (0.22, 0.24, 0.32))], 1.0)
+    toon_lights(sc)
+    rows = {"Wall": [], "Scorer": [], "Playmaker": []}
+    for hid in heroes.HERO_IDS:
+        if hid in rigs:
+            rows[heroes.SPEC[hid]["role"]].append(hid)
+    d = Vector((math.cos(math.radians(-30)), math.sin(math.radians(-30)), 0.0))
+    side_v = Vector((-d.y, d.x, 0))
+    row_gap = 330.0
+    maxw = 0
+    for r, (role, ids) in enumerate(rows.items()):
+        x = 0.0
+        for hid in ids:
+            m = rigs[hid].measures()
+            x += m["width"] * 0.5 + 34
+            off = side_v * (-x) + Vector((0, 0, -r * row_gap))
+            place_hero(sc, rigs[hid], hid, off)
+            x += m["width"] * 0.5 + 34
+        maxw = max(maxw, x)
+    tgt = side_v * (-maxw * 0.5) + Vector((0, 0, -row_gap + 130))
+    cam = camera(sc, tgt + (d + Vector((0, 0, 0.12))).normalized() * 6000, tgt, ortho=maxw * 1.04)
+    render(sc, "heroes_lineup.png")
+
+
+def hero_turnarounds(rigs):
+    """tools/art/previews/heroes/<Key>.png: front, 3/4 and back of one hero."""
+    folder = os.path.join(OUT, "heroes")
+    for hid in heroes.HERO_IDS:
+        if hid not in rigs:
+            continue
+        sc = new_scene("T_" + hid)
+        sc.view_settings.view_transform = 'Standard'
+        sc.render.resolution_x, sc.render.resolution_y = 1200, 700
+        gradient_world(sc, [(0.0, (0.36, 0.38, 0.47)), (1.0, (0.22, 0.24, 0.32))], 1.0)
+        toon_lights(sc)
         m = rigs[hid].measures()
-        widths.append(m["width"])
-    total = sum(widths) + gap * (len(widths) - 1)
-    y = -total / 2
-    for hid, w in zip(LINEUP, widths):
-        ys.append(y + w / 2)
-        y += w + gap
-    for hid, yc in zip(LINEUP, ys):
+        gap = max(m["width"], m["depth"]) * 1.25 + 30
+        for i, yaw in enumerate((0, 35, 180)):
+            place_hero(sc, rigs[hid], hid, Vector((0, (1 - i) * gap, 0)), yaw=yaw, suffix="_%d" % i)
+        h = m["height"]
+        camera(sc, (5000, 0, h * 0.5), (0, 0, h * 0.5), ortho=max(h * 1.12 * 1200 / 700, gap * 3.2))
+        render(sc, "%s.png" % hid, folder)
+
+
+PORTRAITS = os.path.normpath(os.path.join(HERE, "..", "build", "portraits"))
+
+
+def portraits(rigs):
+    """256x256 bust per hero (3/4 view, transparent) -> tools/build/portraits/T_Portrait_<Key>.png (imported by
+    import_all.py as /Game/Art/UI/T_Portrait_<Key>) and a contact sheet in the previews."""
+    import numpy as np
+    os.makedirs(PORTRAITS, exist_ok=True)
+    tiles = []
+    for hid in heroes.HERO_IDS:
+        if hid not in rigs:
+            continue
         rig = rigs[hid]
+        sc = new_scene("P_" + hid)
+        sc.view_settings.view_transform = 'Standard'
+        sc.render.resolution_x = sc.render.resolution_y = 256
+        sc.render.film_transparent = True
+        sc.render.image_settings.color_mode = 'RGBA'
+        gradient_world(sc, [(0.0, (0.5, 0.5, 0.55)), (1.0, (0.4, 0.42, 0.5))], 1.0)
+        toon_lights(sc)
+        place_hero(sc, rig, hid, Vector((0, 0, 0)), yaw=-28)
         o = rig.rest_origins()
-        m = rig.measures()
-        off = Vector((0, yc - (m["bounds_lo"].y + m["bounds_hi"].y) / 2, 0))
-        for pn, part in rig.parts.items():
-            scene_util.instantiate(part, hid, "%s_%s" % (hid, pn), o[pn] + off, collection=sc.collection)
-        cls = heroes.TARGETS[hid][2]
-        text(sc, "%s" % hid, (60, yc, -2), (90, 0, 90), 15, label)
-        text(sc, "%s  eyes %d cm" % (cls, round(m["eye_height"])), (60, yc, -22), (90, 0, 90), 10, label)
-    # 1.75 m reference: post at the left end + a line across the lineup
-    y_ref = -total / 2 - 70
-    box_obj(sc, (0, y_ref, 87.5), (3, 3, 175), white, "RefPost")
-    box_obj(sc, (0, 0, 175), (0.6, total + 160, 0.6), teal, "RefLine")
-    for z in range(0, 176, 25):
-        box_obj(sc, (0, y_ref, z), (3, 10 if z % 50 == 0 else 6, 0.8), white, "Tick")
-    text(sc, "1.75 m", (5, y_ref, 182), (90, 0, 90), 11, white)
-    sun(sc, (55, 0, 60), 3.2, (1.0, 0.96, 0.9), 3.0, "Key")
-    sun(sc, (70, 0, -120), 1.0, (0.7, 0.8, 1.0), 6.0, "Rim")
-    sun(sc, (20, 0, 10), 0.5, (0.95, 0.92, 1.0), 10.0, "Fill")
-    bloom(sc, 1.2, 6)
-    # front view (characters face +X)
-    cam = camera(sc, (3000, 0, 150), (0, 0, 150), ortho=total + 260)
-    render(sc, "heroes_front.png")
-    # 3/4 view
-    d = Vector((math.cos(math.radians(35)), math.sin(math.radians(35)), 0.18)).normalized()
-    cam.location = Vector((0, 0, 150)) + d * 3000
-    cam.rotation_euler = (-d).to_track_quat('-Z', 'Y').to_euler()
-    cam.data.ortho_scale = total + 300
-    render(sc, "heroes_34.png")
+        eye = o["Head"] + rig.parts["Head"].sockets["eyes"]
+        lo, hi = rig.parts["Head"].bounds()
+        top = o["Head"].z + hi.z
+        size = max(top - (eye.z - (top - eye.z) * 1.7), 40.0 * eye.z / 175.0)
+        c = Vector((0, 0, top - size * 0.48))
+        camera(sc, c + Vector((1, 0, 0.08)).normalized() * 3000, c, ortho=size * 1.08)
+        fp = "T_Portrait_%s.png" % hid
+        render(sc, fp, PORTRAITS)
+        tiles.append(os.path.join(PORTRAITS, fp))
+    cols = 10
+    rows = (len(tiles) + cols - 1) // cols
+    sheet = np.zeros((rows * 256, cols * 256, 4), dtype=np.float32)
+    sheet[..., :3] = 0.25
+    sheet[..., 3] = 1.0
+    for i, fp in enumerate(tiles):
+        img = bpy.data.images.load(fp)
+        px = np.array(img.pixels[:], dtype=np.float32).reshape(256, 256, 4)
+        r, c_ = i // cols, i % cols
+        dst = sheet[(rows - 1 - r) * 256:(rows - r) * 256, c_ * 256:(c_ + 1) * 256]
+        a = px[..., 3:4]
+        dst[..., :3] = px[..., :3] * a + dst[..., :3] * (1 - a)
+        bpy.data.images.remove(img)
+    out = bpy.data.images.new("portraits", cols * 256, rows * 256, alpha=True)
+    out.pixels = sheet.ravel()
+    out.filepath_raw = os.path.join(OUT, "portraits.png")
+    out.file_format = 'PNG'
+    out.save()
+    print("RENDERED", out.filepath_raw)
 
 
 def stack_images(top, bottom, out_name):
@@ -390,13 +459,13 @@ def court_scene(assets, rigs, a_lit=3.0, b_lit=0.0):
     except Exception:
         pass
     for a in assets:
-        if a.category in ("court", "city", "sea"):
+        if a.category in ("court", "city", "sea") or a.name == "SM_Clouds":
             scene_util.instantiate(a.part, a.owner, a.name, collection=sc.collection)
     window_vertex_colour_materials({"CityA": a_lit, "CityB": b_lit, "RooftopProps": 0.8})
     court_lines(sc)
     # a few heroes and the ball on the court for scale (preview only; UE: x, y -> Blender x, -y)
     for hid, (x, y, yaw) in (("Gantetsu", (200, 215, -20)), ("Tsumugi", (330, 105, -25)), ("Rei", (330, -150, 20)),
-                             ("Hibiki", (130, -300, 30))):
+                             ("Hibiki", (130, -300, 30)), ("Ankou", (420, 330, 15)), ("Yatai", (650, -380, -10))):
         rig = rigs[hid]
         o = rig.rest_origins()
         par = bpy.data.objects.new("H_" + hid, None)
@@ -420,16 +489,26 @@ def court_scene(assets, rigs, a_lit=3.0, b_lit=0.0):
 
 
 def main():
+    argv = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else []
+    what = set(argv[0].split(",")) if argv else {"heroes", "portraits", "turnarounds", "ball", "court"}
     scene_util.reset_scene()
     rigs, assets = build_assets.build_everything()
-    hero_lineup(rigs)
-    stack_images("heroes_front.png", "heroes_34.png", "heroes_lineup.png")
-    ball_render(assets)
-    sc = court_scene(assets, rigs)
-    camera(sc, (720, 0, 175), (157.5, 0, 290), lens_deg=78)
-    render(sc, "court_view.png")
-    camera(sc, (13000, 15000, 21000), (-1200, 0, -2500), lens_deg=50)
-    render(sc, "court_aerial.png")
+    if "heroes" in what:
+        hero_lineup(rigs)
+    if "portraits" in what:
+        portraits(rigs)
+    if "turnarounds" in what:
+        hero_turnarounds(rigs)
+    if "ball" in what:
+        ball_render(assets)
+    if "court" in what:
+        sc = court_scene(assets, rigs)
+        camera(sc, (720, 0, 175), (157.5, 0, 290), lens_deg=78)
+        render(sc, "court_view.png")
+        camera(sc, (13000, 15000, 21000), (-1200, 0, -2500), lens_deg=50)
+        render(sc, "court_aerial.png")
+        camera(sc, (1150, 250, 170), (150, 30, 520), lens_deg=84)
+        render(sc, "court_sky.png")
 
 
 if __name__ == "__main__":

@@ -1,7 +1,7 @@
 """
 copy_to_game.py - copy the imported packages from the helper project into the game project.
 
-  python C:/TaG/tools/import/copy_to_game.py
+  python C:/TaG/tools/import/copy_to_game.py [--only Art]      (--only takes a comma list of Art,Audio)
 
 tools/assetproj/Content/Art   -> game/Content/Art     (same relative paths, package paths stay /Game/Art/...)
 tools/assetproj/Content/Audio -> game/Content/Audio
@@ -30,11 +30,17 @@ def sha(path):
 
 
 def main():
+    folders = FOLDERS
+    if "--only" in sys.argv:
+        folders = tuple(f for f in sys.argv[sys.argv.index("--only") + 1].split(",") if f)
+        bad = [f for f in folders if f not in FOLDERS]
+        if bad:
+            sys.exit("--only accepts %s, got %s" % (",".join(FOLDERS), bad))
     if not os.path.isdir(DST):
         sys.exit("game Content folder not found: %s" % DST)
     copied = same = 0
     src_files = set()
-    for folder in FOLDERS:
+    for folder in folders:
         root = os.path.join(SRC, folder)
         if not os.path.isdir(root):
             sys.exit("missing %s - run tools/import/import_all.py first" % root)
@@ -53,7 +59,7 @@ def main():
                     sys.exit("copy verification failed for %s" % rel)
                 copied += 1
     extra = []
-    for folder in FOLDERS:
+    for folder in folders:
         for dp, _, files in os.walk(os.path.join(DST, folder)):
             for f in files:
                 rel = os.path.relpath(os.path.join(dp, f), DST)

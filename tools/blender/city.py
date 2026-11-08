@@ -337,5 +337,19 @@ def build_sea(footprints):
                 P.add(cylinder(160, 3, 3, 4), "Dark", False, M @ T(px, 115, 170))
                 P.add(sphere(24, 6, 3), "Glow", True, M @ T(px, 115, 345) @ S(1, 1, 1.35))
         piers += 1
-    P.meta = dict(boats=boats, piers=piers)
+    # floating sky lanterns rising from the bay (fantasy dressing), clear of the court and the buildings
+    lanterns = 0
+    tries = 0
+    while lanterns < 90 and tries < 5000:
+        tries += 1
+        a = rng.uniform(0, 2 * math.pi)
+        d = rng.uniform(2600, 16000)
+        x, y = 550 + d * math.cos(a), d * math.sin(a)
+        if not clear(x, y, 200):
+            continue
+        z = SEA_Z + rng.uniform(300, 7000)
+        sc = rng.uniform(0.8, 1.6)
+        P.add(sphere(32 * sc, 8, 5), "Glow", True, T(x, y, z) @ S(1, 1, 1.35))
+        lanterns += 1
+    P.meta = dict(boats=boats, piers=piers, lanterns=lanterns)
     return P

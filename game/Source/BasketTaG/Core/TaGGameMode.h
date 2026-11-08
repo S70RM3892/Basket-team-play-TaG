@@ -67,7 +67,7 @@ public:
 	void OnPullHit(ATaGCharacter* Puller, ATaGCharacter* Target);
 	void OnGuardBreak(ATaGCharacter* Victim);
 	void OnArtUsed(ATaGCharacter* User, ETaGArt Art);
-	void LaunchPass(ATaGCharacter* Passer, ATaGCharacter* Receiver, bool bThread);
+	void LaunchPass(ATaGCharacter* Passer, ATaGCharacter* Receiver, uint8 Style);
 	void OnPassCaught(ATaGCharacter* Receiver);
 	void OnPassIntercepted(ATaGCharacter* Defender);
 	void OnBasket(ATaGCharacter* Shooter, int32 Points, bool bValid);
@@ -138,6 +138,16 @@ protected:
 	void LogStats() const;
 	void RunShotTest();
 	void TickSnap(float Dt);
+
+	// -TaGSnap=Gait: four walkers (run in a circle, backpedal, side shuffle, diagonal) seen from the side,
+	// a burst of screenshots and the worst foot error (how far a planted foot drifted from its footprint)
+	UPROPERTY() TArray<TObjectPtr<ATaGCharacter>> GaitChars;
+	UPROPERTY() TObjectPtr<AActor> GaitCam;
+	float GaitErr[4] = { 0.f, 0.f, 0.f, 0.f };
+	int32 GaitSteps[4] = { 0, 0, 0, 0 };
+	int32 GaitShot = 0;
+	float GaitHitchT = -10.f;
+	void TickGait(float Dt);
 	void TickSlowmo();
 	ATaGPlayerState* PS(ATaGCharacter* C) const;
 };

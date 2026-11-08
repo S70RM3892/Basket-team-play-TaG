@@ -1,6 +1,8 @@
 #include "Core/TaGArtLib.h"
 #include "Components/MeshComponent.h"
+#include "Components/StaticMeshComponent.h"
 #include "Engine/StaticMesh.h"
+#include "GameFramework/Actor.h"
 #include "Materials/MaterialInstanceDynamic.h"
 #include "Materials/MaterialInterface.h"
 
@@ -86,6 +88,12 @@ namespace TaGArt
 				}
 			}
 			UMaterialInterface* Parent = bTranslucent ? TranslucentMaterial() : C->GetMaterial(i);
+			// Painting a slot twice (the hero is set up again) must not stack a dynamic material on another one:
+			// only materials and constant instances are valid parents
+			while (UMaterialInstanceDynamic* Old = Cast<UMaterialInstanceDynamic>(Parent))
+			{
+				Parent = Old->Parent;
+			}
 			if (!Parent || Slot.IsNone())
 			{
 				Parent = bTranslucent ? TranslucentMaterial() : BaseMaterial();
@@ -111,6 +119,44 @@ namespace TaGArt
 		{
 			M->SetVectorParameterValue(TEXT("Emissive"), Color);
 			M->SetScalarParameterValue(TEXT("EmissiveStrength"), Strength);
+		}
+	}
+
+	UStaticMeshComponent* MakeBlobShadow(AActor* Owner)
+	{
+		if (!Owner)
+		{
+			return nullptr;
+		}
+		UStaticMeshComponent* C = NewObject<UStaticMeshComponent>(Owner);
+		C->SetupAttachment(Owner->GetRootComponent());
+		C->SetUsingAbsoluteLocation(true);
+		C->SetUsingAbsoluteRotation(true);
+		C->SetUsingAbsoluteScale(true);
+		C->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+		C->SetGenerateOverlapEvents(false);
+		C->SetCastShadow(false);
+		C->SetStaticMesh(EngineCylinder());
+		C->RegisterComponent();
+		// Black in the toon material is black whatever the light, so only the opacity matters
+		PaintSlot(C, NAME_None, FLinearColor::Black, 0.f, true, 0.35f);
+		return C;
+	}
+
+	void PlaceBlobShadow(UStaticMeshComponent* Shadow, const FVector& At, float Diameter, float Height, float Opacity)
+	{
+		if (!Shadow)
+		{
+			return;
+		}
+		const float Up = FMath::Clamp(Height / 400.f, 0.f, 1.f);
+		const float D = Diameter * FMath::Lerp(1.f, 0.55f, Up);
+		// 0.5 cm thin, floating just above the court lines (0.4 cm)
+		Shadow->SetWorldLocationAndRotation(FVector(At.X, At.Y, 0.7f), FRotator::ZeroRotator);
+		Shadow->SetWorldScale3D(FVector(D / 100.f, D / 100.f, 0.005f));
+		if (UMaterialInstanceDynamic* M = Cast<UMaterialInstanceDynamic>(Shadow->GetMaterial(0)))
+		{
+			M->SetScalarParameterValue(TEXT("Opacity"), Opacity * FMath::Lerp(1.f, 0.3f, Up));
 		}
 	}
 }

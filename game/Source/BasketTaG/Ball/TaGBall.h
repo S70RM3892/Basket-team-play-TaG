@@ -34,6 +34,7 @@ struct FTaGBallNet
 	UPROPERTY() float ServerTime = 0.f;
 	UPROPERTY() float Duration = 0.f;
 	UPROPERTY() bool bThread = false;
+	UPROPERTY() uint8 Style = 0;   // 0 normal, 1 thread, 2 curve (bends around defenders), 3 lob (high)
 	UPROPERTY() uint8 Seq = 0;
 };
 
@@ -56,7 +57,7 @@ public:
 	// --- Server API ---
 	void GiveTo(ATaGCharacter* NewHolder);
 	void LaunchShot(const FVector& From, const FVector& Velocity, ATaGCharacter* Shooter, int32 Points, bool bValid, float BlockMult);
-	void LaunchPass(ATaGCharacter* Passer, ATaGCharacter* Receiver, bool bThread);
+	void LaunchPass(ATaGCharacter* Passer, ATaGCharacter* Receiver, uint8 Style);
 	void MakeLoose(const FVector& From, const FVector& Velocity, int32 TouchTeam);
 	void SetDead();
 	void SetChain(int32 InChain) { Chain = InChain; }
@@ -70,6 +71,7 @@ public:
 	int32 GetShotTeam() const { return ShotTeam; }
 	FVector GetSimVelocity() const { return Sim.Vel; }
 	int32 GetChain() const { return Chain; }
+	uint8 GetPassStyle() const { return Net.Style; }
 
 	/** Where the ball sits in the holder's hands this frame (cosmetic). */
 	FVector HoldPoint(const ATaGCharacter* Who) const;
@@ -77,6 +79,8 @@ public:
 protected:
 	UPROPERTY(VisibleAnywhere) TObjectPtr<UStaticMeshComponent> Mesh;
 	UPROPERTY() TObjectPtr<UMaterialInstanceDynamic> GlowMat;
+	/** Dark disc on the floor under the ball: the toon materials receive no shadows, and it shows how high the ball is. */
+	UPROPERTY() TObjectPtr<UStaticMeshComponent> BlobShadow;
 
 	UPROPERTY(ReplicatedUsing = OnRep_Net) FTaGBallNet Net;
 	UPROPERTY(Replicated) int32 LastTouchTeam = -1;

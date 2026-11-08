@@ -185,6 +185,8 @@ public:
 	void AddSpeedBoost(float Seconds);
 	void ResetHandCooldowns();
 	void OnCaughtPass();
+	/** Server: open the catch-and-shoot window (curved passes, lantern marks). */
+	void GrantCatchAndShoot(float Seconds) { CatchShootEnd = ServerNow() + Seconds; }
 	void OnBallGained();
 	void OnBallLost();
 	void ClearForNewPossession(const FVector& FeetPos, const FVector& LookAt);
@@ -198,18 +200,49 @@ public:
 	bool HadBallOnDrive() const { return bHadBallOnDrive; }
 	bool UsedAfterimage() const { return Action == ETaGAction::Dodge && ActionVariant == static_cast<uint8>(ETaGArt::Afterimage); }
 
+	// ------------------------------------------------ Art status effects (TaGCharacterArts.cpp)
+	bool IsInvulnerable() const { return ServerNow() < InvulnEnd; }      // shell: tackles, steals and pulls bounce off
+	bool IsPhasing() const { return ServerNow() < PhaseEnd; }            // intangible: tackles and steals miss
+	bool IsRooted() const { return ServerNow() < RootEnd; }              // can't move
+	bool IsRootedWall() const { return ServerNow() < RootWallEnd; }      // Kokemaru: unmovable, contests shots around
+	float GetRootWallRadius() const { return RootWallRadius; }
+	bool HasCounter() const { return ServerNow() < CounterEnd; }
+	bool IsShotDebuffed() const { return ServerNow() < ShotDebuffEnd; }
+	bool HasInterceptBoost() const { return ServerNow() < InterceptEnd; }
+	/** Steal / block reach multiplier (blinded by sparks: 0.5). */
+	float GetReachFactor() const { return ServerNow() < BlindEnd ? 0.5f : 1.f; }
+	/** The shot modifier waiting for the next shot (ETaGArtFx::None if none). */
+	ETaGArtFx GetShotMod() const;
+	void ConsumeShotMod();
+	/** The art behind the current tackle (Arrest, ShieldBash) or None. */
+	ETaGArt GetTackleArt() const { return TackleArt; }
+	/** Server: a tackle reached this player while a counter was up. Returns the counter used (None if none). */
+	ETaGArtFx ConsumeCounter();
+	/** Server: catch with a lantern / data-share mark: returns the chain bonus (0 if none). */
+	int32 ConsumeMark();
+	/** Server: an art of another player lands on this one (or on a teammate for team buffs). */
+	void ApplyArtStatus(ETaGArtFx Fx, float Duration, float Power);
+	/** The contest-stance art held right now (Gulp) or nullptr. */
+	const FTaGArtDef* GetContestArt() const;
+	bool IsShielding() const { return ServerNow() < ShieldEnd; }
+
 	/** Bots: turn the view toward a point. */
 	void FaceTowards(const FVector& Target, float DeltaSeconds, float Speed);
 
 	// ------------------------------------------------ Camera
 	void SetThirdPerson(bool bTPS);
 	bool IsThirdPerson() const { return bThirdPerson; }
+	UTaGRigComponent* GetRig() const { return Rig; }
 	/** Local camera shake (hits, read losses); decays on its own. */
 	void AddCameraKick(float Strength) { KickAmp = FMath::Max(KickAmp, Strength); }
 
 	// ------------------------------------------------ Cosmetic events (server -> everyone)
 	UFUNCTION(NetMulticast, Unreliable)
 	void MulticastFx(uint8 Kind, FVector_NetQuantize A, FVector_NetQuantize B, ATaGCharacter* Other);
+
+	/** A generic art's visual: Stage 0 cast (A = user), 1 hit (B = target), 2 bounced / read (B = target). */
+	UFUNCTION(NetMulticast, Unreliable)
+	void MulticastArtFx(uint8 ArtId, uint8 Stage, FVector_NetQuantize A, FVector_NetQuantize B);
 
 	/** Shot type chosen for the current shot (also replicated as the action variant). */
 	ETaGShotType ClassifyShot() const;
@@ -222,6 +255,8 @@ protected:
 	UPROPERTY(VisibleAnywhere) TObjectPtr<UStaticMeshComponent> FPArmL;
 	UPROPERTY(VisibleAnywhere) TObjectPtr<UStaticMeshComponent> FPArmR;
 	UPROPERTY(VisibleAnywhere) TObjectPtr<UStaticMeshComponent> ContestField;
+	/** Dark disc on the floor (TaGArt::MakeBlobShadow): the toon materials receive no shadows. */
+	UPROPERTY() TObjectPtr<UStaticMeshComponent> BlobShadow;
 	UPROPERTY(VisibleAnywhere) TObjectPtr<UAbilitySystemComponent> AbilitySystem;
 	UPROPERTY() TObjectPtr<UMaterialInstanceDynamic> FPGlowL;
 	UPROPERTY() TObjectPtr<UMaterialInstanceDynamic> FPGlowR;
@@ -246,6 +281,23 @@ protected:
 	UPROPERTY(Replicated) TObjectPtr<ATaGCharacter> TetherPartner;
 	UPROPERTY(Replicated) uint8 PretellKind = 0;     // 1 tackle, 2 contest, 3 drive, 4 shot (tutorial)
 	UPROPERTY(Replicated) float PretellEnd = 0.f;
+	// Art status effects
+	UPROPERTY(Replicated) float InvulnEnd = 0.f;
+	UPROPERTY(Replicated) float PhaseEnd = 0.f;
+	UPROPERTY(Replicated) float RootEnd = 0.f;
+	UPROPERTY(Replicated) float RootWallEnd = 0.f;
+	UPROPERTY(Replicated) float RootWallRadius = 0.f;
+	UPROPERTY(Replicated) float CounterEnd = 0.f;
+	UPROPERTY(Replicated) uint8 CounterKind = 0;
+	UPROPERTY(Replicated) float ShotModEnd = 0.f;
+	UPROPERTY(Replicated) uint8 ShotMod = 0;
+	UPROPERTY(Replicated) float BlindEnd = 0.f;
+	UPROPERTY(Replicated) float ShotDebuffEnd = 0.f;
+	UPROPERTY(Replicated) float InterceptEnd = 0.f;
+	UPROPERTY(Replicated) float MarkEnd = 0.f;
+	UPROPERTY(Replicated) uint8 MarkPower = 0;
+	UPROPERTY(Replicated) float RegenEnd = 0.f;
+	UPROPERTY(Replicated) float ShieldEnd = 0.f;
 
 	UFUNCTION() void OnRep_HeroTeam();
 	UFUNCTION() void OnRep_NetAction();
@@ -286,6 +338,11 @@ protected:
 	float LandCheckZ = 0.f;
 	float KickAmp = 0.f;
 	float KickT = 0.f;
+	int32 LastStepCount = 0;
+	float AmbientT = 0.f;
+	float ZoneFxT = 0.f;
+	/** Particles that make each hero recognisable at a glance (sparks, fireflies, frost, steam...). */
+	void TickHeroAmbience(float Dt);
 
 	/** The local player's own state changes (knocked down, staggered): rumble and camera kick. */
 	void OnLocalActionChanged(ETaGAction NewAction);
@@ -317,8 +374,24 @@ protected:
 	bool CanUseArt(int32 Index) const;
 	void ExecuteArt(ETaGArt Art);
 	void ArtStartFinished();
-	void FinishBlink();
+	void FinishBlink(float Distance = 450.f);
 	void FirePull();
+
+	// Generic arts (TaGCharacterArts.cpp)
+	ETaGArt TackleArt = ETaGArt::None;
+	uint8 PendingPassStyle = 0;   // 2 curve, 3 lob (set around TryPass by the pass arts)
+	float SkateTrailT = 0.f;
+	bool bPhaseCollision = false;
+	bool CanUseGenericArt(const FTaGArtDef& Def) const;
+	void ExecuteGenericArt(const FTaGArtDef& Def);
+	/** ArtStart finished its startup for a generic art: fire it. */
+	void FireGenericArt(const FTaGArtDef& Def);
+	void StartArtDrive(const FTaGArtDef& Def);
+	/** Server: the art's effect on one opponent (handles dodges, shells and drives as reads). */
+	void HitWithArt(ATaGCharacter* Target, const FTaGArtDef& Def, const FVector& Push);
+	/** Server, every tick: drive trails (sparks, ice), shields, phase collision. */
+	void TickArtStatus(float Dt);
+	TArray<ATaGCharacter*> TeamInRadius(float Radius, bool bIncludeSelf) const;
 	FVector ShotMotion(float& OutSpeed) const;
 
 	// Input handlers

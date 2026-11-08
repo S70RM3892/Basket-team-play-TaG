@@ -12,8 +12,10 @@ class UPointLightComponent;
 
 /**
  * The rooftop court in Nagisa (Tetsuba district) at dusk, plus the two districts around it.
- * Uses the Blender-made meshes under /Game/Art/Court and /Game/Art/City when they exist, and falls back to
- * engine shapes otherwise. Court lines are always drawn here. Purely visual: the ball's rim and board collision
+ * Uses the Blender-made meshes under /Game/Art/Court and /Game/Art/City (court, props, districts, sea, toon sky dome
+ * and clouds) when they exist; then the scene has no lights, only a post-process volume with manual exposure, because
+ * every art material is unlit toon lit by MPC_TaG. Falls back to engine shapes and real lights otherwise.
+ * Court lines are always drawn here. Purely visual: the ball's rim and board collision
  * lives in FTaGBallSim; this actor only provides the floor and the walls for the players.
  * World rule shown on screen: the district of the team that scores gets its lights back (WORLD.md section 1).
  */

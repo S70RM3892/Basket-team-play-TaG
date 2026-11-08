@@ -283,7 +283,7 @@ void ATaGPlayerController::Tick(float DeltaSeconds)
 
 void ATaGPlayerController::UpdateSpectatorCamera(float Dt)
 {
-	if (!OrbitCamera)
+	if (!OrbitCamera || bExternalView)
 	{
 		return;
 	}

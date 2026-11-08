@@ -2,6 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "AIController.h"
+#include "Core/TaGHeroData.h"
 #include "TaGBotController.generated.h"
 
 class ATaGCharacter;
@@ -66,6 +67,8 @@ protected:
 	float OpenNess(const ATaGCharacter* Who) const;
 	EHand Pick(const TMap<EHand, float>& Weights) const;
 	bool UseArtIf(ATaGCharacter* Me, int32 Index, bool bCondition);
+	/** Data-driven arts (TaGHeroData): use one whose AI hint matches the situation, at RatePerSec. */
+	bool TryArts(ATaGCharacter* Me, ETaGArtAI Situation, float RatePerSec, float Dt);
 
 	EHand DefFav = EHand::Tackle;
 	EHand OffFav = EHand::Drive;

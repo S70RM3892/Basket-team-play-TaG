@@ -54,6 +54,7 @@ void UTaGRigComponent::Clear()
 	WristGlow.Reset();
 	AnkleGlow.Reset();
 	TeamMats.Reset();
+	OutlineMats.Reset();
 }
 
 USceneComponent* UTaGRigComponent::MakeJoint(USceneComponent* Parent, const TCHAR* Name, const FVector& Loc)
@@ -112,12 +113,33 @@ void UTaGRigComponent::BuildArt(const FTaGHeroDef& Hero)
 	UStaticMesh* ThighR = M(TEXT("Thigh_R"));
 	UStaticMesh* ShinL = M(TEXT("Shin_L"));
 	UStaticMesh* ShinR = M(TEXT("Shin_R"));
+	UStaticMesh* FootL = M(TEXT("Foot_L"));
+	UStaticMesh* FootR = M(TEXT("Foot_R"));
+	bHasFeet = FootL && FootR;
 
 	const float S = HeightScale;
-	const FVector HipLLoc = SocketLoc(Pelvis, TEXT("hip_l"), FVector(0.f, -11.f * S, -2.f * S));
-	const FVector KneeLoc = SocketLoc(ThighL, TEXT("knee"), FVector(0.f, 0.f, -45.f * S));
-	const FVector SoleLoc = SocketLoc(ShinL, TEXT("sole"), FVector(0.f, 0.f, -46.f * S));
-	PelvisRestZ = -(HipLLoc.Z + KneeLoc.Z + SoleLoc.Z);
+	HipSock[0] = SocketLoc(Pelvis, TEXT("hip_l"), FVector(0.f, -11.f * S, -2.f * S));
+	HipSock[1] = SocketLoc(Pelvis, TEXT("hip_r"), FVector(0.f, 11.f * S, -2.f * S));
+	KneeSock[0] = SocketLoc(ThighL, TEXT("knee"), FVector(0.f, 0.f, -45.f * S));
+	KneeSock[1] = SocketLoc(ThighR, TEXT("knee"), FVector(0.f, 0.f, -45.f * S));
+	if (bHasFeet)
+	{
+		// Separate feet: the shin ends at the ankle and the foot keeps the sole level on the floor.
+		ShinEndSock[0] = SocketLoc(ShinL, TEXT("ankle"), FVector(0.f, 0.f, -40.f * S));
+		ShinEndSock[1] = SocketLoc(ShinR, TEXT("ankle"), FVector(0.f, 0.f, -40.f * S));
+		SoleSock[0] = SocketLoc(FootL, TEXT("sole"), FVector(5.f * S, 0.f, -7.f * S));
+		SoleSock[1] = SocketLoc(FootR, TEXT("sole"), FVector(5.f * S, 0.f, -7.f * S));
+		ToeSock[0] = SocketLoc(FootL, TEXT("toe"), SoleSock[0] + FVector(12.f * S, 0.f, 0.f));
+		ToeSock[1] = SocketLoc(FootR, TEXT("toe"), SoleSock[1] + FVector(12.f * S, 0.f, 0.f));
+	}
+	else
+	{
+		// One-piece shin and foot: the chain ends at the sole.
+		ShinEndSock[0] = SocketLoc(ShinL, TEXT("sole"), FVector(0.f, 0.f, -46.f * S));
+		ShinEndSock[1] = SocketLoc(ShinR, TEXT("sole"), FVector(0.f, 0.f, -46.f * S));
+		SoleSock[0] = SoleSock[1] = ToeSock[0] = ToeSock[1] = FVector::ZeroVector;
+	}
+	PelvisRestZ = -(HipSock[0].Z + KneeSock[0].Z + ShinEndSock[0].Z + SoleSock[0].Z);
 
 	Joints[Pivot] = MakeJoint(this, TEXT("RigPivot"), FVector::ZeroVector);
 	Joints[Hips] = MakeJoint(Joints[Pivot], TEXT("RigHips"), FVector(0.f, 0.f, PelvisRestZ));
@@ -137,16 +159,23 @@ void UTaGRigComponent::BuildArt(const FTaGHeroDef& Hero)
 	HandOffset[0] = SocketLoc(LowerL, TEXT("hand"), FVector(0.f, 0.f, -30.f * S));
 	HandOffset[1] = SocketLoc(LowerR, TEXT("hand"), FVector(0.f, 0.f, -30.f * S));
 	ForearmLen = -HandOffset[1].Z;
-	Joints[HipL] = MakeJoint(Joints[Hips], TEXT("RigHipL"), HipLLoc);
-	Joints[HipR] = MakeJoint(Joints[Hips], TEXT("RigHipR"), SocketLoc(Pelvis, TEXT("hip_r"), FVector(0.f, 11.f * S, -2.f * S)));
+	Joints[HipL] = MakeJoint(Joints[Hips], TEXT("RigHipL"), HipSock[0]);
+	Joints[HipR] = MakeJoint(Joints[Hips], TEXT("RigHipR"), HipSock[1]);
 	MakePart(Joints[HipL], ThighL);
 	MakePart(Joints[HipR], ThighR);
-	Joints[KneeL] = MakeJoint(Joints[HipL], TEXT("RigKneeL"), KneeLoc);
-	Joints[KneeR] = MakeJoint(Joints[HipR], TEXT("RigKneeR"), SocketLoc(ThighR, TEXT("knee"), FVector(0.f, 0.f, -45.f * S)));
+	Joints[KneeL] = MakeJoint(Joints[HipL], TEXT("RigKneeL"), KneeSock[0]);
+	Joints[KneeR] = MakeJoint(Joints[HipR], TEXT("RigKneeR"), KneeSock[1]);
 	UStaticMeshComponent* ShinCL = MakePart(Joints[KneeL], ShinL);
 	UStaticMeshComponent* ShinCR = MakePart(Joints[KneeR], ShinR);
+	Joints[AnkleL] = MakeJoint(Joints[KneeL], TEXT("RigAnkleL"), ShinEndSock[0]);
+	Joints[AnkleR] = MakeJoint(Joints[KneeR], TEXT("RigAnkleR"), ShinEndSock[1]);
+	if (bHasFeet)
+	{
+		MakePart(Joints[AnkleL], FootL);
+		MakePart(Joints[AnkleR], FootR);
+	}
 
-	// Glow and team slots
+	// Glow, team and outline slots
 	for (UStaticMeshComponent* C : { ForeL, ForeR })
 	{
 		if (C && C->GetMaterialIndex(TEXT("TaG")) != INDEX_NONE)
@@ -161,7 +190,7 @@ void UTaGRigComponent::BuildArt(const FTaGHeroDef& Hero)
 			AnkleGlow.Add(TaGArt::PaintSlot(C, TEXT("TaG"), FLinearColor(0.1f, 0.1f, 0.1f), 0.f));
 		}
 	}
-	// Torso / head TaG bands (Gantetsu's joints, Hibiki's bell rim) follow the wrist glow
+	// Other TaG bands (machine joints, a jelly bell rim) follow the wrist glow
 	for (UStaticMeshComponent* C : Parts)
 	{
 		if (C && C != ForeL && C != ForeR && C != ShinCL && C != ShinCR && C->GetMaterialIndex(TEXT("TaG")) != INDEX_NONE)
@@ -172,18 +201,30 @@ void UTaGRigComponent::BuildArt(const FTaGHeroDef& Hero)
 		{
 			TeamMats.Add(TaGArt::PaintSlot(C, TEXT("Team"), FLinearColor::White, 0.f));
 		}
+		if (C && C->GetMaterialIndex(TEXT("Outline")) != INDEX_NONE)
+		{
+			OutlineMats.Add(TaGArt::PaintSlot(C, TEXT("Outline"), FLinearColor(0.05f, 0.05f, 0.07f), 0.f));
+		}
 	}
+	FinishLegSetup();
 }
 
 void UTaGRigComponent::BuildFallback(const FTaGHeroDef& Hero)
 {
-	// Engine shapes sized from the hero's body numbers (M body = Godot rig.gd proportions in cm).
+	// Engine shapes sized from the body numbers of the hero (M body = Godot rig.gd proportions in cm).
 	const float S = HeightScale;
 	const float W = Hero.BodyWidth / 50.f;
 	UStaticMesh* Cyl = TaGArt::EngineCylinder();
 	UStaticMesh* Sph = TaGArt::EngineSphere();
 	UStaticMesh* Cube = TaGArt::EngineCube();
-	PelvisRestZ = 95.f * S;
+	bHasFeet = true;
+	HipSock[0] = FVector(0.f, -11.f * S * W, -2.f * S);
+	HipSock[1] = FVector(0.f, 11.f * S * W, -2.f * S);
+	KneeSock[0] = KneeSock[1] = FVector(0.f, 0.f, -45.f * S);
+	ShinEndSock[0] = ShinEndSock[1] = FVector(0.f, 0.f, -44.f * S);
+	SoleSock[0] = SoleSock[1] = FVector(5.f * S, 0.f, -3.5f * S);
+	ToeSock[0] = ToeSock[1] = FVector(18.f * S, 0.f, -3.5f * S);
+	PelvisRestZ = -(HipSock[0].Z + KneeSock[0].Z + ShinEndSock[0].Z + SoleSock[0].Z);
 	ForearmLen = 30.f * S;
 	HandOffset[0] = HandOffset[1] = FVector(0.f, 0.f, -ForearmLen);
 
@@ -223,20 +264,38 @@ void UTaGRigComponent::BuildFallback(const FTaGHeroDef& Hero)
 	WristGlow.Add(Band(Joints[ElbowL], -24.f * S, 10.f * S * W));
 	WristGlow.Add(Band(Joints[ElbowR], -24.f * S, 10.f * S * W));
 
-	Joints[HipL] = MakeJoint(Joints[Hips], TEXT("RigHipL"), FVector(0.f, -11.f * S * W, -2.f * S));
-	Joints[HipR] = MakeJoint(Joints[Hips], TEXT("RigHipR"), FVector(0.f, 11.f * S * W, -2.f * S));
+	Joints[HipL] = MakeJoint(Joints[Hips], TEXT("RigHipL"), HipSock[0]);
+	Joints[HipR] = MakeJoint(Joints[Hips], TEXT("RigHipR"), HipSock[1]);
 	Limb(Joints[HipL], 45.f * S, 16.f * S * W, Q * 0.5f);
 	Limb(Joints[HipR], 45.f * S, 16.f * S * W, Q * 0.5f);
-	Joints[KneeL] = MakeJoint(Joints[HipL], TEXT("RigKneeL"), FVector(0.f, 0.f, -45.f * S));
-	Joints[KneeR] = MakeJoint(Joints[HipR], TEXT("RigKneeR"), FVector(0.f, 0.f, -45.f * S));
+	Joints[KneeL] = MakeJoint(Joints[HipL], TEXT("RigKneeL"), KneeSock[0]);
+	Joints[KneeR] = MakeJoint(Joints[HipR], TEXT("RigKneeR"), KneeSock[1]);
 	Limb(Joints[KneeL], 44.f * S, 13.f * S * W, P);
 	Limb(Joints[KneeR], 44.f * S, 13.f * S * W, P);
-	for (USceneComponent* K : { Joints[KneeL], Joints[KneeR] })
+	Joints[AnkleL] = MakeJoint(Joints[KneeL], TEXT("RigAnkleL"), ShinEndSock[0]);
+	Joints[AnkleR] = MakeJoint(Joints[KneeR], TEXT("RigAnkleR"), ShinEndSock[1]);
+	for (USceneComponent* A : { Joints[AnkleL], Joints[AnkleR] })
 	{
-		TaGArt::PaintSlot(MakePart(K, Cube, FTransform(FRotator::ZeroRotator, FVector(5.f * S, 0.f, -44.f * S), FVector(0.26f * S, 0.11f * S * W, 0.07f * S))), NAME_None, FLinearColor(0.92f, 0.93f, 0.95f));
+		TaGArt::PaintSlot(MakePart(A, Cube, FTransform(FRotator::ZeroRotator, FVector(8.f * S, 0.f, 0.f), FVector(0.26f * S, 0.11f * S * W, 0.07f * S))), NAME_None, FLinearColor(0.92f, 0.93f, 0.95f));
 	}
 	AnkleGlow.Add(Band(Joints[KneeL], -38.f * S, 13.f * S * W));
 	AnkleGlow.Add(Band(Joints[KneeR], -38.f * S, 13.f * S * W));
+	FinishLegSetup();
+}
+
+void UTaGRigComponent::FinishLegSetup()
+{
+	ThighLen = FMath::Max(KneeSock[0].Size(), 5.f);
+	ShinLen = FMath::Max(ShinEndSock[0].Size(), 5.f);
+	for (int32 i = 0; i < 2; ++i)
+	{
+		RestSole[i] = FVector(0.f, 0.f, PelvisRestZ) + HipSock[i] + KneeSock[i] + ShinEndSock[i] + SoleSock[i];
+	}
+	bFeetValid = false;
+	bWasOnFloor = true;
+	LegIKWeight = 1.f;
+	HipDrop = 0.f;
+	GaitPhase = 0.f;
 }
 
 void UTaGRigComponent::SetOwnerNoSeeAll(bool bNoSee)
@@ -257,6 +316,14 @@ void UTaGRigComponent::SetTeamColor(const FLinearColor& Color)
 		if (M)
 		{
 			M->SetVectorParameterValue(TEXT("Color"), bArt ? Color : (Color * 0.55f + FLinearColor(0.05f, 0.05f, 0.05f)));
+		}
+	}
+	// Outlines carry the team colour (WORLD.md 7: TaG glow and outline tell ally from enemy)
+	for (UMaterialInstanceDynamic* M : OutlineMats)
+	{
+		if (M)
+		{
+			M->SetVectorParameterValue(TEXT("Color"), Color * 0.9f);
 		}
 	}
 }
@@ -286,40 +353,333 @@ FVector UTaGRigComponent::GetHandWorld(bool bRight) const
 	return E ? E->GetComponentTransform().TransformPosition(HandOffset[bRight ? 1 : 0]) : GetComponentLocation();
 }
 
+// ================================================================ Legs: planted-foot gait
+
+float UTaGRigComponent::FootForward(int32 Side, float Duty) const
+{
+	const float P = FMath::Frac(GaitPhase + (Side == 0 ? 0.f : 0.5f));
+	if (P < Duty)
+	{
+		return 1.f - 2.f * P / FMath::Max(Duty, 0.01f);
+	}
+	const float Q = (P - Duty) / FMath::Max(1.f - Duty, 0.01f);
+	return -1.f + 2.f * FMath::SmoothStep(0.f, 1.f, Q);
+}
+
+FVector UTaGRigComponent::ChainEndTarget(int32 Side) const
+{
+	const FFoot& F = Feet[Side & 1];
+	const FVector SoleW = F.Current + FVector(0.f, 0.f, F.Lift);
+	if (!bHasFeet)
+	{
+		return SoleW; // the shin mesh ends at the sole
+	}
+	const FQuat FootW = FRotator(F.Pitch, F.CurYaw, 0.f).Quaternion();
+	if (F.bOnToe)
+	{
+		// Heel up: the foot rolls over the toe, which stays where a flat foot would put it.
+		const FQuat Flat = FRotator(0.f, F.CurYaw, 0.f).Quaternion();
+		const FVector ToeW = SoleW + Flat.RotateVector(ToeSock[Side & 1] - SoleSock[Side & 1]);
+		return ToeW - FootW.RotateVector(ToeSock[Side & 1]);
+	}
+	return SoleW - FootW.RotateVector(SoleSock[Side & 1]);
+}
+
+void UTaGRigComponent::UpdateFeet(float Dt, const FVector& Vel, bool bOnFloor, float Duty, float Sweep, float Lift, float Widen, float OutYaw)
+{
+	const FTransform RigXf = GetComponentTransform();
+	const float GroundZ = RigXf.GetLocation().Z;
+	const float BodyYaw = RigXf.Rotator().Yaw;
+	const float LegLen = ThighLen + ShinLen;
+	auto Rest = [&](int32 i)
+	{
+		FVector W = RigXf.TransformPositionNoScale(FVector(RestSole[i].X, RestSole[i].Y + (i == 0 ? -Widen : Widen), 0.f));
+		W.Z = GroundZ;
+		return W;
+	};
+	auto RestYaw = [&](int32 i) { return BodyYaw + (i == 0 ? -OutYaw : OutYaw); };
+	auto Reset = [&]()
+	{
+		for (int32 i = 0; i < 2; ++i)
+		{
+			FFoot& F = Feet[i];
+			F.bPlanted = true;
+			F.PlantPos = F.Current = F.SwingFrom = Rest(i);
+			F.PlantYaw = F.CurYaw = F.SwingFromYaw = RestYaw(i);
+			F.Lift = 0.f;
+			F.Pitch = 0.f;
+			F.bOnToe = false;
+		}
+		GaitPhase = 0.f;
+		bFeetValid = true;
+		bSettling = false;
+	};
+
+	if (!bOnFloor)
+	{
+		bWasOnFloor = false;
+		bFeetValid = false;
+		return;
+	}
+	if (!bFeetValid || !bWasOnFloor)
+	{
+		const bool bLanded = !bWasOnFloor;
+		Reset();
+		if (bLanded)
+		{
+			LandSquash = 1.f;
+			StepCount++;
+		}
+	}
+	bWasOnFloor = true;
+	for (int32 i = 0; i < 2; ++i)
+	{
+		if (FVector::Dist2D(Feet[i].Current, Rest(i)) > 1.6f * LegLen)
+		{
+			Reset(); // teleported (a new possession)
+			break;
+		}
+	}
+
+	FVector V = Vel;
+	V.Z = 0.f;
+	const float Spd = V.Size();
+	const FVector Dir = Spd > 1.f ? V / Spd : FVector::ZeroVector;
+
+	// Standing still with the feet out of place (stopped mid-stride, turned on the spot): a few small steps.
+	if (Spd < 25.f && Feet[0].bPlanted && Feet[1].bPlanted)
+	{
+		float Err = 0.f;
+		for (int32 i = 0; i < 2; ++i)
+		{
+			Err = FMath::Max(Err, FVector::Dist2D(Feet[i].PlantPos, Rest(i)) + 0.25f * FMath::Abs(FMath::FindDeltaAngleDegrees(Feet[i].PlantYaw, RestYaw(i))));
+		}
+		if (Err > 0.13f * LegLen)
+		{
+			bSettling = true;
+		}
+		else if (Err < 0.05f * LegLen)
+		{
+			bSettling = false;
+		}
+	}
+	else if (Spd >= 25.f)
+	{
+		bSettling = false;
+	}
+	const bool bAnySwing = !Feet[0].bPlanted || !Feet[1].bPlanted;
+	float SEff = Spd;
+	if (bSettling || bAnySwing)
+	{
+		SEff = FMath::Max(SEff, 0.9f * LegLen);
+	}
+	// The stance foot sweeps back exactly as fast as the body moves forward: cycles/s = speed * duty / sweep.
+	float Freq = 0.f;
+	float UseSweep = Sweep;
+	if (Spd >= 25.f || bSettling || bAnySwing)
+	{
+		Freq = SEff * Duty / Sweep;
+		if (Freq > 3.6f)
+		{
+			Freq = 3.6f; // very fast (drives): longer strides instead of even faster feet
+			UseSweep = SEff * Duty / Freq;
+		}
+	}
+	// A planted foot the body has run away from (sharp turns, shoves) is picked up at once.
+	for (int32 i = 0; i < 2 && Freq > 0.f; ++i)
+	{
+		if (Feet[i].bPlanted && FVector::Dist2D(Feet[i].PlantPos, Rest(i)) > 0.7f * LegLen)
+		{
+			GaitPhase = FMath::Frac(Duty - (i == 0 ? 0.f : 0.5f));
+			break;
+		}
+	}
+	GaitPhase = FMath::Frac(GaitPhase + Freq * Dt);
+
+	const float RunK = FMath::Clamp(Spd / (2.f * LegLen), 0.f, 1.f);
+	for (int32 i = 0; i < 2; ++i)
+	{
+		FFoot& F = Feet[i];
+		if (Freq <= 0.f)
+		{
+			F.Lift = FMath::FInterpTo(F.Lift, 0.f, Dt, 12.f);
+			F.Pitch = FMath::FInterpTo(F.Pitch, 0.f, Dt, 12.f);
+			F.bOnToe = false;
+			continue;
+		}
+		const float P = FMath::Frac(GaitPhase + (i == 0 ? 0.f : 0.5f));
+		const bool bStance = P < Duty;
+		if (bStance && !F.bPlanted)
+		{
+			F.bPlanted = true;
+			F.PlantPos = FVector(F.Current.X, F.Current.Y, GroundZ);
+			F.PlantYaw = F.CurYaw;
+			StepCount++;
+		}
+		else if (!bStance && F.bPlanted)
+		{
+			F.bPlanted = false;
+			F.SwingFrom = F.PlantPos;
+			F.SwingFromYaw = F.PlantYaw;
+		}
+		if (F.bPlanted)
+		{
+			F.Current = F.PlantPos;
+			F.CurYaw = F.PlantYaw;
+			F.Lift = 0.f;
+			// Running: the heel comes up late in the stance and the foot rolls onto the toe.
+			const float Late = FMath::Clamp((P / Duty - 0.72f) / 0.28f, 0.f, 1.f) * RunK;
+			F.bOnToe = bHasFeet && Late > 0.01f;
+			F.Pitch = -26.f * Late;
+		}
+		else
+		{
+			const float Q = (P - Duty) / (1.f - Duty);
+			const float TimeLeft = (1.f - Q) * (1.f - Duty) / Freq;
+			// Land half a sweep ahead of where the hip will be at touchdown.
+			const FVector Land = Rest(i) + V * TimeLeft + Dir * (UseSweep * 0.5f);
+			const float E = Q * Q * Q * (Q * (Q * 6.f - 15.f) + 10.f);
+			F.Current = FMath::Lerp(F.SwingFrom, Land, E);
+			F.Current.Z = GroundZ;
+			F.CurYaw = F.SwingFromYaw + FMath::FindDeltaAngleDegrees(F.SwingFromYaw, RestYaw(i)) * E;
+			F.Lift = Lift * FMath::Sin(UE_PI * Q);
+			F.bOnToe = false;
+			F.Pitch = (-32.f * FMath::Max(0.f, 1.f - Q / 0.35f) + 10.f * FMath::SmoothStep(0.6f, 1.f, Q)) * RunK;
+		}
+	}
+}
+
+void UTaGRigComponent::SolveLeg(int32 Side, const FQuat& FKThigh, const FQuat& FKKnee)
+{
+	USceneComponent* HipJ = Joints[Side == 0 ? HipL : HipR];
+	USceneComponent* KneeJ = Joints[Side == 0 ? KneeL : KneeR];
+	USceneComponent* AnkJ = Joints[Side == 0 ? AnkleL : AnkleR];
+	if (!HipJ || !KneeJ)
+	{
+		return;
+	}
+	const float W = bFeetValid ? LegIKWeight : 0.f;
+	if (W <= 0.001f)
+	{
+		HipJ->SetRelativeRotation(FKThigh);
+		KneeJ->SetRelativeRotation(FKKnee);
+		if (AnkJ)
+		{
+			AnkJ->SetRelativeRotation(FQuat::Identity);
+		}
+		return;
+	}
+	const FFoot& F = Feet[Side];
+	const FTransform HipsXf = Joints[Hips]->GetComponentTransform();
+	const FVector Target = HipsXf.InverseTransformPositionNoScale(ChainEndTarget(Side)) - HipSock[Side];
+	const float A = KneeSock[Side].Size();
+	const float B = ShinEndSock[Side].Size();
+	const float D = FMath::Clamp(Target.Size(), FMath::Abs(A - B) + 1.f, (A + B) * 0.999f);
+	const FVector N = Target.GetSafeNormal(UE_SMALL_NUMBER, FVector(0.f, 0.f, -1.f));
+	// The knee points where the foot points, a little outward.
+	const FQuat FootYawInHips = HipsXf.GetRotation().Inverse() * FRotator(0.f, F.CurYaw, 0.f).Quaternion();
+	const FVector Pole = FootYawInHips.RotateVector(FVector(1.f, Side == 0 ? -0.12f : 0.12f, 0.f));
+	FVector H = FVector::CrossProduct(Pole, N).GetSafeNormal();
+	if (H.IsNearlyZero())
+	{
+		H = FVector(0.f, 1.f, 0.f);
+	}
+	const FVector M = FVector::CrossProduct(N, H);
+	const float CosA = FMath::Clamp((A * A + D * D - B * B) / (2.f * A * D), -1.f, 1.f);
+	const float Alpha = FMath::Acos(CosA);
+	const FVector T = N * FMath::Cos(Alpha) + M * FMath::Sin(Alpha); // hip -> knee
+	FQuat QThigh = FRotationMatrix::MakeFromZY(-T, H).ToQuat();
+	// The knee socket may sit a little off the joint axis: turn it onto T.
+	const float PsiKnee = FMath::Atan2(KneeSock[Side].X, -KneeSock[Side].Z);
+	QThigh = QThigh * FRotator(-FMath::RadiansToDegrees(PsiKnee), 0.f, 0.f).Quaternion();
+	// Knee hinge (local pitch): swing the end of the shin onto the target.
+	const FVector InThigh = QThigh.Inverse().RotateVector(Target) - KneeSock[Side];
+	const float PsiWant = FMath::Atan2(InThigh.X, -InThigh.Z);
+	const float PsiRest = FMath::Atan2(ShinEndSock[Side].X, -ShinEndSock[Side].Z);
+	const FQuat QKnee = FRotator(FMath::RadiansToDegrees(PsiWant - PsiRest), 0.f, 0.f).Quaternion();
+	HipJ->SetRelativeRotation(FQuat::Slerp(FKThigh, QThigh, W));
+	KneeJ->SetRelativeRotation(FQuat::Slerp(FKKnee, QKnee, W));
+	if (AnkJ)
+	{
+		// The foot keeps its own world orientation: flat on the floor, or toe-off / landing pitch in the air.
+		const FQuat ShinW = KneeJ->GetComponentQuat();
+		const FQuat Want = ShinW.Inverse() * FRotator(F.Pitch, F.CurYaw, 0.f).Quaternion();
+		AnkJ->SetRelativeRotation(FQuat::Slerp(FQuat::Identity, Want, W));
+	}
+}
+
+// ================================================================ Pose
+
 void UTaGRigComponent::Animate(const FTaGPoseInput& In)
 {
 	if (Joints.Num() != JointCount || !Joints[Hips])
 	{
 		return;
 	}
-	// Godot rig.gd works in m/s; speeds here are cm/s.
-	const float Spd = In.Speed / 100.f;
-	const float Fwd = In.ForwardSpeed / 100.f;
-	const float Amp = FMath::Clamp(Spd / 5.f, 0.f, 1.f);
-	if (Spd > 0.3f)
-	{
-		Phase += In.Dt * (5.f + Spd * 1.5f) * (Fwd >= -0.5f ? 1.f : -1.f);
-	}
-	const float Sw = FMath::Sin(Phase);
+	// Long frames (hitches) still advance the gait by the real time, or the planted feet fall behind the body.
+	const float Dt = FMath::Clamp(In.Dt, 0.f, 0.25f);
+	IdleT += Dt;
 
-	float HipsY = 0.95f - 0.05f * FMath::Abs(Sw) * Amp;
-	float Lean = 0.12f * Amp;
+	// ---------------- Travel: how fast, and which way relative to the body
+	const FTransform RigXf = GetComponentTransform();
+	FVector Vel = In.Velocity;
+	Vel.Z = 0.f;
+	const float Spd = Vel.Size();
+	const float LegLen = FMath::Max(ThighLen + ShinLen, 10.f);
+	const float SRel = Spd / LegLen; // leg lengths per second
+	const float Run = FMath::Clamp((SRel - 1.f) / 3.5f, 0.f, 1.f);
+	if (Spd > 15.f)
+	{
+		const FVector L = RigXf.InverseTransformVectorNoScale(Vel / Spd);
+		const FVector2D Want(L.X, L.Y);
+		const FVector2D Blend = MoveDirLocal + (Want - MoveDirLocal) * FMath::Clamp(Dt * 12.f, 0.f, 1.f);
+		MoveDirLocal = Blend.IsNearlyZero() ? Want : Blend.GetSafeNormal();
+	}
+	const float FwdW = FMath::Max(MoveDirLocal.X, 0.f);
+	const float BackW = FMath::Max(-MoveDirLocal.X, 0.f);
+	const float SideW = FMath::Abs(MoveDirLocal.Y);
+	const float WSum = FwdW + BackW + SideW + 1e-3f;
+	auto Mix = [&](float F, float B, float Sd) { return (FwdW * F + BackW * B + SideW * Sd) / WSum; };
+	const float SideMix = SideW / WSum;
+	const float Moving = FMath::Clamp(Spd / (0.5f * LegLen), 0.f, 1.f);
+
+	// Stride: longer with speed; shorter when backpedalling, shortest sideways (a shuffle: the feet never cross).
+	const float StepLen = LegLen * FMath::Min(0.4f + 0.15f * SRel, 1.2f) * Mix(1.f, 0.72f, 0.55f);
+	const float Duty = FMath::Clamp(FMath::Lerp(0.62f, 0.38f, Run) + 0.1f * SideMix, 0.36f, 0.72f);
+	const float Sweep = FMath::Max(2.f * Duty * StepLen, 2.f);
+	const float Lift = LegLen * FMath::Lerp(0.07f, 0.2f, Run) * Mix(1.f, 0.6f, 0.45f);
+	float Widen = LegLen * (0.03f + 0.07f * SideMix * Moving);
+	if (In.Role == 2)
+	{
+		Widen += LegLen * 0.09f; // defensive stance: wide base
+	}
+	UpdateFeet(Dt, Vel, In.bOnFloor, Duty, Sweep, Lift, Widen, 8.f);
+	const float FxL = FootForward(0, Duty) * Moving;
+	const float FxR = FootForward(1, Duty) * Moving;
+	const float Amp = FMath::Clamp(Spd / 500.f, 0.f, 1.f);
+	const float ArmAmp = 0.65f * Amp * Mix(1.f, 0.6f, 0.15f);
+
+	float HipsY = 0.95f;
+	float Lean = (0.06f + 0.16f * Run) * (FwdW - 0.6f * BackW) / WSum * Moving;
+	float SideLean = 0.1f * Run * MoveDirLocal.Y;
 	float Spin = 0.f;
 	float Tilt = 0.f;
-	float ShL = -Sw * 0.6f * Amp + 0.1f, ShR = Sw * 0.6f * Amp + 0.1f;
-	float ShzL = -0.12f, ShzR = 0.12f;
-	float ElL = 0.5f, ElR = 0.5f;
-	float HipL_ = Sw * 0.75f * Amp, HipR_ = -Sw * 0.75f * Amp;
-	float KnL = -(0.15f + 0.9f * Amp * FMath::Max(0.f, -Sw));
-	float KnR = -(0.15f + 0.9f * Amp * FMath::Max(0.f, Sw));
+	// Arms swing against the legs (left arm back when the left foot is forward); out for balance when shuffling.
+	float ShL = -FxL * ArmAmp + 0.1f, ShR = -FxR * ArmAmp + 0.1f;
+	float ShzL = -0.12f - 0.3f * SideMix * Moving, ShzR = 0.12f + 0.3f * SideMix * Moving;
+	float ElL = 0.5f + 0.4f * Run, ElR = 0.5f + 0.4f * Run;
+	// FK legs: only used while the IK is off (air, lunges, spins, falls)
+	float HipL_ = 0.f, HipR_ = 0.f;
+	float KnL = -0.15f, KnR = -0.15f;
 
 	const ETaGAction St = In.Action;
 	const bool bNormal = St == ETaGAction::None || St == ETaGAction::Gathered || St == ETaGAction::PassThrow;
 	if (In.Role == 2 && bNormal)
 	{
 		// Defensive stance: hips down, arms wide
-		HipsY -= 0.1f; KnL -= 0.55f; KnR -= 0.55f; HipL_ += 0.35f; HipR_ += 0.35f;
-		Lean = 0.25f; ShL = 0.5f; ShR = 0.5f; ShzL = -0.9f; ShzR = 0.9f; ElL = 0.4f; ElR = 0.4f;
+		HipsY -= 0.1f;
+		Lean = 0.25f;
+		ShL = 0.5f; ShR = 0.5f; ShzL = -0.9f; ShzR = 0.9f; ElL = 0.4f; ElR = 0.4f;
 	}
 	if (In.Role == 1 && bNormal)
 	{
@@ -359,7 +719,7 @@ void UTaGRigComponent::Animate(const FTaGPoseInput& In)
 			ShzL = -0.15f; ShzR = 0.1f;
 			if (In.bOnFloor && K < 0.5f)
 			{
-				KnL = -0.7f; KnR = -0.7f; HipL_ = 0.45f; HipR_ = 0.45f; HipsY = 0.85f;
+				HipsY = 0.85f; // gather: sink before the jump
 			}
 			else if (!In.bOnFloor)
 			{
@@ -367,6 +727,7 @@ void UTaGRigComponent::Animate(const FTaGPoseInput& In)
 			}
 			Lean = Ty == ETaGShotType::Fade ? -0.38f : (Ty == ETaGShotType::StepBack ? -0.15f : 0.f);
 		}
+		SideLean = 0.f;
 		break;
 	}
 	case ETaGAction::ContestStart:
@@ -375,7 +736,8 @@ void UTaGRigComponent::Animate(const FTaGPoseInput& In)
 		break;
 	case ETaGAction::TackleStart:
 	case ETaGAction::ArtStart:
-		HipsY = 0.78f; KnL = -1.1f; KnR = -1.1f; HipL_ = 0.7f; HipR_ = 0.7f; Lean = 0.55f;
+		HipsY = 0.78f; Lean = 0.55f;
+		HipL_ = 0.7f; HipR_ = 0.7f; KnL = -1.1f; KnR = -1.1f;
 		ShL = 0.9f; ShR = 0.9f; ElL = 1.2f; ElR = 1.2f;
 		break;
 	case ETaGAction::Tackle:
@@ -387,20 +749,24 @@ void UTaGRigComponent::Animate(const FTaGPoseInput& In)
 		Lean = 0.6f; ShL = 0.4f; ShR = 0.4f;
 		break;
 	case ETaGAction::DriveStart:
+		HipsY = 0.86f; Lean = 0.5f;
+		break;
 	case ETaGAction::Drive:
-		Lean = 0.45f;
+		Lean = 0.45f + 0.1f * Run;
 		break;
 	case ETaGAction::DodgeStart:
 	case ETaGAction::Dodge:
 		// Spin move
 		Spin = 2.f * UE_PI * FMath::Clamp(In.ActionT / 0.36f, 0.f, 1.f) * In.DodgeSide;
 		Lean = 0.2f;
+		KnL = -0.6f; KnR = -0.3f; HipL_ = 0.4f; HipR_ = -0.1f;
 		break;
 	case ETaGAction::DodgeRecover:
 		Lean = 0.25f; ShL = 0.2f; ShR = 0.2f;
 		break;
 	case ETaGAction::Stagger:
 		Lean = -0.3f; ShL = 1.4f; ShR = 1.4f; ShzL = -1.f; ShzR = 1.f;
+		KnL = -0.5f; KnR = -0.2f; HipL_ = 0.3f; HipR_ = -0.2f;
 		break;
 	case ETaGAction::StealRecover:
 		ShR = 1.6f; ElR = 0.1f; Lean = 0.4f;
@@ -420,7 +786,7 @@ void UTaGRigComponent::Animate(const FTaGPoseInput& In)
 	}
 	if (In.bPretellTackle && bNormal)
 	{
-		HipsY = 0.82f; KnL = -1.f; KnR = -1.f; HipL_ = 0.6f; HipR_ = 0.6f; Lean = 0.5f;
+		HipsY = 0.82f; Lean = 0.5f; HipL_ = 0.6f; HipR_ = 0.6f; KnL = -1.f; KnR = -1.f;
 	}
 	else if (In.bPretellContest && bNormal)
 	{
@@ -428,16 +794,40 @@ void UTaGRigComponent::Animate(const FTaGPoseInput& In)
 	}
 	else if (In.bPretellDrive && bNormal)
 	{
-		HipsY = 0.86f; Lean = 0.65f; KnL = -0.8f; KnR = -0.4f; HipL_ = 0.6f; ShL = 0.7f; ShR = -0.5f;
+		HipsY = 0.86f; Lean = 0.65f; ShL = 0.7f; ShR = -0.5f;
 	}
 	else if (In.bPretellShot && bNormal)
 	{
-		ShL = 1.7f; ShR = 1.7f; ElL = 0.9f; ElR = 0.9f; KnL = -0.5f; KnR = -0.5f; HipsY = 0.9f;
+		ShL = 1.7f; ShR = 1.7f; ElL = 0.9f; ElR = 0.9f; HipsY = 0.9f;
 	}
+	if (In.bBraced && bNormal)
+	{
+		HipsY = 0.8f; Lean = 0.35f; ShL = 1.2f; ShR = 1.2f; ElL = 1.9f; ElR = 1.9f; ShzL = 0.2f; ShzR = -0.2f;
+	}
+	// Idle: a slow breath when standing
+	Lean += 0.015f * FMath::Sin(IdleT * 1.7f) * (1.f - Moving);
 
-	const float R = FMath::Clamp(18.f * In.Dt, 0.f, 1.f);
+	// Legs follow the IK on the floor; lunges, spins, falls and jumps use the posed (FK) legs.
+	bool bLegIK = In.bOnFloor;
+	switch (St)
+	{
+	case ETaGAction::Down:
+	case ETaGAction::Stagger:
+	case ETaGAction::DodgeStart:
+	case ETaGAction::Dodge:
+	case ETaGAction::Tackle:
+	case ETaGAction::ArtActive:
+		bLegIK = false;
+		break;
+	default:
+		break;
+	}
+	LegIKWeight = FMath::FInterpConstantTo(LegIKWeight, bLegIK ? 1.f : 0.f, Dt, 7.f);
+
+	const float R = FMath::Clamp(18.f * Dt, 0.f, 1.f);
 	CurHipsY = FMath::Lerp(CurHipsY, HipsY, R);
 	CurLean = LerpAngle(CurLean, Lean, R);
+	CurSideLean = LerpAngle(CurSideLean, SideLean, R);
 	CurTilt = LerpAngle(CurTilt, Tilt, R * 0.6f);
 	const bool bSpinning = St == ETaGAction::Dodge || St == ETaGAction::DodgeStart;
 	CurSpin = bSpinning ? Spin : LerpAngle(CurSpin, 0.f, R);
@@ -449,17 +839,76 @@ void UTaGRigComponent::Animate(const FTaGPoseInput& In)
 	CurKnee[0] = LerpAngle(CurKnee[0], KnL, R);
 	CurKnee[1] = LerpAngle(CurKnee[1], KnR, R);
 
+	// ---------------- Upper body
 	Joints[Pivot]->SetRelativeRotation(FRotator(Deg(CurTilt), Deg(CurSpin), 0.f));
-	Joints[Hips]->SetRelativeLocation(FVector(0.f, 0.f, PelvisRestZ + (CurHipsY - 0.95f) * 100.f * HeightScale));
-	Joints[Spine]->SetRelativeRotation(FRotator(-Deg(CurLean), 0.f, 0.f));
+	const float Twist = -0.08f * (FxL - FxR) * Mix(1.f, 0.8f, 0.2f); // shoulders turn against the stride
+	Joints[Spine]->SetRelativeRotation(FRotator(-Deg(CurLean), Deg(Twist), Deg(CurSideLean)));
+	if (Joints[Neck])
+	{
+		// The head stays nearly level while the body leans
+		Joints[Neck]->SetRelativeRotation(FRotator(Deg(CurLean) * 0.5f, -Deg(Twist) * 0.7f, -Deg(CurSideLean) * 0.6f));
+	}
 	// Shz follows rig.gd: positive swings a hanging arm toward the body's right. UE's roll swings it toward the left
 	// (-Y), so the sign flips here; without it both arms swung inward and crossed in front of the body.
 	Joints[ShoulderL]->SetRelativeRotation(FRotator(Deg(Cur[0]), 0.f, -Deg(Cur[2])));
 	Joints[ShoulderR]->SetRelativeRotation(FRotator(Deg(Cur[1]), 0.f, -Deg(Cur[3])));
 	Joints[ElbowL]->SetRelativeRotation(FRotator(Deg(Cur[4]), 0.f, 0.f));
 	Joints[ElbowR]->SetRelativeRotation(FRotator(Deg(Cur[5]), 0.f, 0.f));
-	Joints[HipL]->SetRelativeRotation(FRotator(Deg(Cur[6]), 0.f, 0.f));
-	Joints[HipR]->SetRelativeRotation(FRotator(Deg(Cur[7]), 0.f, 0.f));
-	Joints[KneeL]->SetRelativeRotation(FRotator(Deg(CurKnee[0]), 0.f, 0.f));
-	Joints[KneeR]->SetRelativeRotation(FRotator(Deg(CurKnee[1]), 0.f, 0.f));
+
+	// ---------------- Pelvis height: the pose, lowered so the legs reach the planted feet, squashed on landing
+	LandSquash = FMath::Max(0.f, LandSquash - Dt * 5.f);
+	const float PoseZ = PelvisRestZ + (CurHipsY - 0.95f) * 100.f * HeightScale - 0.08f * LegLen * LandSquash;
+	Joints[Hips]->SetRelativeLocation(FVector(0.f, 0.f, PoseZ - HipDrop * LegIKWeight));
+	float Need = 0.f;
+	if (bFeetValid && LegIKWeight > 0.f)
+	{
+		const FTransform HipsXf = Joints[Hips]->GetComponentTransform();
+		const float Reach = 0.985f * (ThighLen + ShinLen);
+		for (int32 i = 0; i < 2; ++i)
+		{
+			const FVector HipW = HipsXf.TransformPosition(HipSock[i]);
+			const FVector EndW = ChainEndTarget(i);
+			const float Hd = FVector::Dist2D(HipW, EndW);
+			const float Up = FMath::Sqrt(FMath::Max(Reach * Reach - Hd * Hd, 1.f));
+			Need = FMath::Max(Need, (HipW.Z + HipDrop * LegIKWeight) - EndW.Z - Up);
+		}
+	}
+	HipDrop = Need > HipDrop ? FMath::FInterpTo(HipDrop, Need, Dt, 25.f) : FMath::FInterpTo(HipDrop, Need, Dt, 10.f);
+	HipDrop = FMath::Clamp(HipDrop, 0.f, 0.3f * LegLen);
+	Joints[Hips]->SetRelativeLocation(FVector(0.f, 0.f, PoseZ - HipDrop * LegIKWeight));
+
+	// ---------------- Legs
+	SolveLeg(0, FRotator(Deg(Cur[6]), 0.f, 0.f).Quaternion(), FRotator(Deg(CurKnee[0]), 0.f, 0.f).Quaternion());
+	SolveLeg(1, FRotator(Deg(Cur[7]), 0.f, 0.f).Quaternion(), FRotator(Deg(CurKnee[1]), 0.f, 0.f).Quaternion());
+}
+
+float UTaGRigComponent::GetFootError(int32 Side) const
+{
+	if (!bFeetValid || LegIKWeight < 0.99f)
+	{
+		return 0.f;
+	}
+	const USceneComponent* End = Joints[Side == 0 ? AnkleL : AnkleR];
+	if (!End)
+	{
+		return 0.f;
+	}
+	return FVector::Dist(End->GetComponentLocation(), ChainEndTarget(Side));
+}
+
+FString UTaGRigComponent::DebugFeet() const
+{
+	FString Out = FString::Printf(TEXT("phase=%.2f drop=%.1f ik=%.2f"), GaitPhase, HipDrop, LegIKWeight);
+	if (Joints.Num() == JointCount && Joints[Hips])
+	{
+		const FTransform HipsXf = Joints[Hips]->GetComponentTransform();
+		for (int32 i = 0; i < 2; ++i)
+		{
+			const FVector HipW = HipsXf.TransformPosition(HipSock[i]);
+			const FVector EndW = ChainEndTarget(i);
+			Out += FString::Printf(TEXT(" | %s planted=%d lift=%.1f hd=%.1f dz=%.1f len=%.1f reach=%.1f"), i == 0 ? TEXT("L") : TEXT("R"),
+				Feet[i].bPlanted ? 1 : 0, Feet[i].Lift, FVector::Dist2D(HipW, EndW), HipW.Z - EndW.Z, FVector::Dist(HipW, EndW), ThighLen + ShinLen);
+		}
+	}
+	return Out;
 }

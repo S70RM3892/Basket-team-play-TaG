@@ -13,6 +13,10 @@
 #include "Core/TaGTutorial.h"
 #include "Core/TaGTypes.h"
 #include "UI/TaGHUD.h"
+#include "Character/TaGRig.h"
+#include "AIController.h"
+#include "Camera/CameraActor.h"
+#include "Camera/CameraComponent.h"
 #include "Engine/Engine.h"
 #include "EngineUtils.h"
 #include "GameFramework/CharacterMovementComponent.h"
@@ -117,7 +121,7 @@ void ATaGGameMode::BeginPlay()
 		{
 			Size = FMath::Clamp(FCString::Atoi(*SizeValue), 1, 3);
 		}
-		if (SnapMode != TEXT("Title") && SnapMode != TEXT("Settings") && SnapMode != TEXT("Trail") && !SnapMode.StartsWith(TEXT("Tutorial")))
+		if (SnapMode != TEXT("Title") && SnapMode != TEXT("Settings") && SnapMode != TEXT("Trail") && SnapMode != TEXT("Gait") && !SnapMode.StartsWith(TEXT("Tutorial")))
 		{
 			EnterLobby(Size, 1);
 		}
@@ -390,7 +394,19 @@ void ATaGGameMode::StartMatch()
 			}
 			AI->Skill = BotSkillValue(S->BotSkill);
 			// The tutorial bot is Minamo: none of her arts replace the plain hands the lessons teach.
-			const ETaGHero Hero = S->bTutorial ? ETaGHero::Minamo : TaGHeroes::Random(Used);
+			ETaGHero Hero = S->bTutorial ? ETaGHero::Minamo : TaGHeroes::Random(Used);
+			// Tests: -TaGTeamHeroes=A,B,C,D,E,F puts these heroes on the court in order (team A first)
+			FString List;
+			if (FParse::Value(FCommandLine::Get(), TEXT("TaGTeamHeroes="), List, false))
+			{
+				TArray<FString> Keys;
+				List.ParseIntoArray(Keys, TEXT(","));
+				const int32 Index = Team * Size + Slot;
+				if (Keys.IsValidIndex(Index))
+				{
+					Hero = TaGHeroes::FromKey(Keys[Index], Hero);
+				}
+			}
 			Used.Add(Hero);
 			if (ATaGPlayerState* P = AI->GetPlayerState<ATaGPlayerState>())
 			{
@@ -751,6 +767,44 @@ void ATaGGameMode::ResolveTackle(ATaGCharacter* T, ATaGCharacter* O, bool bCharg
 	const float WeightRatio = T->GetHeroDef().Weight / FMath::Max(O->GetHeroDef().Weight, 0.3f);
 	Sfx(TEXT("Tackle"), O->GetActorLocation(), 1.f);
 
+	// Shell: the tackle bounces off and the tackler is stuck (evade > tackle)
+	if (O->IsInvulnerable())
+	{
+		T->ForceRecover(1.2f);
+		ReadWin(O, T, TEXT("殻ごもり ＞ タックル"));
+		return;
+	}
+	// Mist and scattering swarms: it goes straight through (evade > tackle)
+	if (O->IsPhasing())
+	{
+		T->ForceRecover(1.f);
+		ReadWin(O, T, TEXT("すり抜け ＞ タックル"));
+		return;
+	}
+	// Counters: Amagi slips aside, Kawara's tile armour throws the tackler back
+	const ETaGArtFx Counter = O->ConsumeCounter();
+	if (Counter == ETaGArtFx::CounterSlip)
+	{
+		O->MarkEvaded();
+		T->ForceRecover(1.f);
+		O->LaunchCharacter(O->GetActorRightVector() * (FMath::RandBool() ? 420.f : -420.f), true, false);
+		ReadWin(O, T, TEXT("予測回避 ＞ タックル"));
+		return;
+	}
+	if (Counter == ETaGArtFx::CounterTile)
+	{
+		T->Stagger(0.8f, -Fwd * 300.f);
+		ReadWin(O, T, TEXT("瓦鎧 ＞ タックル"));
+		return;
+	}
+	// A rooted giant does not move: the tackler bounces off
+	if (O->IsRootedWall())
+	{
+		T->Stagger(0.6f, -Fwd * 260.f);
+		Popup(FString::Printf(TEXT("%s は根を張っていて動かない"), O->GetHeroDef().Name), O->GetTeam());
+		return;
+	}
+
 	// Evade > tackle: the tackler is stuck for a long time
 	if (O->IsDodging())
 	{
@@ -778,9 +832,18 @@ void ATaGGameMode::ResolveTackle(ATaGCharacter* T, ATaGCharacter* O, bool bCharg
 	const bool bWasDrive = O->IsDriving();
 	if (!bWasDrive)
 	{
+		// Keibi's arrest pins the player in place instead of a shove
+		if (T->GetTackleArt() == ETaGArt::Arrest)
+		{
+			O->ApplyArtStatus(ETaGArtFx::Root, 1.f, 0.f);
+			O->ApplyGuardDamage(TaG::ContactGuardDamage * 0.5f);
+			Popup(FString::Printf(TEXT("確保！ %s が止まった"), O->GetHeroDef().Name), T->GetTeam());
+			return;
+		}
 		// A tackle on someone who is not driving only knocks them off balance (the tackle is for drives).
-		const float Push = (bCharge ? 260.f : 250.f) * FMath::Clamp(WeightRatio, 0.4f, 2.5f);
-		O->Stagger(bCharge ? 0.8f : 0.35f, Fwd * Push);
+		const bool bBash = T->GetTackleArt() == ETaGArt::ShieldBash;
+		const float Push = (bCharge ? 260.f : 250.f) * FMath::Clamp(WeightRatio, 0.4f, 2.5f) * (bBash ? 1.5f : 1.f);
+		O->Stagger(bCharge || bBash ? 0.7f : 0.35f, Fwd * Push);
 		O->ApplyGuardDamage(TaG::ContactGuardDamage * FMath::Clamp(WeightRatio, 0.5f, 2.f) * (bCharge ? 1.5f : 1.f));
 		Popup(bCharge ? TEXT("押し返した！") : TEXT("当たっただけ（タックルは突破に刺す技）"), bCharge ? T->GetTeam() : -1);
 		return;
@@ -899,7 +962,11 @@ bool ATaGGameMode::ResolveSteal(ATaGCharacter* S)
 	To.Z = 0.f;
 	FVector Look = S->GetAimDirection();
 	Look.Z = 0.f;
-	const float Range = TaG::StealRange * S->GetHeroDef().ReachMul;
+	if (H->IsInvulnerable() || H->IsPhasing())
+	{
+		return false; // shells and mist cannot be stripped
+	}
+	const float Range = TaG::StealRange * S->GetHeroDef().ReachMul * S->GetReachFactor() * (S->HasInterceptBoost() ? 1.3f : 1.f);
 	if (To.Size() > Range || FVector::DotProduct(To.GetSafeNormal(), Look.GetSafeNormal()) < 0.7f)
 	{
 		return false;
@@ -938,7 +1005,12 @@ void ATaGGameMode::OnPullHit(ATaGCharacter* M, ATaGCharacter* O)
 	{
 		return;
 	}
-	if (O->IsDodging())
+	if (O->IsInvulnerable())
+	{
+		Popup(FString::Printf(TEXT("%s は殻で弾いた"), O->GetHeroDef().Name), O->GetTeam());
+		return;
+	}
+	if (O->IsDodging() || O->IsPhasing())
 	{
 		O->MarkEvaded();
 		M->ForceRecover(1.f);
@@ -985,6 +1057,10 @@ void ATaGGameMode::OnArtUsed(ATaGCharacter* U, ETaGArt Art)
 	}
 	GS()->Stats(U->GetTeam()).ArtsUsed++;
 	const FTaGArtDef& A = TaGHeroes::GetArt(Art);
+	if (bAutoTest)
+	{
+		UE_LOG(LogTaG, Display, TEXT("ARTUSE %s %s"), U->GetHeroDef().Key, A.Name);
+	}
 	Popup(FString::Printf(TEXT("%s：%s〔%s〕"), U->GetHeroDef().Name, A.Name, TaGHeroes::HandName(A.Hand)), U->GetTeam());
 	if (GS()->bTutorial && U->IsPlayerControlled() && GS()->TutorialStep == TaGTutorial::Art)
 	{
@@ -1025,6 +1101,10 @@ void ATaGGameMode::ResolveShot(ATaGCharacter* Shooter, float Charge, bool bConta
 	{
 		S->Stats(Team).Perfects++;
 		Popup(TEXT("パーフェクト・リリース！"), -1);
+		if (!bAutoTest)
+		{
+			S->MulticastWorldFx(1, Shooter->GetEyeLocation() + Shooter->GetActorForwardVector() * 40.f, Team);
+		}
 	}
 	if (S->bTutorial)
 	{
@@ -1057,7 +1137,9 @@ void ATaGGameMode::ResolveShot(ATaGCharacter* Shooter, float Charge, bool bConta
 	const bool bMake = FMath::FRand() < E.Chance;
 	const bool bValid = !NeedsClear(Team);
 	const FVector Feet = Shooter->GetFeetLocation();
-	const float Release = Shooter->GetHeroDef().EyeHeight + 60.f;
+	const ETaGArtFx ShotMod = Shooter->GetShotMod();
+	// Nikoichi: the kid on the shoulders lets it go from much higher
+	const float Release = Shooter->GetHeroDef().EyeHeight + 60.f + (ShotMod == ETaGArtFx::ShotShoulder ? 70.f : 0.f);
 	FVector From = FTaGBallSim::ReleasePoint(Feet, Release);
 	FVector Target = TaG::RimCenter() + FVector(0.f, 0.f, 2.f);
 	if (!bMake)
@@ -1101,7 +1183,15 @@ void ATaGGameMode::ResolveShot(ATaGCharacter* Shooter, float Charge, bool bConta
 		}
 	}
 	// Tall release (Hayate) is harder to block
-	const float BlockMult = St.Block * FMath::Clamp(175.f / Shooter->GetHeroDef().EyeHeight, 0.6f, 1.3f);
+	float BlockMult = St.Block * FMath::Clamp(175.f / Shooter->GetHeroDef().EyeHeight, 0.6f, 1.3f);
+	if (ShotMod == ETaGArtFx::ShotHigh)
+	{
+		BlockMult = 0.f; // Tsurube: the high arc cannot be blocked
+	}
+	else if (ShotMod == ETaGArtFx::ShotShoulder)
+	{
+		BlockMult *= 0.3f;
+	}
 	Ball->LaunchShot(From, Vel, Shooter, E.Points, bValid, BlockMult);
 	bShotInFlight = true;
 	bLastShotTeamPlay = PossessionPasses > 0;
@@ -1109,19 +1199,20 @@ void ATaGGameMode::ResolveShot(ATaGCharacter* Shooter, float Charge, bool bConta
 	S->Stats(Team).ExpectedMakes += E.Chance;
 	if (ATaGPlayerState* P = PS(Shooter)) { P->Stats.Shots++; }
 	Shooter->ConsumeZone();
+	Shooter->ConsumeShotMod();
 	UE_LOG(LogTaG, Verbose, TEXT("Shot team=%d type=%d dist=%.0f pts=%d charge=%.2f p=%.2f make=%d"), Team, static_cast<int32>(E.Type), E.Distance, E.Points, Charge, E.Chance, bMake ? 1 : 0);
 }
 
-void ATaGGameMode::LaunchPass(ATaGCharacter* Passer, ATaGCharacter* Receiver, bool bThread)
+void ATaGGameMode::LaunchPass(ATaGCharacter* Passer, ATaGCharacter* Receiver, uint8 Style)
 {
 	if (!Ball || !Passer || !Receiver || Ball->GetHolder() != Passer)
 	{
 		return;
 	}
-	Ball->LaunchPass(Passer, Receiver, bThread);
+	Ball->LaunchPass(Passer, Receiver, Style);
 	LastPasser = Passer;
 	GS()->Stats(Passer->GetTeam()).Passes++;
-	if (bThread)
+	if (Style == 1)
 	{
 		Passer->MulticastFx(5, Passer->GetActorLocation(), Receiver->GetActorLocation(), Receiver);
 	}
@@ -1136,8 +1227,18 @@ void ATaGGameMode::OnPassCaught(ATaGCharacter* Receiver)
 	PossessionPasses++;
 	LastCatcher = Receiver;
 	LastCatchTime = GetWorld()->GetTimeSeconds();
-	Ball->SetChain(FMath::Min(PossessionPasses, 5));
+	// Lantern / data-share marks add to the chain; marked and curved catches can shoot at once
+	const int32 Bonus = Receiver->ConsumeMark();
+	Ball->SetChain(FMath::Min(PossessionPasses + Bonus, 5));
 	Receiver->OnCaughtPass();
+	if (Bonus > 0 || Ball->GetPassStyle() == 2)
+	{
+		Receiver->GrantCatchAndShoot(1.5f);
+		if (Bonus > 0)
+		{
+			Popup(FString::Printf(TEXT("灯りが乗った！ チェイン+%d"), Bonus), Receiver->GetTeam());
+		}
+	}
 }
 
 void ATaGGameMode::OnPassIntercepted(ATaGCharacter* D)
@@ -1213,6 +1314,10 @@ void ATaGGameMode::OnBlocked(ATaGCharacter* Blocker)
 	bShotInFlight = false;
 	if (Blocker)
 	{
+		if (!bAutoTest && Ball)
+		{
+			GS()->MulticastWorldFx(2, Ball->GetActorLocation(), Blocker->GetTeam());
+		}
 		GS()->Stats(Blocker->GetTeam()).Blocks++;
 		if (ATaGPlayerState* P = PS(Blocker)) { P->Stats.Blocks++; }
 		Popup(FString::Printf(TEXT("ブロック！ %s"), Blocker->GetHeroDef().Name), Blocker->GetTeam());
@@ -1641,9 +1746,134 @@ void ATaGGameMode::RunShotTest()
 		MakeOk, MakeTotal, 100.f * MakeOk / FMath::Max(MakeTotal, 1), MissIn, MissTotal, 100.f * MissIn / FMath::Max(MissTotal, 1));
 }
 
+void ATaGGameMode::TickGait(float Dt)
+{
+	SnapTimer += Dt;
+	UWorld* World = GetWorld();
+	const ETaGHero Heroes[4] = { ETaGHero::Rei, ETaGHero::Hayate, ETaGHero::Minamo, ETaGHero::Gantetsu };
+	const FVector Starts[4] = { FVector(700.f, -200.f, 0.f), FVector(500.f, 0.f, 0.f), FVector(300.f, 250.f, 0.f), FVector(800.f, 300.f, 0.f) };
+	if (GaitChars.Num() == 0 && SnapTimer > 1.f)
+	{
+		if (GEngine && GEngine->GameViewport)
+		{
+			GEngine->GameViewport->RemoveAllViewportWidgets(); // no menus over the test scene
+		}
+		for (int32 i = 0; i < 4; ++i)
+		{
+			FActorSpawnParameters Params;
+			Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+			AAIController* AI = World->SpawnActor<AAIController>(AAIController::StaticClass(), Params);
+			ATaGCharacter* C = SpawnPlayerCharacter(AI, Heroes[i], i % 2, Starts[i]);
+			GaitChars.Add(C);
+		}
+		ACameraActor* Cam = World->SpawnActor<ACameraActor>(ACameraActor::StaticClass(), FTransform(FVector(560.f, -980.f, 150.f)));
+		if (Cam)
+		{
+			Cam->SetActorRotation((FVector(560.f, 40.f, 95.f) - Cam->GetActorLocation()).Rotation());
+			Cam->GetCameraComponent()->SetFieldOfView(58.f);
+			Cam->GetCameraComponent()->bConstrainAspectRatio = false;
+			if (ATaGPlayerController* PC = Cast<ATaGPlayerController>(World->GetFirstPlayerController()))
+			{
+				PC->bExternalView = true;
+				PC->SetViewTarget(Cam);
+			}
+		}
+		GaitCam = Cam;
+		return;
+	}
+	if (GaitChars.Num() == 0)
+	{
+		return;
+	}
+	if (APlayerController* PC = World->GetFirstPlayerController())
+	{
+		if (GaitCam && PC->GetViewTarget() != GaitCam)
+		{
+			PC->SetViewTarget(GaitCam);
+		}
+	}
+	const float T = SnapTimer - 1.f;
+	if (FApp::GetDeltaTime() >= 0.05f)
+	{
+		GaitHitchT = T;
+	}
+	for (int32 i = 0; i < GaitChars.Num(); ++i)
+	{
+		ATaGCharacter* C = GaitChars[i];
+		AController* Ctrl = C ? C->GetController() : nullptr;
+		if (!Ctrl)
+		{
+			continue;
+		}
+		FVector Move = FVector::ZeroVector;
+		float Yaw = 0.f;
+		switch (i)
+		{
+		case 0: // runs forward around a circle, facing where it goes
+		{
+			const float A = T * 1.4f;
+			Move = FVector(-FMath::Sin(A), FMath::Cos(A), 0.f);
+			Yaw = Move.Rotation().Yaw;
+			break;
+		}
+		case 1: // backpedals and comes forward again, always facing +X
+			Move = FVector(FMath::Fmod(T, 3.f) < 1.5f ? -1.f : 1.f, 0.f, 0.f);
+			break;
+		case 2: // defensive side shuffle, facing +X
+			Move = FVector(0.f, FMath::Fmod(T, 2.4f) < 1.2f ? 1.f : -1.f, 0.f);
+			break;
+		default: // diagonal: forward-left, then back-right
+			Move = FMath::Fmod(T, 3.f) < 1.5f ? FVector(0.7f, -0.7f, 0.f) : FVector(-0.7f, 0.7f, 0.f);
+			break;
+		}
+		if (T > 7.f)
+		{
+			Move = FVector::ZeroVector; // stop: the feet should settle under the hips
+		}
+		Ctrl->SetControlRotation(FRotator(0.f, Yaw, 0.f));
+		C->AddMovementInput(Move, 1.f);
+		if (UTaGRigComponent* Rig = C->GetRig())
+		{
+			// Measure steady walking only: frames right after a hitch (screenshots) are skipped.
+			if (T > 1.f && FApp::GetDeltaTime() < 0.05f && T - GaitHitchT > 0.4f)
+			{
+				const float E = FMath::Max(Rig->GetFootError(0), Rig->GetFootError(1));
+				if (E > 8.f && E > GaitErr[i] + 2.f)
+				{
+					UE_LOG(LogTaG, Display, TEXT("GAITTEST walker=%d t=%.2f err=%.1f %s"), i, T, E, *Rig->DebugFeet());
+				}
+				GaitErr[i] = FMath::Max(GaitErr[i], E);
+			}
+			GaitSteps[i] = Rig->GetStepCount();
+		}
+	}
+	// A burst of frames while they move, then one after they stopped
+	const float Shots[7] = { 5.0f, 5.12f, 5.24f, 5.36f, 5.48f, 5.6f, 9.2f };
+	if (GaitShot < 7 && T >= Shots[GaitShot])
+	{
+		const FString File = FPaths::ProjectSavedDir() / TEXT("Screenshots") / FString::Printf(TEXT("TaGSnap_Gait_%d.png"), GaitShot);
+		FScreenshotRequest::RequestScreenshot(File, false, false);
+		GaitShot++;
+	}
+	if (T > 10.f)
+	{
+		for (int32 i = 0; i < 4; ++i)
+		{
+			UE_LOG(LogTaG, Display, TEXT("GAITTEST walker=%d hero=%s steps=%d max_foot_error=%.2fcm"), i,
+				TaGHeroes::Get(Heroes[i]).Key, GaitSteps[i], GaitErr[i]);
+		}
+		FPlatformMisc::RequestExit(false);
+	}
+}
+
 void ATaGGameMode::TickSnap(float Dt)
 {
 	// -TaGSnap=<Title|Lobby|Play|TPS|Results>: take one screenshot after the scene settles, then quit.
+	if (SnapMode == TEXT("Gait"))
+	{
+		TickGait(Dt);
+		return;
+	}
 	SnapTimer += Dt;
 	ATaGGameState* S = GS();
 	if (SnapStage == 0 && SnapMode == TEXT("Defense") && SnapTimer > 4.f && SnapTimer - Dt <= 4.f)

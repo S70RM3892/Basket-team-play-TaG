@@ -21,7 +21,8 @@ public:
 	virtual void Tick(float DeltaSeconds) override;
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
-	void Init(int32 InTeam, float Lifetime);
+	/** Style = the art that raised it (0 = the iron wall): picks the colour; the scale picks the size. */
+	void Init(int32 InTeam, float Lifetime, uint8 InStyle = 0);
 	int32 GetTeam() const { return Team; }
 
 	/** True when the wall stands between a shooter at FeetPos and the rim, close to the shooter. */
@@ -37,6 +38,7 @@ protected:
 	UPROPERTY(VisibleAnywhere) TObjectPtr<UBoxComponent> Box;
 	UPROPERTY(VisibleAnywhere) TObjectPtr<UStaticMeshComponent> Mesh;
 	UPROPERTY(ReplicatedUsing = OnRep_Team) int32 Team = 0;
+	UPROPERTY(ReplicatedUsing = OnRep_Team) uint8 Style = 0;
 	UPROPERTY() TObjectPtr<UMaterialInstanceDynamic> Mat;
 	float Rise = 0.f;
 
@@ -47,7 +49,14 @@ UENUM()
 enum class ETaGFieldKind : uint8
 {
 	Slow,   // Minamo: water current, opponents slowed
-	Sonic   // Hibiki: sonic pulse around her, drives slowed (the shot contest itself is her Contest state)
+	Sonic,  // Hibiki: sonic pulse around her, drives slowed (the shot contest itself is her Contest state)
+	Spore,  // Kokemaru: opponents inside lose guard and do not recover
+	Wind,   // Kazami: teammates inside are faster and shoot better from range
+	Feast,  // Yatai: teammates inside recover guard fast and are a little faster
+	Mist,   // Oboro: opponents inside contest at half strength; passes through it cannot be cut
+	Ice,    // Tsurara: opponents inside slip (slow, shorter drives and dodges)
+	Swarm,  // Hotaru: fireflies around the opponent ball handler: their shots are contested
+	Root    // Kokemaru rooted: roots on the floor around him (the contest itself is in the shot rules)
 };
 
 /** A circular field on the floor (Minamo's slow field, Hibiki's sonic wave). Server applies the effect. */
@@ -63,6 +72,12 @@ public:
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
 	void Init(ETaGFieldKind InKind, int32 InTeam, float InRadius, float Lifetime, ATaGCharacter* Follow);
+	ETaGFieldKind GetKind() const { return Kind; }
+	int32 GetTeam() const { return Team; }
+	float GetRadius() const { return Radius; }
+	bool Contains(const FVector& P) const { return FVector::Dist2D(P, GetActorLocation()) <= Radius; }
+	/** The field of this kind owned by Team (or any team with -1) that covers P, if any. */
+	static const ATaGFieldActor* FindAt(const UWorld* World, ETaGFieldKind Kind, int32 OwnerTeam, const FVector& P);
 
 protected:
 	UPROPERTY(VisibleAnywhere) TObjectPtr<UStaticMeshComponent> Disc;
@@ -72,6 +87,7 @@ protected:
 	UPROPERTY(Replicated) TObjectPtr<ATaGCharacter> FollowTarget;
 	UPROPERTY() TObjectPtr<UMaterialInstanceDynamic> Mat;
 	float Age = 0.f;
+	float FxT = 0.f;
 };
 
 /** Local cosmetic: a glowing line between two points or two actors (water beam, thread, tether). */
