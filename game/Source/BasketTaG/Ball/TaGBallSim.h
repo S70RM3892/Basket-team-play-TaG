@@ -29,9 +29,10 @@ struct FTaGBallSim
 
 	/** Launch angle used by P1 shots for a given horizontal distance to the rim (cm). */
 	static float ShotAngleForDistance(float Dist);
+	static float ShotAngleForDistance(float Dist, float ReleaseZ);
 
 	/** Where a shooter releases the ball: above the head, nudged out from under the rim and the board. */
-	static FVector ReleasePoint(const FVector& FeetPos);
+	static FVector ReleasePoint(const FVector& FeetPos, float ReleaseHeight = 235.f);
 
 private:
 	uint8 SubStep(float Dt, bool& bOutScored);

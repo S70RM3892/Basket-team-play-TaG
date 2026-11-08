@@ -20,7 +20,9 @@ public class BasketTaG : ModuleRules
 
 		PrivateDependencyModuleNames.AddRange(new string[] {
 			"Slate",
-			"SlateCore"
+			"SlateCore",
+			"Sockets",
+			"AssetRegistry"
 		});
 
 		PublicIncludePaths.Add(ModuleDirectory);

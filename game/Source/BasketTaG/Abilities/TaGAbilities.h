@@ -6,66 +6,30 @@
 
 class ATaGCharacter;
 
-/** Base for TaG abilities: locally predicted, one instance per player. */
-UCLASS(Abstract)
-class BASKETTAG_API UTaGGameplayAbility : public UGameplayAbility
-{
-	GENERATED_BODY()
-
-public:
-	UTaGGameplayAbility();
-
-protected:
-	ATaGCharacter* GetTaGCharacter(const FGameplayAbilityActorInfo* ActorInfo) const;
-};
-
-/** GA_Shoot: hold to gather and jump (automatic), release near the top of the jump. */
+/**
+ * One locally predicted ability per input channel (granted once per channel; the spec's InputID says which).
+ * The ability is the network path for the press: it runs on the owning client right away (prediction) and on the
+ * server (authority). Held inputs (shoot, contest) wait for the release, which GAS replicates to the server.
+ * What the press means (drive or tackle, pass or steal...) depends on the situation and is decided by ATaGCharacter.
+ */
 UCLASS()
-class BASKETTAG_API UTaGAbility_Shoot : public UTaGGameplayAbility
+class BASKETTAG_API UTaGInputAbility : public UGameplayAbility
 {
 	GENERATED_BODY()
 
 public:
-	UTaGAbility_Shoot();
+	UTaGInputAbility();
 
 	virtual bool CanActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo,
 		const FGameplayTagContainer* SourceTags, const FGameplayTagContainer* TargetTags, FGameplayTagContainer* OptionalRelevantTags) const override;
 	virtual void ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo,
 		const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData) override;
-	virtual void EndAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo,
-		const FGameplayAbilityActivationInfo ActivationInfo, bool bReplicateEndAbility, bool bWasCancelled) override;
 
 protected:
 	UFUNCTION()
 	void OnInputReleased(float TimeHeld);
-};
 
-/** GA_Block: a short swipe in the aim direction; the server checks it against the rising ball. */
-UCLASS()
-class BASKETTAG_API UTaGAbility_Block : public UTaGGameplayAbility
-{
-	GENERATED_BODY()
-
-public:
-	UTaGAbility_Block();
-
-	virtual bool CanActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo,
-		const FGameplayTagContainer* SourceTags, const FGameplayTagContainer* TargetTags, FGameplayTagContainer* OptionalRelevantTags) const override;
-	virtual void ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo,
-		const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData) override;
-};
-
-/** GA_Steal: reach for the ball of the handler in front of you; a whiff leaves you slow for a moment. */
-UCLASS()
-class BASKETTAG_API UTaGAbility_Steal : public UTaGGameplayAbility
-{
-	GENERATED_BODY()
-
-public:
-	UTaGAbility_Steal();
-
-	virtual bool CanActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo,
-		const FGameplayTagContainer* SourceTags, const FGameplayTagContainer* TargetTags, FGameplayTagContainer* OptionalRelevantTags) const override;
-	virtual void ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo,
-		const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData) override;
+	ATaGCharacter* GetTaGCharacter(const FGameplayAbilityActorInfo* ActorInfo) const;
+	uint8 InputOf(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo) const;
+	uint8 ActiveInput = 0;
 };

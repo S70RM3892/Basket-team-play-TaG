@@ -2,12 +2,14 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/PlayerController.h"
+#include "Core/TaGHeroData.h"
 #include "TaGPlayerController.generated.h"
 
 class UInputAction;
 class UInputMappingContext;
+class ACameraActor;
 
-/** Input actions built in C++ (P1 keeps no input assets in the repository). */
+/** Input actions built in C++ (no input assets in the repository). */
 USTRUCT()
 struct FTaGInputActions
 {
@@ -17,13 +19,22 @@ struct FTaGInputActions
 	UPROPERTY() TObjectPtr<UInputAction> LookMouse;
 	UPROPERTY() TObjectPtr<UInputAction> LookStick;
 	UPROPERTY() TObjectPtr<UInputAction> Jump;
+	UPROPERTY() TObjectPtr<UInputAction> Primary;
+	UPROPERTY() TObjectPtr<UInputAction> Secondary;
+	UPROPERTY() TObjectPtr<UInputAction> Step;
+	UPROPERTY() TObjectPtr<UInputAction> PassSteal;
 	UPROPERTY() TObjectPtr<UInputAction> Shoot;
-	UPROPERTY() TObjectPtr<UInputAction> Block;
-	UPROPERTY() TObjectPtr<UInputAction> Steal;
-	UPROPERTY() TObjectPtr<UInputAction> Restart;
+	UPROPERTY() TObjectPtr<UInputAction> Art1;
+	UPROPERTY() TObjectPtr<UInputAction> Art2;
+	UPROPERTY() TObjectPtr<UInputAction> Pause;
+	UPROPERTY() TObjectPtr<UInputAction> CameraToggle;
 };
 
-UCLASS()
+/**
+ * Local input, menus and the network path for lobby choices. The host (listen server or offline) controls the
+ * lobby settings and starts the match; everyone picks their own hero.
+ */
+UCLASS(Config = Game)
 class BASKETTAG_API ATaGPlayerController : public APlayerController
 {
 	GENERATED_BODY()
@@ -31,17 +42,48 @@ class BASKETTAG_API ATaGPlayerController : public APlayerController
 public:
 	ATaGPlayerController();
 
-	const FTaGInputActions& GetInputActions() const { return Actions; }
+	virtual void BeginPlay() override;
+	virtual void Tick(float DeltaSeconds) override;
+	virtual void OnPossess(APawn* InPawn) override;
+	virtual void OnUnPossess() override;
 
-	UFUNCTION(Server, Reliable)
-	void ServerRequestRestart();
+	const FTaGInputActions& GetInputActions() const { return Actions; }
+	float GetLookSensitivity() const { return LookSensitivity; }
+	void SetLookSensitivity(float Value);
+	bool IsHost() const;
+	bool IsPauseMenuOpen() const { return bPauseMenu; }
+	void TogglePauseMenu();
+	void SetUIMode(bool bUI);
+
+	// --- Title
+	void PlayOffline();
+	void HostOnline();
+	void JoinOnline(const FString& Address);
+	void QuitGame();
+	void LeaveToTitle();
+
+	// --- Lobby / results (server RPCs; the host's options are ignored for guests)
+	UFUNCTION(Server, Reliable) void ServerSetLobbyOptions(int32 TeamSize, int32 BotSkill);
+	UFUNCTION(Server, Reliable) void ServerSetHero(ETaGHero Hero);
+	UFUNCTION(Server, Reliable) void ServerSetTeam(int32 Team);
+	UFUNCTION(Server, Reliable) void ServerStartMatch();
+	UFUNCTION(Server, Reliable) void ServerRematch();
+	UFUNCTION(Server, Reliable) void ServerBackToLobby();
+	UFUNCTION(Server, Reliable) void ServerEnterLobby(int32 TeamSize, int32 BotSkill);
+
+	UPROPERTY(Config) float LookSensitivity = 1.f;
+	UPROPERTY(Config) FString LastJoinAddress = TEXT("127.0.0.1");
 
 protected:
-	virtual void BeginPlay() override;
+	UPROPERTY() FTaGInputActions Actions;
+	UPROPERTY() TObjectPtr<UInputMappingContext> Mapping;
+	UPROPERTY() TObjectPtr<ACameraActor> OrbitCamera;
 
-	UPROPERTY()
-	FTaGInputActions Actions;
+	bool bPauseMenu = false;
+	float NetLogTimer = 0.f;
+	float NetTestTime = 0.f;
+	bool bUIMode = false;
+	float OrbitAngle = 0.f;
 
-	UPROPERTY()
-	TObjectPtr<UInputMappingContext> Mapping;
+	void UpdateSpectatorCamera(float Dt);
 };

@@ -1,37 +1,44 @@
 #include "Abilities/TaGAbilities.h"
 #include "Abilities/TaGTags.h"
 #include "Abilities/Tasks/AbilityTask_WaitInputRelease.h"
+#include "AbilitySystemComponent.h"
 #include "Character/TaGCharacter.h"
 
-UTaGGameplayAbility::UTaGGameplayAbility()
+UTaGInputAbility::UTaGInputAbility()
 {
 	InstancingPolicy = EGameplayAbilityInstancingPolicy::InstancedPerActor;
 	NetExecutionPolicy = EGameplayAbilityNetExecutionPolicy::LocalPredicted;
+	FGameplayTagContainer Tags;
+	Tags.AddTag(TaGTags::Ability_Input);
+	SetAssetTags(Tags);
 }
 
-ATaGCharacter* UTaGGameplayAbility::GetTaGCharacter(const FGameplayAbilityActorInfo* ActorInfo) const
+ATaGCharacter* UTaGInputAbility::GetTaGCharacter(const FGameplayAbilityActorInfo* ActorInfo) const
 {
 	return ActorInfo ? Cast<ATaGCharacter>(ActorInfo->AvatarActor.Get()) : nullptr;
 }
 
-// ---------------------------------------------------------------- Shoot
-
-UTaGAbility_Shoot::UTaGAbility_Shoot()
+uint8 UTaGInputAbility::InputOf(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo) const
 {
-	FGameplayTagContainer Tags;
-	Tags.AddTag(TaGTags::Ability_Shoot);
-	SetAssetTags(Tags);
-	ActivationBlockedTags.AddTag(TaGTags::State_Recovering);
+	if (ActorInfo && ActorInfo->AbilitySystemComponent.IsValid())
+	{
+		if (const FGameplayAbilitySpec* Spec = ActorInfo->AbilitySystemComponent->FindAbilitySpecFromHandle(Handle))
+		{
+			return static_cast<uint8>(Spec->InputID);
+		}
+	}
+	return 0;
 }
 
-bool UTaGAbility_Shoot::CanActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo,
+bool UTaGInputAbility::CanActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo,
 	const FGameplayTagContainer* SourceTags, const FGameplayTagContainer* TargetTags, FGameplayTagContainer* OptionalRelevantTags) const
 {
 	const ATaGCharacter* C = GetTaGCharacter(ActorInfo);
-	return C && C->CanStartShot() && Super::CanActivateAbility(Handle, ActorInfo, SourceTags, TargetTags, OptionalRelevantTags);
+	const ETaGInput Input = static_cast<ETaGInput>(InputOf(Handle, ActorInfo));
+	return C && C->CanUseInput(Input) && Super::CanActivateAbility(Handle, ActorInfo, SourceTags, TargetTags, OptionalRelevantTags);
 }
 
-void UTaGAbility_Shoot::ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo,
+void UTaGInputAbility::ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo,
 	const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData)
 {
 	if (!CommitAbility(Handle, ActorInfo, ActivationInfo))
@@ -39,96 +46,28 @@ void UTaGAbility_Shoot::ActivateAbility(const FGameplayAbilitySpecHandle Handle,
 		EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
 		return;
 	}
-	if (ATaGCharacter* C = GetTaGCharacter(ActorInfo))
+	ActiveInput = InputOf(Handle, ActorInfo);
+	const ETaGInput Input = static_cast<ETaGInput>(ActiveInput);
+	ATaGCharacter* C = GetTaGCharacter(ActorInfo);
+	if (C)
 	{
-		C->BeginShot();
+		C->InputPressed(Input);
 	}
-	UAbilityTask_WaitInputRelease* Wait = UAbilityTask_WaitInputRelease::WaitInputRelease(this, true);
-	Wait->OnRelease.AddDynamic(this, &UTaGAbility_Shoot::OnInputReleased);
-	Wait->ReadyForActivation();
+	if (Input == ETaGInput::Shoot || Input == ETaGInput::Secondary)
+	{
+		UAbilityTask_WaitInputRelease* Wait = UAbilityTask_WaitInputRelease::WaitInputRelease(this, true);
+		Wait->OnRelease.AddDynamic(this, &UTaGInputAbility::OnInputReleased);
+		Wait->ReadyForActivation();
+		return;
+	}
+	EndAbility(Handle, ActorInfo, ActivationInfo, true, false);
 }
 
-void UTaGAbility_Shoot::OnInputReleased(float TimeHeld)
+void UTaGInputAbility::OnInputReleased(float TimeHeld)
 {
-	// If the charge already auto-released, ReleaseShot does nothing.
 	if (ATaGCharacter* C = GetTaGCharacter(GetCurrentActorInfo()))
 	{
-		C->ReleaseShot();
+		C->InputReleased(static_cast<ETaGInput>(ActiveInput));
 	}
 	EndAbility(GetCurrentAbilitySpecHandle(), GetCurrentActorInfo(), GetCurrentActivationInfo(), true, false);
-}
-
-void UTaGAbility_Shoot::EndAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo,
-	const FGameplayAbilityActivationInfo ActivationInfo, bool bReplicateEndAbility, bool bWasCancelled)
-{
-	if (bWasCancelled)
-	{
-		if (ATaGCharacter* C = GetTaGCharacter(ActorInfo))
-		{
-			C->ReleaseShot();
-		}
-	}
-	Super::EndAbility(Handle, ActorInfo, ActivationInfo, bReplicateEndAbility, bWasCancelled);
-}
-
-// ---------------------------------------------------------------- Block
-
-UTaGAbility_Block::UTaGAbility_Block()
-{
-	FGameplayTagContainer Tags;
-	Tags.AddTag(TaGTags::Ability_Block);
-	SetAssetTags(Tags);
-	ActivationBlockedTags.AddTag(TaGTags::State_Charging);
-	ActivationBlockedTags.AddTag(TaGTags::State_Recovering);
-}
-
-bool UTaGAbility_Block::CanActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo,
-	const FGameplayTagContainer* SourceTags, const FGameplayTagContainer* TargetTags, FGameplayTagContainer* OptionalRelevantTags) const
-{
-	const ATaGCharacter* C = GetTaGCharacter(ActorInfo);
-	return C && C->CanBlock() && Super::CanActivateAbility(Handle, ActorInfo, SourceTags, TargetTags, OptionalRelevantTags);
-}
-
-void UTaGAbility_Block::ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo,
-	const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData)
-{
-	if (CommitAbility(Handle, ActorInfo, ActivationInfo))
-	{
-		if (ATaGCharacter* C = GetTaGCharacter(ActorInfo))
-		{
-			C->StartBlock();
-		}
-	}
-	EndAbility(Handle, ActorInfo, ActivationInfo, true, false);
-}
-
-// ---------------------------------------------------------------- Steal
-
-UTaGAbility_Steal::UTaGAbility_Steal()
-{
-	FGameplayTagContainer Tags;
-	Tags.AddTag(TaGTags::Ability_Steal);
-	SetAssetTags(Tags);
-	ActivationBlockedTags.AddTag(TaGTags::State_Charging);
-	ActivationBlockedTags.AddTag(TaGTags::State_Recovering);
-}
-
-bool UTaGAbility_Steal::CanActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo,
-	const FGameplayTagContainer* SourceTags, const FGameplayTagContainer* TargetTags, FGameplayTagContainer* OptionalRelevantTags) const
-{
-	const ATaGCharacter* C = GetTaGCharacter(ActorInfo);
-	return C && C->CanSteal() && Super::CanActivateAbility(Handle, ActorInfo, SourceTags, TargetTags, OptionalRelevantTags);
-}
-
-void UTaGAbility_Steal::ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo,
-	const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData)
-{
-	if (CommitAbility(Handle, ActorInfo, ActivationInfo))
-	{
-		if (ATaGCharacter* C = GetTaGCharacter(ActorInfo))
-		{
-			C->StartSteal();
-		}
-	}
-	EndAbility(Handle, ActorInfo, ActivationInfo, true, false);
 }

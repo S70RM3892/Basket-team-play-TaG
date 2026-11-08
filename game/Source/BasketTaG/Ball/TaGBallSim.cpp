@@ -127,6 +127,14 @@ FVector FTaGBallSim::SolveLaunch(const FVector& From, const FVector& Target, flo
 	return FVector(Dir.X * 300.f, Dir.Y * 300.f, 700.f);
 }
 
+float FTaGBallSim::ShotAngleForDistance(float Dist, float ReleaseZ)
+{
+	// A low release (small players, no jump) has to climb more: raise the arc so it clears the front of the rim.
+	const float Climb = TaG::RimZ - ReleaseZ;
+	const float Extra = FMath::Clamp((Climb - 60.f) / 4.f, 0.f, 12.f);
+	return FMath::Min(ShotAngleForDistance(Dist) + Extra, 84.f);
+}
+
 float FTaGBallSim::ShotAngleForDistance(float Dist)
 {
 	// Close shots need a higher arc so a low release (no jump) still clears the front of the rim.
@@ -145,14 +153,14 @@ float FTaGBallSim::ShotAngleForDistance(float Dist)
 	return 52.f;
 }
 
-FVector FTaGBallSim::ReleasePoint(const FVector& FeetPos)
+FVector FTaGBallSim::ReleasePoint(const FVector& FeetPos, float ReleaseHeight)
 {
 	FVector Flat(FeetPos.X - TaG::RimX, FeetPos.Y, 0.f);
 	const float Dist = Flat.Size();
 	const FVector Dir = Dist > KINDA_SMALL_NUMBER ? Flat / Dist : FVector::ForwardVector;
 	// The ball leaves the hands about 35 cm in front of the body, toward the rim.
 	FVector From = FeetPos - Dir * 35.f;
-	From.Z = FeetPos.Z + 235.f; // FeetPos already includes the jump
+	From.Z = FeetPos.Z + ReleaseHeight; // FeetPos already includes the jump
 
 	// Nothing is released from behind the board; shots from under the rim are pushed out a little.
 	From.X = FMath::Max(From.X, 145.f);

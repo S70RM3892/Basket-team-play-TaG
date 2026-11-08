@@ -2,49 +2,245 @@
 #include "Ball/TaGBall.h"
 #include "Character/TaGCharacter.h"
 #include "Core/TaGGameMode.h"
-#include "Core/TaGGameState.h"
+#include "Core/TaGHeroData.h"
+#include "Core/TaGRules.h"
 #include "Core/TaGTypes.h"
+#include "EngineUtils.h"
 #include "GameFramework/CharacterMovementComponent.h"
+
+namespace
+{
+	const TCHAR* HandLabel(uint8 H)
+	{
+		switch (H)
+		{
+		case 0: return TEXT("タックル");
+		case 1: return TEXT("シュート妨害");
+		case 2: return TEXT("間合い（待つ）");
+		case 4: return TEXT("突破");
+		case 5: return TEXT("かわし");
+		default: return TEXT("シュート");
+		}
+	}
+
+	FVector Flat(const FVector& V)
+	{
+		return FVector(V.X, V.Y, 0.f);
+	}
+}
 
 ATaGBotController::ATaGBotController()
 {
 	PrimaryActorTick.bCanEverTick = true;
 	bWantsPlayerState = true;
-	bSetControlRotationFromPawnOrientation = false; // the bot steers its view itself (FaceTowards)
+	bSetControlRotationFromPawnOrientation = false; // the bot steers its view itself
+	const EHand Defs[] = { EHand::Tackle, EHand::Contest, EHand::Wait };
+	const EHand Offs[] = { EHand::Drive, EHand::Dodge, EHand::Shoot };
+	DefFav = Defs[FMath::RandRange(0, 2)];
+	OffFav = Offs[FMath::RandRange(0, 2)];
+}
+
+FString ATaGBotController::HabitText() const
+{
+	return FString::Printf(TEXT("守備では「%s」、攻撃では「%s」が好き"), HandLabel(static_cast<uint8>(DefFav)), HandLabel(static_cast<uint8>(OffFav)));
 }
 
 void ATaGBotController::OnPossess(APawn* InPawn)
 {
 	Super::OnPossess(InPawn);
-	bHasSpot = false;
+	Queue.Reset();
 }
 
-void ATaGBotController::SteerTo(ATaGCharacter* Me, const FVector& Target, float Accuracy)
+// ================================================================ Helpers
+
+bool ATaGBotController::Press(ATaGCharacter* Me, ETaGInput Input)
 {
-	FVector To = Target - Me->GetFeetLocation();
-	To.Z = 0.f;
+	if (Me->CanUseInput(Input))
+	{
+		Me->InputPressed(Input);
+		return true;
+	}
+	return false;
+}
+
+void ATaGBotController::Wish(ATaGCharacter* Me, const FVector& Dir)
+{
+	Me->SetBotWishDir(Flat(Dir));
+}
+
+void ATaGBotController::Steer(ATaGCharacter* Me, const FVector& Target, float Accuracy, float Scale)
+{
+	FVector To = Flat(Target - Me->GetFeetLocation());
 	const float D = To.Size();
 	if (D > Accuracy)
 	{
-		Me->AddMovementInput(To / D, FMath::Clamp(D / 120.f, 0.35f, 1.f));
+		Wish(Me, To);
+		if (!Me->IsForcedMove())
+		{
+			Me->AddMovementInput(To / D, FMath::Clamp(D / 120.f, 0.35f, 1.f) * Scale);
+		}
+	}
+	else
+	{
+		Wish(Me, FVector::ZeroVector);
 	}
 }
 
-void ATaGBotController::PickOffenseSpot(ATaGCharacter* Me)
+void ATaGBotController::Face(ATaGCharacter* Me, const FVector& Point, float Dt, float Rate)
 {
-	const bool bDeep = FMath::FRand() < 0.4f;
-	const float Dist = bDeep ? FMath::FRandRange(TaG::ArcRadius + 40.f, TaG::ArcRadius + 140.f) : FMath::FRandRange(180.f, TaG::ArcRadius - 60.f);
-	const float Angle = FMath::DegreesToRadians(FMath::FRandRange(-70.f, 70.f));
-	OffenseSpot = FVector(TaG::RimX + FMath::Cos(Angle) * Dist, FMath::Sin(Angle) * Dist, 0.f);
-	OffenseSpot.X = FMath::Clamp(OffenseSpot.X, 60.f, TaG::CourtDepth - 80.f);
-	OffenseSpot.Y = FMath::Clamp(OffenseSpot.Y, -TaG::CourtHalfWidth + 80.f, TaG::CourtHalfWidth - 80.f);
-	bHasSpot = true;
-	HoldTime = 0.f;
-	ShootAfter = FMath::FRandRange(0.9f, 2.6f);
-	// Release timing: aim for the perfect window, spread shrinks with skill.
-	const float Spread = FMath::Lerp(0.16f, 0.05f, Skill);
-	ReleaseAt = FMath::Clamp(0.74f + FMath::FRandRange(-Spread, Spread), 0.45f, 1.2f);
+	Me->FaceTowards(Point, Dt, Rate);
 }
+
+int32 ATaGBotController::TeamIndex(ATaGCharacter* Me) const
+{
+	const ATaGGameMode* GM = GetWorld()->GetAuthGameMode<ATaGGameMode>();
+	if (!GM)
+	{
+		return 0;
+	}
+	TArray<ATaGCharacter*> Team = GM->GetTeamPlayers(Me->GetTeam());
+	return FMath::Max(0, Team.IndexOfByKey(Me));
+}
+
+ATaGCharacter* ATaGBotController::MyMan(ATaGCharacter* Me) const
+{
+	const ATaGGameMode* GM = GetWorld()->GetAuthGameMode<ATaGGameMode>();
+	if (!GM)
+	{
+		return nullptr;
+	}
+	TArray<ATaGCharacter*> Opp = GM->GetTeamPlayers(1 - Me->GetTeam());
+	if (Opp.Num() == 0)
+	{
+		return nullptr;
+	}
+	return Opp[FMath::Clamp(TeamIndex(Me), 0, Opp.Num() - 1)];
+}
+
+float ATaGBotController::OpenNess(const ATaGCharacter* Who) const
+{
+	float Best = 9999.f;
+	for (TActorIterator<ATaGCharacter> It(GetWorld()); It; ++It)
+	{
+		if (It->GetTeam() != Who->GetTeam() && It->IsActiveDefender())
+		{
+			Best = FMath::Min(Best, FVector::Dist2D(It->GetActorLocation(), Who->GetActorLocation()));
+		}
+	}
+	return Best;
+}
+
+ATaGBotController::EHand ATaGBotController::Pick(const TMap<EHand, float>& Weights) const
+{
+	float Total = 0.f;
+	for (const auto& W : Weights)
+	{
+		Total += FMath::Max(0.f, W.Value);
+	}
+	if (Total <= 0.f)
+	{
+		return EHand::Wait;
+	}
+	float R = FMath::FRand() * Total;
+	for (const auto& W : Weights)
+	{
+		R -= FMath::Max(0.f, W.Value);
+		if (R <= 0.f)
+		{
+			return W.Key;
+		}
+	}
+	return EHand::Wait;
+}
+
+bool ATaGBotController::UseArtIf(ATaGCharacter* Me, int32 Index, bool bCondition)
+{
+	if (!bCondition)
+	{
+		return false;
+	}
+	return Press(Me, Index == 1 ? ETaGInput::Art1 : ETaGInput::Art2);
+}
+
+void ATaGBotController::Commit(ATaGCharacter* Me, EHand Hand)
+{
+	// Weaker bots telegraph their defensive choice for a moment (readable habits, prototype v0.2).
+	const float Pretell = FMath::Max(0.f, 0.5f - Skill * 0.65f);
+	if (Pretell <= 0.02f)
+	{
+		Do(Me, Hand);
+		return;
+	}
+	for (const FQueued& Q : Queue)
+	{
+		if (Q.Hand == Hand)
+		{
+			return;
+		}
+	}
+	Me->SetPretell(Hand == EHand::Tackle ? 1 : (Hand == EHand::Contest ? 2 : 0), Pretell);
+	Queue.Add({ Pretell, Hand });
+}
+
+void ATaGBotController::Do(ATaGCharacter* Me, EHand Hand)
+{
+	if (Me->GetAction() != ETaGAction::None)
+	{
+		return;
+	}
+	const FTaGHeroDef& H = Me->GetHeroDef();
+	switch (Hand)
+	{
+	case EHand::Tackle:
+		// Gantetsu prefers his shoulder charge, Minamo her pull, when ready
+		if (H.Art1 == ETaGArt::ShoulderCharge && Me->CanUseInput(ETaGInput::Art1) && FMath::FRand() < 0.5f)
+		{
+			Press(Me, ETaGInput::Art1);
+		}
+		else
+		{
+			Press(Me, ETaGInput::Primary);
+		}
+		break;
+	case EHand::Contest:
+		if (H.Art1 == ETaGArt::SonicWave && Me->CanUseInput(ETaGInput::Art1) && FMath::FRand() < 0.5f)
+		{
+			Press(Me, ETaGInput::Art1);
+		}
+		else if (Press(Me, ETaGInput::Secondary))
+		{
+			ContestHold = FMath::FRandRange(0.6f, 1.f);
+		}
+		break;
+	case EHand::Steal:
+		Press(Me, ETaGInput::PassSteal);
+		break;
+	case EHand::Drive:
+		if (H.Art1 == ETaGArt::Blink && Me->CanUseInput(ETaGInput::Art1) && FMath::FRand() < 0.6f)
+		{
+			Press(Me, ETaGInput::Art1);
+		}
+		else
+		{
+			Press(Me, ETaGInput::Primary);
+		}
+		break;
+	case EHand::Dodge:
+		if (H.Art2 == ETaGArt::Afterimage && Me->CanUseInput(ETaGInput::Art2) && FMath::FRand() < 0.6f)
+		{
+			Press(Me, ETaGInput::Art2);
+		}
+		else
+		{
+			Press(Me, ETaGInput::Secondary);
+		}
+		break;
+	default:
+		break;
+	}
+}
+
+// ================================================================ Tick
 
 void ATaGBotController::Tick(float DeltaSeconds)
 {
@@ -52,163 +248,665 @@ void ATaGBotController::Tick(float DeltaSeconds)
 
 	ATaGCharacter* Me = Cast<ATaGCharacter>(GetPawn());
 	ATaGGameMode* GM = GetWorld()->GetAuthGameMode<ATaGGameMode>();
-	if (!Me || !GM || !GM->IsLive())
+	if (!Me || !GM)
 	{
 		return;
 	}
 	ATaGBall* Ball = Me->FindBall();
-	if (!Ball)
+	if (!GM->IsLive() || !Ball)
 	{
+		Wish(Me, FVector::ZeroVector);
+		Face(Me, TaG::RimCenter(), DeltaSeconds, 4.f);
 		return;
 	}
 
+	// Queued (telegraphed) actions
+	for (int32 i = Queue.Num() - 1; i >= 0; --i)
+	{
+		Queue[i].T -= DeltaSeconds;
+		if (Queue[i].T <= 0.f)
+		{
+			const EHand H = Queue[i].Hand;
+			Queue.RemoveAt(i);
+			Do(Me, H);
+		}
+	}
+	if (ContestHold > 0.f)
+	{
+		ContestHold -= DeltaSeconds;
+		if (ContestHold <= 0.f)
+		{
+			Me->InputReleased(ETaGInput::Secondary);
+		}
+	}
+
+	ATaGCharacter* Holder = Ball->GetHolder();
 	switch (Ball->GetBallState())
 	{
 	case ETaGBallState::Held:
-		if (Ball->GetHolder() == Me)
+		if (Holder == Me)
 		{
-			TickOffense(Me, DeltaSeconds);
+			Offense(Me, Ball, DeltaSeconds);
 		}
-		else if (Ball->GetHolder())
+		else if (Holder && Holder->GetTeam() == Me->GetTeam())
 		{
 			bHadBall = false;
-			bBlockDecided = false;
-			TickDefense(Me, Ball->GetHolder(), DeltaSeconds);
+			OffBall(Me, Holder, DeltaSeconds);
 		}
-		break;
-	case ETaGBallState::Flight:
-	case ETaGBallState::Loose:
-		bHadBall = false;
-		if (Ball->GetBallState() == ETaGBallState::Flight && Ball->GetShooter() && Ball->GetShooter()->GetTeam() != Me->GetTeam())
+		else if (Holder)
 		{
-			// One read per shot: swipe at a rising ball that comes close (decided once, not every frame).
-			if (!bBlockDecided && FVector::Dist(Me->GetEyeLocation(), Ball->GetActorLocation()) < 150.f)
+			bHadBall = false;
+			ATaGCharacter* Man = MyMan(Me);
+			if (Man == Holder || !Man)
 			{
-				bBlockDecided = true;
-				if (Me->CanBlock() && FMath::FRand() < 0.1f + 0.25f * Skill)
-				{
-					Me->FaceTowards(Ball->GetActorLocation(), 1.f, 1000.f);
-					Me->StartBlock();
-				}
+				DefendBall(Me, Holder, DeltaSeconds);
+			}
+			else
+			{
+				DefendOffBall(Me, Man, Holder, DeltaSeconds);
 			}
 		}
-		else
-		{
-			bBlockDecided = false;
-		}
-		TickChase(Me, Ball->GetActorLocation(), DeltaSeconds);
+		bBlockDecided = false;
 		break;
 	default:
 		bHadBall = false;
-		bBlockDecided = false;
-		Me->FaceTowards(TaG::RimCenter(), DeltaSeconds, 4.f);
+		Loose(Me, Ball, DeltaSeconds);
 		break;
 	}
 }
 
-void ATaGBotController::TickOffense(ATaGCharacter* Me, float Dt)
+// ================================================================ Offense
+
+void ATaGBotController::Offense(ATaGCharacter* Me, ATaGBall* Ball, float Dt)
 {
 	ATaGGameMode* GM = GetWorld()->GetAuthGameMode<ATaGGameMode>();
+	const FVector Feet = Me->GetFeetLocation();
+	const FVector ToRim = Flat(TaG::RimFloor() - Feet);
+	const float Nd = ToRim.Size() / 100.f;
+	ATaGCharacter* Opp = Me->FindNearestOpponent();
+	const FVector ToOpp = Opp ? Flat(Opp->GetActorLocation() - Me->GetActorLocation()) : FVector(9999.f, 0.f, 0.f);
+	const float DOpp = ToOpp.Size();
+	const bool bBetween = DOpp < 300.f && FVector::DotProduct(ToOpp.GetSafeNormal(), ToRim.GetSafeNormal()) > 0.45f;
+	Face(Me, TaG::RimCenter(), Dt, 8.f);
+
 	if (!bHadBall)
 	{
 		bHadBall = true;
-		bHasSpot = false;
+		HoldTime = 0.f;
+		bTetherUsed = false;
 	}
+	HoldTime += Dt;
 
 	if (Me->IsChargingShot())
 	{
-		Me->FaceTowards(TaG::RimCenter(), Dt, 12.f);
-		if (Me->GetChargeTime() >= ReleaseAt)
+		if (Me->GetShotCharge() >= ReleaseAt)
 		{
-			Me->ReleaseShot();
+			Me->InputReleased(ETaGInput::Shoot);
 		}
 		return;
 	}
+	if (FadeWait > 0.f)
+	{
+		FadeWait -= Dt;
+		Wish(Me, -ToRim);
+		if (FadeWait <= 0.f)
+		{
+			StartShot(Me);
+		}
+		return;
+	}
+	if (Me->GetAction() == ETaGAction::Drive || Me->GetAction() == ETaGAction::Gathered)
+	{
+		// Out of a drive: dunk or euro step near the rim, otherwise pass or pull up (gather rule)
+		if (!bDashShotRolled && (Nd < 3.6f || Me->GetAction() == ETaGAction::Gathered))
+		{
+			bDashShotRolled = true;
+			if (Nd < 3.6f && FMath::FRand() < 0.65f)
+			{
+				Wish(Me, ToRim);
+				StartShot(Me);
+				return;
+			}
+			if (TryPass(Me, true))
+			{
+				return;
+			}
+			if (Me->GetAction() == ETaGAction::Gathered)
+			{
+				StartShot(Me);
+			}
+		}
+		return;
+	}
+	bDashShotRolled = false;
 
-	// 3x3: after a steal or defensive rebound the ball must go back beyond the arc first.
+	// Catch and shoot: open right after the catch -> let it fly (the pass created the advantage)
+	if (Me->IsFreshCatch() && !GM->NeedsClear(Me->GetTeam()) && DOpp > 200.f && Nd < 7.8f && Me->GetAction() == ETaGAction::None)
+	{
+		Wish(Me, FVector::ZeroVector);
+		StartShot(Me);
+		return;
+	}
+
+	// 3x3: after a change of possession, clear the ball beyond the arc first (or pass to someone out there)
 	if (GM->NeedsClear(Me->GetTeam()))
 	{
-		FVector Out(Me->GetFeetLocation().X - TaG::RimX, Me->GetFeetLocation().Y, 0.f);
-		Out = Out.GetSafeNormal() * (TaG::ArcRadius + 90.f);
-		const FVector Target(TaG::RimX + Out.X, Out.Y, 0.f);
-		Me->FaceTowards(Target + FVector(0, 0, TaG::EyeHeight), Dt, 6.f);
-		SteerTo(Me, Target);
-		bHasSpot = false;
+		const FVector Out = TaG::RimFloor() - ToRim.GetSafeNormal() * (TaG::ArcRadius + 120.f);
+		Steer(Me, Out);
+		if (HoldTime > 0.6f && FMath::FRand() < Dt * 2.f)
+		{
+			TryPass(Me, false);
+		}
 		return;
 	}
 
-	if (!bHasSpot)
+	// Hero arts on offense
+	const FTaGHeroDef& H = Me->GetHeroDef();
+	if (H.Art1 == ETaGArt::Scope && Nd > 5.f && DOpp > 180.f)
 	{
-		PickOffenseSpot(Me);
+		UseArtIf(Me, 1, FMath::FRand() < Dt * 2.f);
 	}
-	HoldTime += Dt;
-	Me->FaceTowards(TaG::RimCenter(), Dt, 6.f);
-	SteerTo(Me, OffenseSpot);
+	if (H.Art2 == ETaGArt::Tether && !bTetherUsed && FMath::FRand() < Dt)
+	{
+		bTetherUsed = UseArtIf(Me, 2, true);
+	}
 
-	float DefDist = 9999.f;
-	if (const ATaGCharacter* Def = Me->FindOpponent())
+	FVector WishDir = ToRim.GetSafeNormal();
+	if (bBetween)
 	{
-		DefDist = FVector::Dist2D(Def->GetFeetLocation(), Me->GetFeetLocation());
+		WishDir = (WishDir + Me->GetActorRightVector() * Strafe * 0.9f).GetSafeNormal();
 	}
-	const float RimDist = TaG::DistToRim(Me->GetFeetLocation());
-	const bool bOpen = DefDist > 220.f && RimDist < TaG::ArcRadius + 150.f && HoldTime > 0.5f;
-	const bool bClock = GM->GetShotClockLeft() < 2.5f;
-	if ((HoldTime >= ShootAfter || bOpen || bClock) && Me->CanStartShot())
+	Wish(Me, WishDir);
+	if (!Me->IsForcedMove() && Me->GetAction() == ETaGAction::None)
 	{
-		Me->BeginShot();
+		Me->AddMovementInput(WishDir, 0.8f);
+	}
+	if (Me->GetAction() != ETaGAction::None)
+	{
+		return;
+	}
+
+	// Reaction: see the tackle start and spin away (the startup beats reaction time, so only sometimes)
+	if (Opp && Opp->GetAction() == ETaGAction::TackleStart && ReactedTo != static_cast<uint8>(ETaGAction::TackleStart))
+	{
+		ReactedTo = static_cast<uint8>(ETaGAction::TackleStart);
+		if (FMath::FRand() < Skill * 0.3f)
+		{
+			Queue.Add({ (FMath::FRandRange(0.25f, 0.4f) - Skill * 0.08f) * 0.5f, EHand::Dodge });
+		}
+	}
+	else if (!Opp || Opp->GetAction() != ETaGAction::TackleStart)
+	{
+		ReactedTo = 255;
+	}
+
+	if (GM->GetShotClockLeft() < 2.f || ToRim.Size() < 150.f)
+	{
+		PlanShot(Me, Nd, DOpp);
+		return;
+	}
+	ThinkT -= Dt;
+	if (ThinkT > 0.f)
+	{
+		return;
+	}
+	ThinkT = FMath::FRandRange(0.3f, 0.6f) / (0.6f + Skill * 0.6f);
+	if (FMath::FRand() < 0.25f)
+	{
+		Strafe = -Strafe;
+	}
+
+	// Team play first: a teammate who is wide open, or help when pressured
+	if (TryPass(Me, DOpp < 160.f))
+	{
+		return;
+	}
+
+	const bool bOpen = DOpp > 230.f || !bBetween;
+	if (bOpen && Nd < 8.f && FMath::FRand() < 0.75f)
+	{
+		PlanShot(Me, Nd, DOpp);
+		return;
+	}
+	if (!bBetween)
+	{
+		return;
+	}
+	TMap<EHand, float> W;
+	W.Add(EHand::Drive, 1.f);
+	W.Add(EHand::Dodge, 0.5f);
+	W.Add(EHand::Shoot, Nd < 7.5f ? 0.7f : 0.15f);
+	W.Add(EHand::Wait, 0.6f);
+	W[OffFav] *= 2.5f;
+	if (Opp && (Opp->IsContesting() || Opp->IsContestStarting()))
+	{
+		W[EHand::Drive] = 3.f;
+		W[EHand::Shoot] = 0.05f;
+	}
+	if (Opp && Opp->GetCooldownLeft(ETaGSlot::Tackle) > 0.6f)
+	{
+		W[EHand::Drive] += 2.f;
+		W[EHand::Dodge] = 0.1f;
+	}
+	if (!Me->CanUseInput(ETaGInput::Primary)) { W[EHand::Drive] = 0.f; }
+	if (!Me->CanUseInput(ETaGInput::Secondary)) { W[EHand::Dodge] = 0.f; }
+	switch (Pick(W))
+	{
+	case EHand::Drive:
+		Do(Me, EHand::Drive);
+		break;
+	case EHand::Dodge:
+		Do(Me, EHand::Dodge);
+		break;
+	case EHand::Shoot:
+		PlanShot(Me, Nd, DOpp);
+		break;
+	default:
+		break;
 	}
 }
 
-void ATaGBotController::TickDefense(ATaGCharacter* Me, ATaGCharacter* Handler, float Dt)
+bool ATaGBotController::TryPass(ATaGCharacter* Me, bool bPressured)
 {
-	const FVector HFeet = Handler->GetFeetLocation();
-	FVector ToRim(TaG::RimX - HFeet.X, -HFeet.Y, 0.f);
-	ToRim = ToRim.GetSafeNormal();
-	// Stay between the handler and the rim, a little more than an arm's length off.
-	const FVector Spot = HFeet + ToRim * 130.f;
-	SteerTo(Me, Spot, 25.f);
-	Me->FaceTowards(Handler->GetActorLocation(), Dt, 10.f);
-
-	const float D = FVector::Dist2D(HFeet, Me->GetFeetLocation());
-	if (Handler->IsChargingShot())
+	ATaGGameMode* GM = GetWorld()->GetAuthGameMode<ATaGGameMode>();
+	const TArray<ATaGCharacter*> Mates = GM->GetTeamPlayers(Me->GetTeam());
+	if (Mates.Num() < 2)
 	{
-		// Contest: read the shot and rise with the shooter
-		if (!bReactedToShot && Handler->GetChargeTime() > FMath::Lerp(0.45f, 0.3f, Skill))
+		return false;
+	}
+	const float MyOpen = OpenNess(Me);
+	const float MyValue = FTaGRules::BaseChance(TaG::DistToRim(Me->GetFeetLocation())) * (TaG::IsBeyondArc(Me->GetFeetLocation()) ? 2.f : 1.f);
+	ATaGCharacter* Best = nullptr;
+	float BestScore = 0.f;
+	bool bLaneRisky = false;
+	for (ATaGCharacter* M : Mates)
+	{
+		if (M == Me || M->IsDown())
 		{
-			bReactedToShot = true;
-			if (D < TaG::ContestRange && FMath::FRand() < 0.35f + 0.45f * Skill)
+			continue;
+		}
+		const float Open = OpenNess(M);
+		const FVector Feet = M->GetFeetLocation();
+		float Value = FTaGRules::BaseChance(TaG::DistToRim(Feet)) * (TaG::IsBeyondArc(Feet) ? 2.f : 1.f);
+		if (GM->NeedsClear(Me->GetTeam()) && TaG::IsBeyondArc(Feet))
+		{
+			Value += 0.6f; // passing out clears the ball
+		}
+		// Lane safety: a defender close to the pass line
+		bool bRisky = false;
+		for (TActorIterator<ATaGCharacter> It(GetWorld()); It; ++It)
+		{
+			if (It->GetTeam() == Me->GetTeam())
 			{
-				Me->Jump();
+				continue;
 			}
+			const FVector C = FMath::ClosestPointOnSegment(It->GetActorLocation(), Me->GetActorLocation(), M->GetActorLocation());
+			if (FVector::Dist2D(C, It->GetActorLocation()) < 90.f)
+			{
+				bRisky = true;
+			}
+		}
+		const float Score = Value * FMath::Clamp(Open / 250.f, 0.f, 1.6f) * (bRisky ? 0.35f : 1.f);
+		if (Score > BestScore)
+		{
+			BestScore = Score;
+			Best = M;
+			bLaneRisky = bRisky;
+		}
+	}
+	if (!Best)
+	{
+		return false;
+	}
+	const float Mine = MyValue * FMath::Clamp(MyOpen / 250.f, 0.f, 1.6f);
+	const bool bWorth = BestScore > Mine * (bPressured ? 0.75f : 1.1f) && OpenNess(Best) > 150.f;
+	if (!bWorth || FMath::FRand() > 0.5f + 0.35f * Skill)
+	{
+		return false;
+	}
+	Face(Me, Best->GetActorLocation(), 1.f, 1000.f);
+	// Tsumugi threads risky lanes
+	if (bLaneRisky && Me->GetHeroDef().Art1 == ETaGArt::ThreadPass && Press(Me, ETaGInput::Art1))
+	{
+		return true;
+	}
+	return Press(Me, ETaGInput::PassSteal);
+}
+
+void ATaGBotController::PlanShot(ATaGCharacter* Me, float Nd, float DefDist)
+{
+	// Pick a shot type and enter its inputs (stick direction, jump) like a player would.
+	const FVector ToRim = Flat(TaG::RimFloor() - Me->GetFeetLocation()).GetSafeNormal();
+	int32 Plan = 0; // 0 auto, 1 drive-in, 2 stepback, 3 fade, 4 jumper
+	if (Nd < 3.2f)
+	{
+		Plan = 1;
+	}
+	else if (DefDist < 180.f)
+	{
+		const float R = FMath::FRand() * 2.8f;
+		Plan = R < 1.2f ? 2 : (R < 2.2f ? 3 : 4);
+	}
+	else if (Nd < 5.5f)
+	{
+		Plan = FMath::RandBool() ? 1 : 4;
+	}
+	else
+	{
+		Plan = 4;
+	}
+	switch (Plan)
+	{
+	case 1:
+		Wish(Me, ToRim);
+		StartShot(Me);
+		break;
+	case 2:
+		Wish(Me, -ToRim);
+		StartShot(Me);
+		break;
+	case 3:
+		Me->InputJump();
+		FadeWait = 0.12f;
+		break;
+	default:
+		Wish(Me, FVector::ZeroVector);
+		StartShot(Me);
+		break;
+	}
+}
+
+void ATaGBotController::StartShot(ATaGCharacter* Me)
+{
+	ReleaseAt = FMath::Clamp(0.74f + FMath::FRandRange(-1.f, 1.f) * 0.22f * (1.15f - Skill), 0.35f, 1.3f);
+	Press(Me, ETaGInput::Shoot);
+}
+
+void ATaGBotController::OffBall(ATaGCharacter* Me, ATaGCharacter* Handler, float Dt)
+{
+	const int32 Index = TeamIndex(Me);
+	FVector Spot = TaG::OffenseSpot(1 + (Index % 4));
+	if (FVector::Dist2D(Spot, Handler->GetFeetLocation()) < 250.f)
+	{
+		Spot = TaG::OffenseSpot(1 + ((Index + 2) % 6));
+	}
+	const FTaGHeroDef& H = Me->GetHeroDef();
+
+	// Cuts: now and then, sprint to the rim (a cut beats a defender who ball-watches)
+	CutTimer -= Dt;
+	if (CuttingFor > 0.f)
+	{
+		CuttingFor -= Dt;
+		Steer(Me, TaG::RimFloor() + FVector(80.f, 0.f, 0.f), 30.f);
+		Face(Me, Handler->GetActorLocation(), Dt, 8.f);
+		return;
+	}
+	if (CutTimer <= 0.f)
+	{
+		CutTimer = FMath::FRandRange(3.5f, 7.f);
+		if (FMath::FRand() < 0.35f + 0.35f * Skill && OpenNess(Me) < 400.f)
+		{
+			CuttingFor = 1.2f;
+			Wish(Me, Flat(TaG::RimFloor() - Me->GetFeetLocation()));
+			Press(Me, ETaGInput::Primary); // a cut is a drive without the ball
+			return;
+		}
+	}
+	Steer(Me, Spot, 50.f);
+	Face(Me, Handler->GetActorLocation(), Dt, 8.f);
+
+	// Arts that help without the ball
+	const bool bSettled = FVector::Dist2D(Spot, Me->GetFeetLocation()) < 80.f;
+	if (H.Art2 == ETaGArt::SpotUp)
+	{
+		UseArtIf(Me, 2, bSettled && FMath::FRand() < Dt * 0.8f);
+	}
+	if (H.Art2 == ETaGArt::Tether)
+	{
+		UseArtIf(Me, 2, FVector::Dist2D(Handler->GetActorLocation(), Me->GetActorLocation()) < 900.f && FMath::FRand() < Dt * 0.3f);
+	}
+	if (H.Art2 == ETaGArt::Resync)
+	{
+		bool bMateDown = false;
+		for (TActorIterator<ATaGCharacter> It(GetWorld()); It; ++It)
+		{
+			bMateDown |= It->GetTeam() == Me->GetTeam() && It->IsDown();
+		}
+		UseArtIf(Me, 2, bMateDown);
+	}
+	if (H.Art2 == ETaGArt::IronWall)
+	{
+		// A screen for the handler: wall between the handler's defender and the rim side
+		ATaGCharacter* HD = Handler->FindNearestOpponent(200.f);
+		if (HD && FVector::Dist2D(HD->GetActorLocation(), Me->GetActorLocation()) < 400.f && FMath::FRand() < Dt * 0.5f)
+		{
+			Face(Me, HD->GetActorLocation(), 1.f, 1000.f);
+			UseArtIf(Me, 2, true);
+		}
+	}
+}
+
+// ================================================================ Defense
+
+void ATaGBotController::DefendBall(ATaGCharacter* Me, ATaGCharacter* Hd, float Dt)
+{
+	const FVector Hp = Flat(Hd->GetFeetLocation());
+	const FVector ToRim = Flat(TaG::RimFloor() - Hp);
+	const float GuardD = ToRim.Size() < 850.f ? 150.f : 220.f;
+	const FVector Gp = Hp + ToRim.GetSafeNormal() * FMath::Min(GuardD, ToRim.Size() * 0.6f);
+	const FVector ToGp = Gp - Flat(Me->GetFeetLocation());
+	Wish(Me, ToGp);
+	if (!Me->IsForcedMove())
+	{
+		Me->AddMovementInput(ToGp.GetSafeNormal(), FMath::Clamp(ToGp.Size() / 60.f, 0.f, 1.f));
+	}
+	Face(Me, Hd->GetActorLocation(), Dt, 12.f);
+	const float D = FVector::Dist2D(Hp, Me->GetFeetLocation());
+	const FTaGHeroDef& H = Me->GetHeroDef();
+
+	// Reactions to what the handler shows
+	const uint8 HS = static_cast<uint8>(Hd->GetAction());
+	if (HS != ReactedTo)
+	{
+		ReactedTo = HS;
+		const float React = FMath::FRandRange(0.25f, 0.4f) - Skill * 0.08f;
+		switch (Hd->GetAction())
+		{
+		case ETaGAction::Shoot:
+			if (D < 260.f && Me->CanUseInput(ETaGInput::Secondary) && FMath::FRand() < 0.05f + Skill * 0.45f)
+			{
+				Queue.Add({ React, EHand::Contest });
+			}
+			else if (D < 190.f && FMath::FRand() < 0.05f + Skill * 0.25f)
+			{
+				Me->InputJump();
+			}
+			break;
+		case ETaGAction::DriveStart:
+			if (D < 300.f && FMath::FRand() < Skill * 0.35f)
+			{
+				Queue.Add({ React * 0.6f, EHand::Tackle });
+			}
+			break;
+		case ETaGAction::DodgeRecover:
+			if (D < 200.f)
+			{
+				Queue.Add({ 0.08f, EHand::Steal });
+			}
+			break;
+		default:
+			break;
+		}
+	}
+	if (Hd->GetAction() == ETaGAction::Drive && Me->GetAction() == ETaGAction::None)
+	{
+		const float HRim = TaG::DistToRim(Hp);
+		const float MeRim = TaG::DistToRim(Me->GetFeetLocation());
+		if (HRim < MeRim + 30.f && FMath::FRand() < Skill)
+		{
+			Wish(Me, ToGp);
+			Press(Me, ETaGInput::Step);
+		}
+		// Minamo's pull catches drives from range
+		if (H.Art1 == ETaGArt::Pull && D > 250.f && D < 750.f)
+		{
+			Face(Me, Hd->GetActorLocation(), 1.f, 1000.f);
+			UseArtIf(Me, 1, FMath::FRand() < 0.5f);
+		}
+	}
+
+	// Area arts near the paint
+	if (H.Art2 == ETaGArt::SlowField && TaG::DistToRim(Hp) < 450.f && D < 350.f)
+	{
+		UseArtIf(Me, 2, FMath::FRand() < Dt * 1.5f);
+	}
+	if (H.Art2 == ETaGArt::IronWall && TaG::DistToRim(Hp) < 600.f && D < 300.f)
+	{
+		UseArtIf(Me, 2, FMath::FRand() < Dt * 0.8f);
+	}
+
+	uint8 Pt = 0;
+	if (Me->GetAction() != ETaGAction::None || D > 240.f || Me->IsPretelling(Pt))
+	{
+		return;
+	}
+	ThinkT -= Dt;
+	if (ThinkT > 0.f)
+	{
+		return;
+	}
+	ThinkT = FMath::FRandRange(0.4f, 0.8f) / (0.6f + Skill * 0.6f);
+	TMap<EHand, float> W;
+	W.Add(EHand::Tackle, 0.6f);
+	W.Add(EHand::Contest, 0.6f);
+	W.Add(EHand::Wait, 1.6f);
+	W.Add(EHand::Steal, 0.1f);
+	W[DefFav] *= 2.5f;
+	if (!Me->CanUseInput(ETaGInput::Primary) && !(H.Art1 == ETaGArt::ShoulderCharge && Me->CanUseInput(ETaGInput::Art1))) { W[EHand::Tackle] = 0.f; }
+	if (!Me->CanUseInput(ETaGInput::Secondary)) { W[EHand::Contest] = 0.f; }
+	if (!Me->CanUseInput(ETaGInput::PassSteal)) { W[EHand::Steal] = 0.f; }
+	if (TaG::DistToRim(Hp) > 750.f) { W[EHand::Contest] *= 0.3f; }
+	switch (Pick(W))
+	{
+	case EHand::Tackle:
+		Commit(Me, EHand::Tackle);
+		break;
+	case EHand::Contest:
+		Commit(Me, EHand::Contest);
+		break;
+	case EHand::Steal:
+		Do(Me, EHand::Steal);
+		break;
+	default:
+		break;
+	}
+}
+
+void ATaGBotController::DefendOffBall(ATaGCharacter* Me, ATaGCharacter* Man, ATaGCharacter* Hd, float Dt)
+{
+	// Deny: between my man and the rim, sagging toward the ball; help when the handler drives at the rim.
+	const FVector ManP = Flat(Man->GetFeetLocation());
+	const FVector Rim = TaG::RimFloor();
+	FVector Spot = ManP + (Rim - ManP) * 0.28f + (Flat(Hd->GetFeetLocation()) - ManP) * 0.15f;
+	const bool bHelp = Hd->IsDriving() && TaG::DistToRim(Hd->GetFeetLocation()) < 450.f && FVector::Dist2D(Hd->GetActorLocation(), Me->GetActorLocation()) < 450.f;
+	if (bHelp)
+	{
+		Spot = Flat(Hd->GetFeetLocation()) + (Rim - Flat(Hd->GetFeetLocation())).GetSafeNormal() * 90.f;
+		if (FVector::Dist2D(Hd->GetActorLocation(), Me->GetActorLocation()) < 200.f && FMath::FRand() < Skill * Dt * 4.f)
+		{
+			Do(Me, EHand::Tackle);
+		}
+	}
+	Steer(Me, Spot, 30.f);
+	Face(Me, Hd->GetActorLocation(), Dt, 8.f);
+
+	// Jump into the passing lane to my man now and then (handled by the ball as an interception)
+	const FTaGHeroDef& H = Me->GetHeroDef();
+	if (H.Art1 == ETaGArt::Pull && Hd->IsDriving())
+	{
+		const float D = FVector::Dist2D(Hd->GetActorLocation(), Me->GetActorLocation());
+		if (D > 250.f && D < 750.f)
+		{
+			Face(Me, Hd->GetActorLocation(), 1.f, 1000.f);
+			UseArtIf(Me, 1, FMath::FRand() < Dt * 2.f);
+		}
+	}
+	if (H.Art2 == ETaGArt::Resync)
+	{
+		bool bMateDown = false;
+		for (TActorIterator<ATaGCharacter> It(GetWorld()); It; ++It)
+		{
+			bMateDown |= It->GetTeam() == Me->GetTeam() && It->IsDown();
+		}
+		UseArtIf(Me, 2, bMateDown);
+	}
+}
+
+// ================================================================ Loose ball / rebounds
+
+void ATaGBotController::Loose(ATaGCharacter* Me, ATaGBall* Ball, float Dt)
+{
+	const FVector Bp = Ball->GetActorLocation();
+	const FVector Rim = TaG::RimFloor();
+	FVector Target = Flat(Bp);
+	const ETaGBallState St = Ball->GetBallState();
+
+	if (St == ETaGBallState::Flight)
+	{
+		// Crash the glass: around the rim
+		Target = Rim + Flat(Me->GetFeetLocation() - Rim).GetSafeNormal() * 140.f;
+		if (Ball->GetShotTeam() != Me->GetTeam() && !bBlockDecided && FVector::Dist(Me->GetEyeLocation(), Bp) < 160.f)
+		{
+			bBlockDecided = true;
+			if (FMath::FRand() < 0.1f + 0.25f * Skill)
+			{
+				Face(Me, Bp, 1.f, 1000.f);
+				Me->InputJump();
+			}
+		}
+	}
+	else if (St == ETaGBallState::Pass)
+	{
+		// Read the pass: the receiver's defender steps toward the catch point
+		ATaGCharacter* Receiver = Ball->GetPassReceiver();
+		if (Receiver && Receiver->GetTeam() != Me->GetTeam() && MyMan(Me) == Receiver)
+		{
+			Target = Flat(FMath::Lerp(Bp, Receiver->GetActorLocation(), 0.6f));
+		}
+		else
+		{
+			Target = Flat(Me->GetFeetLocation());
 		}
 	}
 	else
 	{
-		bReactedToShot = false;
-		Me->StopJumping();
-		const float Now = GetWorld()->GetTimeSeconds();
-		if (Now >= NextStealTry && D < TaG::StealRange - 20.f && Me->CanSteal())
+		bBlockDecided = false;
+		// Only the closest player of each team chases; the rest hold position near the rim
+		float MyD = FVector::Dist2D(Bp, Me->GetActorLocation());
+		bool bClosest = true;
+		for (TActorIterator<ATaGCharacter> It(GetWorld()); It; ++It)
 		{
-			NextStealTry = Now + 1.5f;
-			if (FMath::FRand() < 0.15f + 0.25f * Skill)
+			if (*It != Me && It->GetTeam() == Me->GetTeam() && FVector::Dist2D(Bp, It->GetActorLocation()) < MyD - 50.f)
 			{
-				Me->StartSteal();
+				bClosest = false;
+			}
+		}
+		if (!bClosest)
+		{
+			Target = Rim + Flat(Bp - Rim).GetSafeNormal() * 300.f + FVector(0.f, (TeamIndex(Me) % 2 ? 200.f : -200.f), 0.f);
+		}
+		if (Me->GetAction() == ETaGAction::None && bClosest)
+		{
+			if (MyD > 400.f && FMath::FRand() < 0.05f)
+			{
+				Press(Me, ETaGInput::Primary);
+			}
+			if (Bp.Z > Me->GetFeetLocation().Z + Me->GetHeroDef().EyeHeight * 1.1f && MyD < 120.f)
+			{
+				Me->InputJump();
 			}
 		}
 	}
-}
-
-void ATaGBotController::TickChase(ATaGCharacter* Me, const FVector& BallPos, float Dt)
-{
-	SteerTo(Me, FVector(BallPos.X, BallPos.Y, 0.f), 10.f);
-	Me->FaceTowards(BallPos, Dt, 8.f);
-	const FVector Feet = Me->GetFeetLocation();
-	if (FVector::Dist2D(BallPos, Feet) < 90.f && BallPos.Z > Feet.Z + TaG::StandingReach - 10.f && BallPos.Z < Feet.Z + TaG::StandingReach + 80.f)
-	{
-		Me->Jump();
-	}
-	else
-	{
-		Me->StopJumping();
-	}
+	Steer(Me, Target, 10.f);
+	Face(Me, Bp, Dt, 10.f);
 }
