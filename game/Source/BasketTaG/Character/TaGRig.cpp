@@ -452,8 +452,10 @@ void UTaGRigComponent::Animate(const FTaGPoseInput& In)
 	Joints[Pivot]->SetRelativeRotation(FRotator(Deg(CurTilt), Deg(CurSpin), 0.f));
 	Joints[Hips]->SetRelativeLocation(FVector(0.f, 0.f, PelvisRestZ + (CurHipsY - 0.95f) * 100.f * HeightScale));
 	Joints[Spine]->SetRelativeRotation(FRotator(-Deg(CurLean), 0.f, 0.f));
-	Joints[ShoulderL]->SetRelativeRotation(FRotator(Deg(Cur[0]), 0.f, Deg(Cur[2])));
-	Joints[ShoulderR]->SetRelativeRotation(FRotator(Deg(Cur[1]), 0.f, Deg(Cur[3])));
+	// Shz follows rig.gd: positive swings a hanging arm toward the body's right. UE's roll swings it toward the left
+	// (-Y), so the sign flips here; without it both arms swung inward and crossed in front of the body.
+	Joints[ShoulderL]->SetRelativeRotation(FRotator(Deg(Cur[0]), 0.f, -Deg(Cur[2])));
+	Joints[ShoulderR]->SetRelativeRotation(FRotator(Deg(Cur[1]), 0.f, -Deg(Cur[3])));
 	Joints[ElbowL]->SetRelativeRotation(FRotator(Deg(Cur[4]), 0.f, 0.f));
 	Joints[ElbowR]->SetRelativeRotation(FRotator(Deg(Cur[5]), 0.f, 0.f));
 	Joints[HipL]->SetRelativeRotation(FRotator(Deg(Cur[6]), 0.f, 0.f));
