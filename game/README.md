@@ -52,7 +52,8 @@ Unreal Engine 5.8.4、C++、Gameplay Ability System（GAS）、Enhanced Input。
 - 素材の作り方とUEへの取り込み方は [tools/README.md](../tools/README.md) にある。
 
 ## ビルドと起動
-エンジンは `C:\Epic Games\UE_5.8` を前提にしている。
+エンジンは `C:\Epic Games\UE_5.8` を前提にしている。**遊ぶだけなら `game/Play.bat` をダブルクリック**（エディタ用のビルドが済んでいる必要がある）。
+Windows用のパッケージ版（`build/win/Windows/BasketTaG.exe`）も作れるが、署名がないため、Smart App Controlなどのアプリ制御が有効なPCでは起動を止められる。
 ```bash
 "C:/Epic Games/UE_5.8/Engine/Build/BatchFiles/Build.bat" BasketTaGEditor Win64 Development -Project="C:/TaG/game/BasketTaG.uproject" -WaitMutex
 "C:/Epic Games/UE_5.8/Engine/Binaries/Win64/UnrealEditor.exe" "C:/TaG/game/BasketTaG.uproject" -game -windowed -ResX=1600 -ResY=900
