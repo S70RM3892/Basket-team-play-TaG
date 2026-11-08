@@ -668,13 +668,9 @@ void ATaGBotController::Offense(ATaGCharacter* Me, ATaGBall* Ball, float Dt)
 	{
 		Me->AddMovementInput(WishDir, 0.8f);
 	}
-	if (Me->GetAction() != ETaGAction::None)
-	{
-		return;
-	}
-
-	// Reaction: see the tackle start and spin away (the startup beats reaction time, so only sometimes)
-	if (Opp && Opp->GetAction() == ETaGAction::TackleStart && ReactedTo != static_cast<uint8>(ETaGAction::TackleStart))
+	// Reaction: see the tackle start and spin away, also out of a drive (the startup beats reaction time, so only sometimes)
+	const bool bCanSpin = Me->GetAction() == ETaGAction::None || Me->IsDriving();
+	if (bCanSpin && Opp && Opp->GetAction() == ETaGAction::TackleStart && ReactedTo != static_cast<uint8>(ETaGAction::TackleStart))
 	{
 		ReactedTo = static_cast<uint8>(ETaGAction::TackleStart);
 		if (FMath::FRand() < Skill * 0.3f)
@@ -685,6 +681,10 @@ void ATaGBotController::Offense(ATaGCharacter* Me, ATaGBall* Ball, float Dt)
 	else if (!Opp || Opp->GetAction() != ETaGAction::TackleStart)
 	{
 		ReactedTo = 255;
+	}
+	if (Me->GetAction() != ETaGAction::None)
+	{
+		return;
 	}
 
 	// Data-driven arts: make room when crowded, slip a tackle that is coming
@@ -845,6 +845,10 @@ bool ATaGBotController::TryPass(ATaGCharacter* Me, bool bPressured)
 		{
 			Value += 0.6f; // passing out clears the ball
 		}
+		if (M->IsSpottingUp())
+		{
+			Value *= 1.6f; // the shooter called for it
+		}
 		// Lane safety: a defender close to the pass line
 		bool bRisky = false;
 		for (TActorIterator<ATaGCharacter> It(GetWorld()); It; ++It)
@@ -872,7 +876,7 @@ bool ATaGBotController::TryPass(ATaGCharacter* Me, bool bPressured)
 		return false;
 	}
 	const float Mine = MyValue * FMath::Clamp(MyOpen / 250.f, 0.f, 1.6f);
-	const bool bWorth = BestScore > Mine * (bPressured ? 0.75f : 1.1f) && OpenNess(Best) > 150.f;
+	const bool bWorth = BestScore > Mine * (bPressured ? 0.75f : 1.1f) && OpenNess(Best) > (Best->IsSpottingUp() ? 100.f : 150.f);
 	if (!bWorth || FMath::FRand() > 0.5f + 0.35f * Skill)
 	{
 		return false;

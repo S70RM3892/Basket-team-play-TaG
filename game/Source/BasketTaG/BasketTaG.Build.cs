@@ -5,6 +5,8 @@ public class BasketTaG : ModuleRules
 	public BasketTaG(ReadOnlyTargetRules Target) : base(Target)
 	{
 		PCHUsage = PCHUsageMode.UseExplicitOrSharedPCHs;
+		// The UI files each keep their own file-local helpers (White, T, GetGS...): never merge them into one unity blob
+		bUseUnity = false;
 
 		PublicDependencyModuleNames.AddRange(new string[] {
 			"Core",

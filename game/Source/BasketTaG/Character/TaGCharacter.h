@@ -194,7 +194,10 @@ public:
 	void ClearForNewPossession(const FVector& FeetPos, const FVector& LookAt);
 	void SetTether(ATaGCharacter* Partner, float Seconds);
 	/** Called when an incoming tackle met this player's dodge. */
-	void MarkEvaded() { bDodgeEvaded = true; }
+	/** The dodge beat a tackle or pull: blow-by (speed burst, drive ready, half the dodge cooldown back). */
+	void MarkEvaded();
+	bool IsSpottingUp() const;
+	void LockDrive(float Seconds) { StartCooldown(ETaGSlot::Drive, Seconds); }
 	/** A tackle met the shooter mid-shot: the shot goes up with contact (a draw in the RPS table). */
 	void ForceContactShot();
 	float GetDriveCancelTime() const { return DriveCancelT; }

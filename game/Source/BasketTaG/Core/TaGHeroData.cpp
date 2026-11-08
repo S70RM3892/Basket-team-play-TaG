@@ -159,7 +159,7 @@ namespace
 		Add(FArt(A::Blink, H::Drive, TEXT("ブリンク"), 7.f, TEXT("4.5m先へ瞬間移動する突破。ボールを持っていればギャザーになる")).Col(0x3EE6FF));
 		Add(FArt(A::Afterimage, H::Evade, TEXT("残像ステップ"), 8.f, TEXT("残像を残してかわす。タックルを空振りさせると長く止められる")).Col(0x9FF3FF));
 		Add(FArt(A::Scope, H::Shot, TEXT("スコープ"), 9.f, TEXT("3秒間、5m以上のシュートが入りやすくなる。妨害には負ける")).Col(0xF2D16B));
-		Add(FArt(A::SpotUp, H::Teamplay, TEXT("スポットアップ"), 8.f, TEXT("止まって待つと、パスを受けてすぐのシュートの溜めが短くなる")).Col(0xD9A33A));
+		Add(FArt(A::SpotUp, H::Teamplay, TEXT("スポットアップ"), 8.f, TEXT("パスを呼ぶ（7秒）。味方が優先して回し、受けて2.5秒は溜めが速く、寄せが効きにくい")).Col(0xD9A33A));
 		Add(FArt(A::ThreadPass, H::Teamplay, TEXT("糸パス"), 6.f, TEXT("糸の上を走る速いパス。糸の真上に立たないと奪えない")).Col(0xFFD95A));
 		Add(FArt(A::Tether, H::Teamplay, TEXT("テザー"), 10.f, TEXT("近くの味方と糸でつながり、2人とも速くなる。2人の間のパスはすべて糸パス")).Col(0xF2CF4F));
 		Add(FArt(A::SonicWave, H::Contest, TEXT("音波"), 9.f, TEXT("周囲4mのシュートを妨害し、突破を遅くする。突破には負ける")).Col(0xB18CFF));

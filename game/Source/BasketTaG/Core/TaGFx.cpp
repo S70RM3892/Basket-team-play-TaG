@@ -62,7 +62,7 @@ ATaGFxManager* ATaGFxManager::Get(const UObject* WorldContext)
 	{
 		return nullptr;
 	}
-	for (TActorIterator<ATaGFxManager> It(World); It; ++It)
+	if (TActorIterator<ATaGFxManager> It(World); It)
 	{
 		return *It;
 	}

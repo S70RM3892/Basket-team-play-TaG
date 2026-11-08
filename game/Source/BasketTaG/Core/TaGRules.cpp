@@ -198,6 +198,10 @@ FTaGShotEval FTaGRules::EvaluateShot(const ATaGCharacter* Shooter, float Charge,
 			else if (D < 230.f) { C = 0.96f; }
 			// Shot types that resist closeouts (fadeaway, euro step, floater); the bodies scale the closeout too
 			C = FMath::Clamp(1.f - (1.f - C) * St.Prox * Body, 0.6f, 1.f);
+			if (Shooter->IsCatchAndShoot())
+			{
+				C = 1.f - (1.f - C) * 0.4f; // set feet, quick release: the closeout arrives late
+			}
 		}
 		// Oboro's mist halves contests made from inside it; the high arc and the quick release resist them
 		if (C < 1.f && ATaGFieldActor::FindAt(Shooter->GetWorld(), ETaGFieldKind::Mist, Shooter->GetTeam(), DefFeet))

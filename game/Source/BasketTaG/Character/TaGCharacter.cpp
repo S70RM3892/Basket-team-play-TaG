@@ -461,6 +461,23 @@ bool ATaGCharacter::CanTouchBall() const
 bool ATaGCharacter::IsInZone() const { return ServerNow() < ZoneEnd; }
 bool ATaGCharacter::IsScoped() const { return ServerNow() < ScopeEnd; }
 bool ATaGCharacter::IsCatchAndShoot() const { return ServerNow() < CatchShootEnd; }
+bool ATaGCharacter::IsSpottingUp() const { return ServerNow() < SpotUpEnd; }
+
+void ATaGCharacter::MarkEvaded()
+{
+	if (bDodgeEvaded)
+	{
+		return;
+	}
+	bDodgeEvaded = true;
+	if (HasAuthority())
+	{
+		// The defender bit and is stuck: the dodger is past him with a burst and the drive ready
+		AddSpeedBoost(1.f);
+		StartCooldown(ETaGSlot::Drive, 0.f);
+		StartCooldown(ETaGSlot::Dodge, TaG::DodgeCD * 0.5f);
+	}
+}
 bool ATaGCharacter::IsFreshCatch() const { return ServerNow() - LastCatchTime < 1.2f; }
 
 bool ATaGCharacter::IsTetheredWith(const ATaGCharacter* Other) const
@@ -596,7 +613,7 @@ ATaGCharacter* ATaGCharacter::FindBestPassTarget(const FVector& AimDir) const
 		}
 		const FVector To = (It->GetActorLocation() - GetActorLocation());
 		const float Dist = To.Size2D();
-		const float Score = FVector::DotProduct(Aim, To.GetSafeNormal2D()) * 2.f - Dist / 1500.f;
+		const float Score = FVector::DotProduct(Aim, To.GetSafeNormal2D()) * 2.f - Dist / 1500.f + (It->IsSpottingUp() ? 0.5f : 0.f);
 		if (Score > BestScore)
 		{
 			BestScore = Score;
@@ -1328,10 +1345,9 @@ bool ATaGCharacter::CanUseInput(ETaGInput Input) const
 		if (MyRole == 2) { return IsReady(ETaGSlot::Tackle); }
 		return IsReady(ETaGSlot::Drive);
 	case ETaGInput::Secondary:
-		if (!bFree) { return false; }
-		if (MyRole == 1) { return IsReady(ETaGSlot::Dodge); }
-		if (MyRole == 2) { return IsReady(ETaGSlot::Contest); }
-		return false;
+		if (MyRole == 2) { return bFree && IsReady(ETaGSlot::Contest); }
+		// The spin can be pulled out of a drive: the drive is what a tackle hunts
+		return MyRole == 1 && (bFree || Action == ETaGAction::Drive || Action == ETaGAction::DriveStart) && IsReady(ETaGSlot::Dodge);
 	case ETaGInput::Step:
 		return bFree && MyRole != 1 && IsReady(ETaGSlot::Step);
 	case ETaGInput::PassSteal:
@@ -1936,12 +1952,13 @@ bool ATaGCharacter::CanUseArt(int32 Index) const
 	case ETaGArt::SlowField:
 	case ETaGArt::SonicWave:
 	case ETaGArt::IronWall:
-	case ETaGArt::SpotUp:
 		return bFree && !bBall;
+	case ETaGArt::SpotUp:
+		return !bBall && (bFree || Action == ETaGAction::Drive || Action == ETaGAction::DriveStart || Action == ETaGAction::Step);
 	case ETaGArt::Blink:
 		return bFree;
 	case ETaGArt::Afterimage:
-		return bFree && bBall;
+		return bBall && (bFree || Action == ETaGAction::Drive || Action == ETaGAction::DriveStart);
 	case ETaGArt::Scope:
 		return Action != ETaGAction::Down;
 	case ETaGArt::ThreadPass:
@@ -2040,7 +2057,7 @@ void ATaGCharacter::ExecuteArt(ETaGArt Art)
 		ScopeEnd = Now + 3.f;
 		break;
 	case ETaGArt::SpotUp:
-		SpotUpEnd = Now + 4.f;
+		SpotUpEnd = Now + 7.f;
 		break;
 	case ETaGArt::ThreadPass:
 		TryPass(true);
@@ -2380,9 +2397,10 @@ void ATaGCharacter::ResetHandCooldowns()
 void ATaGCharacter::OnCaughtPass()
 {
 	LastCatchTime = ServerNow();
-	if (ServerNow() < SpotUpEnd && GetVelocity().Size2D() < 160.f)
+	if (ServerNow() < SpotUpEnd && GetVelocity().Size2D() < 330.f)
 	{
-		CatchShootEnd = ServerNow() + 1.5f; // Hayate: spot-up catch and shoot
+		CatchShootEnd = ServerNow() + 2.5f; // Hayate: spot-up catch and shoot (a hop into the catch counts)
+		SpotUpEnd = 0.f;
 	}
 }
 

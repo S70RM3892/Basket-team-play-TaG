@@ -768,7 +768,7 @@ void ATaGGameMode::ReadWin(ATaGCharacter* Winner, ATaGCharacter* Loser, const FS
 	}
 	if (bAutoTest)
 	{
-		UE_LOG(LogTaG, Verbose, TEXT("READ %s by team %d"), *Rule, Winner->GetTeam());
+		UE_LOG(LogTaG, Display, TEXT("READ %s by team %d"), *Rule, Winner->GetTeam());
 		return;
 	}
 	S->MulticastReadWin(Winner->GetTeam(), Winner, Loser, FText::FromString(Rule));
@@ -954,12 +954,11 @@ void ATaGGameMode::OnDodgeWhiff(ATaGCharacter* D)
 	const bool bWaiting = O->GetAction() == ETaGAction::None || O->GetAction() == ETaGAction::Step;
 	if (Dist < TaG::SpacingReadRange && bWaiting)
 	{
+		// The defender did not bite and is still in front: the handler loses the dribble's edge
+		// (no drive for a moment, guard chipped). The ball is only lost to an actual reach (steal).
 		ReadWin(O, D, TEXT("間合い ＞ かわし"));
-		GS()->Stats(O->GetTeam()).Steals++;
-		GS()->Stats(D->GetTeam()).Turnovers++;
-		if (ATaGPlayerState* P = PS(O)) { P->Stats.Steals++; }
-		Ball->GiveTo(O);
-		OnBallPickedUp(O, false);
+		D->LockDrive(1.5f);
+		D->ApplyGuardDamage(TaG::ContactGuardDamage * 0.5f);
 	}
 	else if (Dist < 300.f)
 	{
@@ -994,7 +993,7 @@ bool ATaGGameMode::ResolveSteal(ATaGCharacter* S)
 	float Chance = 0.15f;
 	if (H->GetAction() == ETaGAction::DodgeRecover)
 	{
-		Chance = 1.f; // the spin whiffed: the ball is wide open
+		Chance = 0.6f; // the spin whiffed: the ball is exposed
 	}
 	else if (H->IsChargingShot() || H->IsDodging())
 	{
