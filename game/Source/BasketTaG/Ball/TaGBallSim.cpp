@@ -174,3 +174,96 @@ FVector FTaGBallSim::ReleasePoint(const FVector& FeetPos, float ReleaseHeight)
 	}
 	return From;
 }
+
+bool FTaGBallSim::SolveBank(const FVector& From, const FVector& Target, float FlightToBoard, FVector& OutVel)
+{
+	// The ball centre touches the face one radius in front of it; the bounce keeps 90 % of the speed along the face and
+	// BoardRestitution of the speed into it (FTaGBallSim::SubStep), so the path is two parabolas joined at the face.
+	const float AX = TaG::BoardFrontX + TaG::BallRadius;
+	const float T1 = FMath::Max(FlightToBoard, 0.08f);
+	if (From.X <= AX + 5.f || Target.X <= AX + 2.f)
+	{
+		return false;
+	}
+	const float G = TaG::Gravity;
+	const float VX = (AX - From.X) / T1;
+	const float T2 = (Target.X - AX) / (-BoardRestitution * VX);
+	const float Sum = T1 + 0.9f * T2;
+	const float VY = (Target.Y - From.Y) / Sum;
+	const float VZ = (Target.Z - From.Z + 0.5f * G * T1 * T1 + 0.9f * G * T1 * T2 + 0.5f * G * T2 * T2) / Sum;
+	const float AY = From.Y + VY * T1;
+	const float AZ = From.Z + VZ * T1 - 0.5f * G * T1 * T1;
+	const float Margin = TaG::BallRadius + 4.f;
+	if (FMath::Abs(AY) > TaG::BoardHalfWidth - Margin || AZ < TaG::BoardBottomZ + Margin || AZ > TaG::BoardTopZ - Margin)
+	{
+		return false;
+	}
+	if (0.9f * (VZ - G * T1) - G * T2 > -60.f)
+	{
+		return false; // it has to come down through the hoop
+	}
+	OutVel = FVector(VX, VY, VZ);
+	return true;
+}
+
+bool FTaGBallSim::Scores(const FVector& From, const FVector& Vel, float MaxT)
+{
+	FTaGBallSim S;
+	S.Pos = From;
+	S.Vel = Vel;
+	for (float T = 0.f; T < MaxT; T += 1.f / 60.f)
+	{
+		bool bIn = false;
+		const uint8 Contacts = S.Step(1.f / 60.f, bIn);
+		if (bIn)
+		{
+			return true;
+		}
+		if ((Contacts & Floor) || (S.Pos.Z < TaG::RimZ - 60.f && S.Vel.Z < 0.f))
+		{
+			return false;
+		}
+	}
+	return false;
+}
+
+FVector FTaGBallSim::SolveLayup(const FVector& From, const FVector& Target, bool bMustScore, bool& bOutBank)
+{
+	bOutBank = false;
+	const FVector2D Off(From.X - TaG::RimX, From.Y);
+	const float Angle = FMath::RadiansToDegrees(FMath::Atan2(FMath::Abs(Off.Y), FMath::Max(Off.X, 1.f)));
+	if (Off.X > 10.f && Angle > 20.f && Angle < 70.f)
+	{
+		for (const float T1 : { 0.34f, 0.28f, 0.42f, 0.5f })
+		{
+			FVector V;
+			if (SolveBank(From, Target, T1, V) && (!bMustScore || Scores(From, V)))
+			{
+				bOutBank = true;
+				return V;
+			}
+		}
+	}
+	for (const float A : { 52.f, 60.f, 68.f, 76.f, 82.f })
+	{
+		const FVector V = SolveLaunch(From, Target, A);
+		if (!bMustScore || Scores(From, V))
+		{
+			return V;
+		}
+	}
+	// Close and low: the glass from any angle (the square above the rim)
+	if (bMustScore && Off.X > 10.f)
+	{
+		for (const float T1 : { 0.3f, 0.38f, 0.46f, 0.55f, 0.24f })
+		{
+			FVector V;
+			if (SolveBank(From, Target, T1, V) && Scores(From, V))
+			{
+				bOutBank = true;
+				return V;
+			}
+		}
+	}
+	return SolveLaunch(From, Target, 66.f);
+}

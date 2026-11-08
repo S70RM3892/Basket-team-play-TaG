@@ -201,6 +201,11 @@ void ATaGGameState::MulticastWorldFx_Implementation(uint8 Kind, FVector_NetQuant
 	case 3: // steal / interception
 		TaGFx::Sparkle(this, FVector(At), C, 18);
 		break;
+	case 4: // slam: the rim takes the hit
+		TaGFx::Ring(this, FVector(At), C, 85.f, 0.28f, 20, 9.f);
+		TaGFx::Burst(this, FVector(At), TaG::GoldColor(), 18, 280.f, 0.45f, 7.f, 450.f, ETaGFxShape::Spark);
+		TaGAudio::PlayAt(this, TEXT("Board"), FVector(At), 1.f, 0.8f);
+		break;
 	default:
 		break;
 	}

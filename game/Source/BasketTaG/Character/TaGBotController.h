@@ -38,6 +38,9 @@ public:
 	enum class EScript : uint8 { Normal, Idle, ContestOnClose, TackleOnClose, DriveAttack, ShootAttack };
 	void SetScript(EScript InScript);
 
+	/** Tests: cut to the rim now. */
+	void TestCut();
+
 protected:
 	EScript Script = EScript::Normal;
 	float ScriptT = 0.f;
@@ -54,6 +57,8 @@ protected:
 	void Loose(ATaGCharacter* Me, ATaGBall* Ball, float Dt);
 
 	bool TryPass(ATaGCharacter* Me, bool bPressured);
+	/** A teammate running at the rim with nobody at the catch spot: throw it up for an alley-oop. */
+	bool TryAlleyOop(ATaGCharacter* Me, float Dt);
 	void PlanShot(ATaGCharacter* Me, float Nd, float DefDist);
 	void StartShot(ATaGCharacter* Me);
 	void Commit(ATaGCharacter* Me, EHand Hand);
@@ -85,6 +90,9 @@ protected:
 	float HoldTime = 0.f;
 	bool bHadBall = false;
 	bool bTetherUsed = false;
+	bool bOopDefDecided = false;
+	bool bAttackRim = false;   // this possession: run an open lane all the way in for a layup
+	float LeapSlack = 0.f;     // this bot jumps for a lob a little early or late (less so when skilled)
 
 	struct FQueued
 	{

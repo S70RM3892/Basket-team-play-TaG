@@ -70,6 +70,10 @@ public:
 	void LaunchPass(ATaGCharacter* Passer, ATaGCharacter* Receiver, uint8 Style);
 	void OnPassCaught(ATaGCharacter* Receiver);
 	void OnPassIntercepted(ATaGCharacter* Defender);
+	/** An alley-oop lob met the cutter's hands in the air: the finish starts at once. */
+	void OnAlleyOopCaught(ATaGCharacter* Receiver);
+	/** A defender in the air tipped the lob away. */
+	void OnAlleyOopStopped(ATaGCharacter* Defender);
 	void OnBasket(ATaGCharacter* Shooter, int32 Points, bool bValid);
 	void OnShotMissed(bool bTouchedRim);
 	void OnBlocked(ATaGCharacter* Blocker);
@@ -153,5 +157,52 @@ protected:
 	float GaitHitchT = -10.f;
 	void TickGait(float Dt);
 	void TickSlowmo();
+
+	// Layups, dunks and alley-oops (counted for the test logs)
+	int32 OopThrown = 0;
+	int32 OopCaught = 0;
+	int32 OopStopped = 0;
+	int32 OopMade = 0;
+	int32 LayupsTaken = 0;
+	int32 LayupBanks = 0;
+	int32 DunksTaken = 0;
+	bool bLastShotOop = false;
+	bool bLastLayupBank = false;
+	bool bForceMakes = false;     // tests: every shot is a planned make (checks that the paths drop in)
+
+	// -TaGSnap=Layup / -TaGSnap=AlleyOop: scripted finishes with step, timing and catch logs, and screenshots
+	UPROPERTY() TObjectPtr<AActor> TestCam;
+	int32 TestStage = 0;
+	int32 TestCase = 0;
+	float TestT = -1.f;
+	float TestT0 = -1.f;
+	float TestTakeoff = -1.f;
+	float TestApexT = -1.f;
+	float TestApexZ = 0.f;
+	float TestRelease = -1.f;
+	float TestReleaseZ = 0.f;
+	float TestHandOff = 0.f;
+	float TestFootErr = 0.f;
+	int32 TestSteps0 = 0;
+	int32 TestLastStepCount = 0;
+	int32 TestPlanted = -1;
+	int32 TestTakeoffFoot = -1;
+	FString TestStepLog;
+	int32 TestShot = 0;
+	bool bTestScored = false;
+	bool bTestMissed = false;
+	bool bTestPressed = false;
+	bool bTestDriven = false;
+	float TestLeapLate = 99.f;
+	float TestCatchAt = -1.f;
+	float TestCatchErr = -1.f;
+	float TestCatchZ = 0.f;
+	float TestCatchDt = 99.f;
+	float TestDoneT = -1.f;
+	FString TestSummary;
+	void TickLayupTest(float Dt);
+	void TickOopTest(float Dt);
+	void TestShotAt(const FString& Name, bool bUI);
+	void TestSideCamera(const FVector& From, const FVector& To);
 	ATaGPlayerState* PS(ATaGCharacter* C) const;
 };

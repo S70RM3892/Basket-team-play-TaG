@@ -7,6 +7,7 @@
 
 class ATaGCharacter;
 class UStaticMeshComponent;
+struct FTaGAlleyOop;
 class UMaterialInstanceDynamic;
 
 UENUM(BlueprintType)
@@ -34,7 +35,7 @@ struct FTaGBallNet
 	UPROPERTY() float ServerTime = 0.f;
 	UPROPERTY() float Duration = 0.f;
 	UPROPERTY() bool bThread = false;
-	UPROPERTY() uint8 Style = 0;   // 0 normal, 1 thread, 2 curve (bends around defenders), 3 lob (high)
+	UPROPERTY() uint8 Style = 0;   // 0 normal, 1 thread, 2 curve (bends around defenders), 3 lob (high), 4 alley-oop
 	UPROPERTY() uint8 Seq = 0;
 };
 
@@ -58,6 +59,12 @@ public:
 	void GiveTo(ATaGCharacter* NewHolder);
 	void LaunchShot(const FVector& From, const FVector& Velocity, ATaGCharacter* Shooter, int32 Points, bool bValid, float BlockMult);
 	void LaunchPass(ATaGCharacter* Passer, ATaGCharacter* Receiver, uint8 Style);
+	/** A lob that meets the receiver's hands at the top of a leap in front of the rim (FTaGRules::PlanAlleyOop). */
+	void LaunchAlleyOop(ATaGCharacter* Passer, ATaGCharacter* Receiver, const FTaGAlleyOop& Plan);
+	/** Tests: how far the last alley-oop catch was from the hands and where; how far the last release glided. */
+	float GetLastCatchError() const { return LastCatchError; }
+	FVector GetLastCatchPos() const { return LastCatchPos; }
+	float GetHandOff() const { return VisOffset.Size(); }
 	void MakeLoose(const FVector& From, const FVector& Velocity, int32 TouchTeam);
 	void SetDead();
 	void SetChain(int32 InChain) { Chain = InChain; }
@@ -124,4 +131,15 @@ protected:
 	void CheckBlocks();
 	void PlayContactSounds(uint8 Contacts);
 	FVector PassPosition(float T) const;
+	/** The alley-oop lob's velocity at time T of its flight (it goes on from there if nobody meets it). */
+	FVector LobVelocity(float T) const;
+	float LastCatchError = -1.f;
+	FVector LastCatchPos = FVector::ZeroVector;
+
+	// A shot leaves the hand where the hand is shown on this machine and glides onto its true path
+	FVector VisOffset = FVector::ZeroVector;
+	float VisBlend = 0.f;
+	ETaGBallState ShownState = ETaGBallState::Dead;   // clients: the state before the last update
+	FVector CatchOffset = FVector::ZeroVector;        // a catch glides from where the ball was into the hands
+	float CatchBlend = 0.f;
 };

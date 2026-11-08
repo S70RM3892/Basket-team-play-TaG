@@ -41,7 +41,8 @@ enum class ETaGAction : uint8
 	PassThrow,
 	ArtStart,
 	ArtActive,
-	ArtRecover
+	ArtRecover,
+	Leap         // off the ball: up at an alley-oop lob
 };
 
 /** Cooldown slots. */
@@ -249,6 +250,38 @@ public:
 	/** Shot type chosen for the current shot (also replicated as the action variant). */
 	ETaGShotType ClassifyShot() const;
 
+	// ------------------------------------------------ Layups, dunks and alley-oops
+	/** The run-up of the current layup or dunk (gather, two steps, one-foot take-off). */
+	const FTaGRunUp& GetRunUp() const { return RunUp; }
+	/** Seconds until the run-up's take-off foot leaves the floor (< 0 without a run-up or once airborne). */
+	float GetRunUpTimeLeft() const;
+	/** Layups, euro steps, dunks and alley-oops: finished up at the rim from a one-foot take-off. */
+	bool IsCloseFinish() const;
+	/** The finishing hand of a layup (the take-off foot is the other one). */
+	bool IsFinishingLeft() const;
+	/** 0 until the take-off, 1 at the top of the jump: how far the ball has been carried up to the release. */
+	float GetFinishRise() const;
+	/** Where a close finish holds the ball this frame (world, seen from outside the body). */
+	FVector GetFinishHold() const;
+	/** Tall enough, with the best jump, to put the ball down through the rim. */
+	bool CanDunk() const;
+	/** Server: an alley-oop lob is on its way to this player. */
+	void SetAlleyOop(const FTaGAlleyOop& Plan, float CatchServerTime);
+	void ClearAlleyOop() { OopTime = 0.f; }
+	bool HasAlleyOop() const { return OopTime > 0.f && ServerNow() < OopTime + 0.5f; }
+	FVector GetAlleyOopPoint() const { return OopPoint; }
+	float GetAlleyOopTime() const { return OopTime; }
+	/** Seconds until the jump whose top meets the lob (negative: late). */
+	float GetAlleyOopJumpIn() const;
+	/** The last alley-oop was high enough to throw down (else it is laid in off the catch). */
+	bool IsOopSlam() const { return bOopSlam; }
+	/** The hands reaching up (for a lob): overhead and a little ahead (world). */
+	FVector GetReachHands() const;
+	/** Server: the lob was caught in the air: finish it before landing. */
+	void StartAlleyOopFinish();
+	/** Tests drive a player-controlled body without a pad: what the stick would say. */
+	void SetTestStick(const FVector& Dir) { LastMoveInput = Dir.GetSafeNormal2D(); }
+
 protected:
 	// ------------------------------------------------ Components
 	UPROPERTY(VisibleAnywhere) TObjectPtr<USpringArmComponent> CameraBoom;
@@ -300,6 +333,11 @@ protected:
 	UPROPERTY(Replicated) uint8 MarkPower = 0;
 	UPROPERTY(Replicated) float RegenEnd = 0.f;
 	UPROPERTY(Replicated) float ShieldEnd = 0.f;
+	// Alley-oop: the lob on its way to this player (server time it reaches OopPoint; 0 = none)
+	UPROPERTY(Replicated) FVector_NetQuantize10 OopPoint = FVector::ZeroVector;
+	UPROPERTY(Replicated) float OopTime = 0.f;
+	UPROPERTY(Replicated) float OopVZ = 0.f;
+	UPROPERTY(Replicated) bool bOopSlam = false;
 
 	UFUNCTION() void OnRep_HeroTeam();
 	UFUNCTION() void OnRep_NetAction();
@@ -351,6 +389,23 @@ protected:
 	FVector ViewBobWorld = FVector::ZeroVector; // what the first-person camera moves with the steps, world space
 	float AmbientT = 0.f;
 	float ZoneFxT = 0.f;
+	FTaGRunUp RunUp;                      // the current layup / dunk run-up (owner and server plan it; others rebuild it)
+	float ShotMeterSec = 1.f;             // seconds for this shot's meter to reach 1.0
+	bool bOopJumpZ = false;               // JumpZVelocity is set for a lob
+	bool bWasAirFinish = false;           // last frame was a dunk / alley-oop in the air (for the slam feedback)
+	bool bWasOnFloorAct = true;           // take-off detection for the leap and run-up effects
+	int32 StopJumpWait = 0;               // ticks since a jump was asked for (it is released once taken)
+	float GazeAfterT = 0.f;               // after a close finish: watch the rim until landing, then level the view
+	/** Remote machines: the run-up from the replicated take-off time (action length) and hand (variant bit 7). */
+	void RestoreRunUp();
+	/** Leap: the stick direction and strength that steer the hands to the lob in the air. */
+	FVector LeapSteer(float& OutScale) const;
+	bool CanStartLeap() const;
+	/** First person: the eyes go to the target (the rim on a close finish, the ball on a leap), as shooters fix
+	 *  their gaze on it (Vickers 1996). Only while the shot or leap owns the view. */
+	void TickGaze(float Dt);
+	/** First person: forearms placed at the ball / reaching up during close finishes and leaps. */
+	bool PlaceFinishArms(float Dt);
 	/** Particles that make each hero recognisable at a glance (sparks, fireflies, frost, steam...). */
 	void TickHeroAmbience(float Dt);
 

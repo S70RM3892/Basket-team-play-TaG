@@ -17,12 +17,13 @@ namespace
 		{ TEXT("ユーロステップ"), 1.35f, 1.00f, 0.50f, 0.6f, 0.f, 0.60f, 400.f },
 		{ TEXT("フローター"), 0.95f, 0.95f, 0.60f, 0.3f, 66.f, 0.40f, 300.f },
 		{ TEXT("ダンク"), 0.80f, 1.00f, 0.70f, 1.5f, 0.f, 0.15f, 440.f },
+		{ TEXT("アリウープ"), 0.50f, 1.00f, 0.70f, 1.5f, 0.f, -1.f, 0.f },
 	};
 }
 
 const FTaGShotTypeDef& FTaGRules::ShotType(ETaGShotType Type)
 {
-	return GShotTypes[FMath::Clamp(static_cast<int32>(Type), 0, 6)];
+	return GShotTypes[FMath::Clamp(static_cast<int32>(Type), 0, static_cast<int32>(UE_ARRAY_COUNT(GShotTypes)) - 1)];
 }
 
 float FTaGRules::TimingQuality(float Charge, float WindowScale)
@@ -79,9 +80,13 @@ FTaGShotEval FTaGRules::EvaluateShot(const ATaGCharacter* Shooter, float Charge,
 
 	// Distance and type
 	float Base = BaseChance(E.Distance);
-	if (E.Type == ETaGShotType::Dunk)
+	if (E.Type == ETaGShotType::Dunk || (E.Type == ETaGShotType::AlleyOop && Shooter->IsOopSlam()))
 	{
 		Base = 0.96f;
+	}
+	else if (E.Type == ETaGShotType::AlleyOop)
+	{
+		Base = 0.93f; // laid in off the catch (a body that cannot reach over the rim)
 	}
 	else
 	{
@@ -111,6 +116,10 @@ FTaGShotEval FTaGRules::EvaluateShot(const ATaGCharacter* Shooter, float Charge,
 	if (Shooter->IsCatchAndShoot() || Shooter->IsFreshCatch())
 	{
 		E.Timing = FMath::Max(E.Timing, 1.f); // catch and shoot: rhythm from the pass
+	}
+	if (E.Type == ETaGShotType::AlleyOop)
+	{
+		E.Timing = 1.f; // no meter: the timing was the jump
 	}
 	// The core ball charges as it passes through teammates' hands (WORLD.md section 3): team play pays.
 	if (const ATaGBall* Ball = Shooter->FindBall())
@@ -227,4 +236,140 @@ FTaGShotEval FTaGRules::EvaluateShot(const ATaGCharacter* Shooter, float Charge,
 	const float Zone = bZone ? 1.15f : 1.f;
 	E.Chance = FMath::Clamp(Base * E.Timing * E.Contest * Zone, 0.02f, 0.97f);
 	return E;
+}
+
+float FTaGRules::LayupRange(float SpeedToRim)
+{
+	return 320.f + FMath::Clamp(SpeedToRim - 200.f, 0.f, 250.f) * 0.4f;
+}
+
+FTaGRunUp FTaGRules::PlanRunUp(const FTaGHeroDef& Hero, ETaGShotType Type, const FVector& Feet, const FVector& Velocity, float StickLateral)
+{
+	FTaGRunUp R;
+	const bool bDunk = Type == ETaGShotType::Dunk;
+	if (Type != ETaGShotType::Layup && !bDunk)
+	{
+		return R;
+	}
+	R.bValid = true;
+	const FVector2D ToRim(TaG::RimX - Feet.X, -Feet.Y);
+	const float D0 = ToRim.Size();
+	const FVector2D Dir = D0 > 1.f ? ToRim / D0 : FVector2D(-1.f, 0.f);
+	R.JumpVZ = ShotType(Type).JumpVel * FMath::Sqrt(Hero.JumpMul);
+	const float TUp = R.JumpVZ / TaG::Gravity;
+	// A layup carries more of the run into the air; a dunk plants harder and goes up
+	const float Keep = bDunk ? 0.35f : 0.55f;
+	// Feet to the rim centre at the top of the jump (the finishing hand reaches about 40 cm ahead of the body)
+	const float Apex = bDunk ? 55.f : 85.f;
+	const float Path = FMath::Max(D0 - Apex, 0.f);
+	const float Along = FMath::Max(0.f, FVector2D::DotProduct(FVector2D(Velocity.X, Velocity.Y), Dir));
+	const float MaxSpeed = 650.f * Hero.SpeedMul;
+	float Speed = FMath::Clamp(Along, 220.f, MaxSpeed);
+	// Path = Speed * (T - Stance) + Speed * (1 + Keep) / 2 * Stance + Speed * Keep * TUp
+	const float Offset = RunUpStanceT * (1.f - Keep) * 0.5f - Keep * TUp;
+	const float TMin = bDunk ? 0.24f : 0.3f;
+	const float TMax = 0.75f;
+	float T = Path / Speed + Offset;
+	if (T < TMin)
+	{
+		T = TMin;
+		Speed = FMath::Max(Path / (TMin - Offset), 60.f);
+	}
+	else if (T > TMax)
+	{
+		Speed = FMath::Min(Path / (TMax - Offset), MaxSpeed);
+		T = FMath::Clamp(Path / Speed + Offset, TMin, TMax);
+	}
+	R.TakeoffT = T;
+	R.ApproachSpeed = Speed;
+	R.TakeoffSpeed = Speed * Keep;
+	// The outside hand. Facing the rim from the court (-X), the +Y half is on the left: finish with the left hand off
+	// the right foot there, the right hand on the other side; down the middle the stick's lean decides.
+	R.bLeftHand = FMath::Abs(Feet.Y) > 35.f ? Feet.Y > 0.f : StickLateral < -0.3f;
+	return R;
+}
+
+FVector FTaGRules::LayupRelease(const FVector& Feet, const FVector& Forward, float EyeHeight, bool bLeftHand)
+{
+	const float S = EyeHeight / 175.f;
+	FVector Fwd(Forward.X, Forward.Y, 0.f);
+	Fwd = Fwd.IsNearlyZero() ? FVector(-1.f, 0.f, 0.f) : Fwd.GetSafeNormal();
+	const FVector Right(-Fwd.Y, Fwd.X, 0.f);
+	FVector P = Feet + Fwd * 38.f * S + Right * (bLeftHand ? -16.f : 16.f) * S;
+	P.Z = Feet.Z + EyeHeight * 1.28f;
+	// Never from inside the hoop's cylinder or behind the board; a hand below the rim needs room to lift it over the front
+	const float MinOff = 36.f + FMath::Clamp(TaG::RimZ + 10.f - P.Z, 0.f, 60.f) * 0.5f;
+	FVector2D Off(P.X - TaG::RimX, P.Y);
+	if (Off.Size() < MinOff)
+	{
+		FVector2D Back(Feet.X - TaG::RimX, Feet.Y);
+		Back = Back.IsNearlyZero() ? FVector2D(1.f, 0.f) : Back.GetSafeNormal();
+		Off = Back * MinOff;
+		P.X = TaG::RimX + Off.X;
+		P.Y = Off.Y;
+	}
+	P.X = FMath::Max(P.X, TaG::BoardFrontX + TaG::BallRadius + 10.f);
+	return P;
+}
+
+FTaGAlleyOop FTaGRules::PlanAlleyOop(const ATaGCharacter* Passer, const ATaGCharacter* Receiver)
+{
+	FTaGAlleyOop O;
+	if (!Passer || !Receiver || Receiver == Passer || Receiver->GetTeam() != Passer->GetTeam())
+	{
+		return O;
+	}
+	const ETaGAction A = Receiver->GetAction();
+	const bool bFree = A == ETaGAction::None || A == ETaGAction::Drive || A == ETaGAction::DriveStart || A == ETaGAction::Step;
+	const UCharacterMovementComponent* Move = Receiver->GetCharacterMovement();
+	if (!bFree || !Receiver->CanTouchBall() || Receiver->IsRooted() || !Move || !Move->IsMovingOnGround())
+	{
+		return O;
+	}
+	const FVector Feet = Receiver->GetFeetLocation();
+	const FVector2D ToRim(TaG::RimX - Feet.X, -Feet.Y);
+	const float D = ToRim.Size();
+	if (D < 160.f || D > 760.f)
+	{
+		return O;
+	}
+	const FVector2D Dir = ToRim / D;
+	const FVector2D V(Receiver->GetVelocity().X, Receiver->GetVelocity().Y);
+	const float Along = FVector2D::DotProduct(V, Dir);
+	if (Along < 250.f || Along < 0.6f * V.Size())
+	{
+		return O; // only for a player running at the rim
+	}
+	const FTaGHeroDef& H = Receiver->GetHeroDef();
+	const float Reach = StandingReach(H);
+	const float MaxVZ = ShotType(ETaGShotType::Dunk).JumpVel * FMath::Sqrt(H.JumpMul);
+	const float Top = Reach + MaxVZ * MaxVZ / (2.f * TaG::Gravity); // the hands at the top of the best jump
+	O.bSlam = Top >= TaG::RimZ + 22.f;
+	const float CatchZ = FMath::Min(Top - 8.f, TaG::RimZ + 45.f);
+	if (CatchZ < 250.f)
+	{
+		return O;
+	}
+	// Just enough jump to put the hands a little over the catch height at the top
+	O.LeapVZ = FMath::Sqrt(2.f * TaG::Gravity * FMath::Max(CatchZ + 8.f - Reach, 10.f));
+	const float TUp = O.LeapVZ / TaG::Gravity;
+	// The ball meets the hands in front of the rim on the cutter's line
+	const float Front = O.bSlam ? 55.f : 65.f;
+	const FVector2D C2 = FVector2D(TaG::RimX, 0.f) - Dir * Front;
+	O.Catch = FVector(FMath::Max(C2.X, TaG::RimX - 15.f), C2.Y, CatchZ);
+	// Run on to the take-off spot, then a leap that keeps about 45 % of the run; the hands lead the body by ~22 cm
+	const float Run = FMath::Clamp(FMath::Min(Along, 1.2f * TaG::WalkSpeed * H.SpeedMul), 300.f, 650.f * H.SpeedMul);
+	const float Lead = 22.f + 0.45f * Run * TUp;
+	const float ToTakeoff = (D - Front) - Lead;
+	if (ToTakeoff < -40.f)
+	{
+		return O; // already too close for a lob
+	}
+	O.FlightT = FMath::Max(ToTakeoff, 0.f) / Run + 0.1f + TUp;
+	if (O.FlightT < 0.55f || O.FlightT > 1.25f)
+	{
+		return O;
+	}
+	O.bValid = true;
+	return O;
 }

@@ -527,6 +527,55 @@ TSharedRef<SWidget> TaGUI::MakeMatchHUD(FPCPtr PC)
 				PopupBox
 			]
 		]
+		// Alley-oop: a lob on its way to you -> jump so the top of the leap meets it
+		+ SOverlay::Slot().HAlign(HAlign_Center).VAlign(VAlign_Center).Padding(0.f, 230.f, 0.f, 0.f)
+		[
+			SNew(SVerticalBox)
+			.Visibility_Lambda([PC]()
+			{
+				const ATaGCharacter* Me = GetMe(PC);
+				const bool bShow = Me && Me->HasAlleyOop() && Me->GetAction() != ETaGAction::Leap && Me->GetAction() != ETaGAction::Shoot;
+				return bShow ? EVisibility::HitTestInvisible : EVisibility::Collapsed;
+			})
+			+ SVerticalBox::Slot().AutoHeight().HAlign(HAlign_Center)
+			[
+				SNew(STextBlock).Font(Font(30.f))
+				.Text_Lambda([PC]()
+				{
+					const ATaGCharacter* Me = GetMe(PC);
+					const float In = Me ? Me->GetAlleyOopJumpIn() : 9.f;
+					return T(In < 0.1f ? TEXT("今！ ジャンプ（A / Space）") : TEXT("アリウープ！ ジャンプで受ける（A / Space）"));
+				})
+				.ColorAndOpacity_Lambda([PC]()
+				{
+					const ATaGCharacter* Me = GetMe(PC);
+					const float In = Me ? Me->GetAlleyOopJumpIn() : 9.f;
+					return FSlateColor(In < 0.1f ? FLinearColor(1.f, 1.f, 1.f) : TaG::GoldColor());
+				})
+			]
+			+ SVerticalBox::Slot().AutoHeight().HAlign(HAlign_Center).Padding(0.f, 6.f)
+			[
+				SNew(SBox).WidthOverride(320.f).HeightOverride(12.f)
+				[
+					SNew(SCanvas)
+					+ SCanvas::Slot().Position(FVector2D(0.f, 0.f)).Size(FVector2D(320.f, 12.f))
+					[
+						SNew(SImage).Image(White()).ColorAndOpacity(FLinearColor(0.f, 0.f, 0.f, 0.55f))
+					]
+					+ SCanvas::Slot().Position(FVector2D(0.f, 0.f))
+					.Size_Lambda([PC]()
+					{
+						// Fills up to the moment to leave the floor
+						const ATaGCharacter* Me = GetMe(PC);
+						const float In = Me ? Me->GetAlleyOopJumpIn() : 9.f;
+						return FVector2D(320.f * FMath::Clamp(1.f - In / 0.9f, 0.f, 1.f), 12.f);
+					})
+					[
+						SNew(SImage).Image(White()).ColorAndOpacity(TaG::GoldColor())
+					]
+				]
+			]
+		]
 		// Crosshair
 		+ SOverlay::Slot().HAlign(HAlign_Center).VAlign(VAlign_Center)
 		[
@@ -637,6 +686,7 @@ TSharedRef<SWidget> TaGUI::MakeMatchHUD(FPCPtr PC)
 						{
 						case ETaGAction::Down: return T(TEXT("ダウン：味方が触れると復帰"));
 						case ETaGAction::Gathered: return T(TEXT("ギャザー：パスかシュート"));
+						case ETaGAction::Leap: return T(TEXT("アリウープ：空中で受けてそのまま決める"));
 						case ETaGAction::Stagger: return T(TEXT("よろけ"));
 						default: break;
 						}
@@ -1236,6 +1286,8 @@ TSharedRef<SWidget> TaGUI::MakePause(FPCPtr PC, TSharedPtr<SWidget>& OutFocus)
 					.Text(T(TEXT(
 						"移動 左スティック/WASD   視点 右スティック/マウス   ジャンプ・ブロック A/Space\n"
 						"シュート RT/左クリック（押して溜め、跳んだ頂点で離す。スティックの向きで種類が変わる）\n"
+						"レイアップ：リングへ走りながらシュート（2歩で踏み切る）。突破からリング近くでダンク\n"
+						"アリウープ：リングへ走る味方にパス。受ける側は「今！」でジャンプ A/Space\n"
 						"攻撃：突破 LB/Q   かわし RB/E   パス X/F・右クリック\n"
 						"守備：タックル LB/Q   シュート妨害 RB/E（長押し）   間合い B/Shift   スティール X/F\n"
 						"ヒーローの技 LT/C・Y/V   カメラ切替 View/T   ポーズ Start/Esc   メニューで戻る B")))

@@ -29,6 +29,9 @@ struct FTaGPoseInput
 	bool bPretellDrive = false;   // tutorial bot: about to drive (leans forward)
 	bool bPretellShot = false;    // tutorial bot: about to shoot (ball up)
 	bool bBraced = false;         // shelled or rooted: crouched behind the arms
+	float RunUpLeft = -1.f;       // layup / dunk run-up on the floor: seconds until the take-off foot leaves it
+	float FinishRise = 0.f;       // close finishes: 0 at the take-off .. 1 at the top of the jump
+	bool bLeftHand = false;       // a layup's finishing hand (the take-off foot is the other one)
 	float Dt = 0.f;
 };
 
@@ -125,6 +128,8 @@ protected:
 	int32 LastStepSide = 0;
 	float GaitWeight = 0.f;     // 1 while the legs walk or run on the IK; fades out when standing or airborne
 	FVector HeadMotion = FVector::ZeroVector;
+	bool bRunUp = false;         // the steps are being fitted to a take-off
+	float RunUpPhaseLeft = 0.f;  // gait phase still to cover before the take-off foot lifts
 	float DbgBob = 0.f, DbgCrouch = 0.f, DbgSide = 0.f, DbgRun = 0.f, DbgFroude = 0.f, DbgSpd = 0.f, DbgLeg = 0.f;
 	FVector2D MoveDirLocal = FVector2D(1.f, 0.f);
 	float ThighLen = 45.f;
@@ -143,7 +148,7 @@ protected:
 	void FinishLegSetup();
 	void Clear();
 	/** Gait: advances the phase with the distance travelled, plants and lifts the feet in world space. */
-	void UpdateFeet(float Dt, const FVector& Vel, bool bOnFloor, float Duty, float Sweep, float Lift, float Widen, float OutYaw);
+	void UpdateFeet(float Dt, const FVector& Vel, bool bOnFloor, float Duty, float Sweep, float Lift, float Widen, float OutYaw, float FreqOverride = -1.f);
 	/** -1 (foot behind) .. +1 (foot in front), for the arm swing. */
 	float FootForward(int32 Side, float Duty) const;
 	/** Where the end of the shin chain must be (ankle with feet, sole without), world space. */

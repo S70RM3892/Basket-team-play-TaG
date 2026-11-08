@@ -1,4 +1,5 @@
 #include "Ball/TaGBall.h"
+#include "Core/TaGRules.h"
 #include "BasketTaG.h"
 #include "Character/TaGArtActors.h"
 #include "Character/TaGCharacter.h"
@@ -170,6 +171,7 @@ void ATaGBall::GiveTo(ATaGCharacter* NewHolder)
 			Old->OnBallLost();
 		}
 	}
+	const bool bCatch = Net.State == ETaGBallState::Pass || Net.State == ETaGBallState::Loose || Net.State == ETaGBallState::Flight;
 	Net.State = NewHolder ? ETaGBallState::Held : ETaGBallState::Dead;
 	Net.Holder = NewHolder;
 	Net.Receiver = nullptr;
@@ -178,6 +180,11 @@ void ATaGBall::GiveTo(ATaGCharacter* NewHolder)
 	{
 		LastTouchTeam = NewHolder->GetTeam();
 		NewHolder->OnBallGained();
+		if (bCatch)
+		{
+			CatchOffset = (GetActorLocation() - HoldPoint(NewHolder)).GetClampedToMaxSize(120.f);
+			CatchBlend = 0.1f;
+		}
 		Sim.Pos = HoldPoint(NewHolder);
 		SetActorLocation(Sim.Pos);
 	}
@@ -207,6 +214,9 @@ void ATaGBall::LaunchShot(const FVector& From, const FVector& Velocity, ATaGChar
 	bTouchedRim = false;
 	ShotBlockMult = BlockMult;
 	BlockRolled.Reset();
+	// Where this machine showed the ball in the hand: the flight starts from there and glides onto the true path
+	VisOffset = (GetActorLocation() - From).GetClampedToMaxSize(160.f);
+	VisBlend = 0.12f;
 	SetActorLocation(From);
 	PushNet();
 	TaGAudio::PlayAt(this, TEXT("ShotRelease"), From, 0.6f);
@@ -244,6 +254,41 @@ void ATaGBall::LaunchPass(ATaGCharacter* InPasser, ATaGCharacter* Receiver, uint
 	SetActorLocation(PassFrom);
 	PushNet();
 	Net.Pos = PassFrom;
+}
+
+void ATaGBall::LaunchAlleyOop(ATaGCharacter* InPasser, ATaGCharacter* Receiver, const FTaGAlleyOop& Plan)
+{
+	if (!InPasser || !Receiver)
+	{
+		return;
+	}
+	InPasser->OnBallLost();
+	Passer = InPasser;
+	PassFrom = HoldPoint(InPasser);
+	PassRolled.Reset();
+	Net.State = ETaGBallState::Pass;
+	Net.Holder = nullptr;
+	Net.Receiver = Receiver;
+	Net.Target = Plan.Catch;
+	Net.Duration = FMath::Max(Plan.FlightT, 0.2f);
+	Net.bThread = false;
+	Net.Style = 4;
+	LastTouchTeam = InPasser->GetTeam();
+	FlightTime = 0.f;
+	Sim.Pos = PassFrom;
+	SetActorLocation(PassFrom);
+	Net.Pos = PassFrom;
+	Sim.Vel = LobVelocity(0.f);
+	PushNet();
+	Net.Pos = PassFrom;
+	Receiver->SetAlleyOop(Plan, Receiver->ServerNow() + Net.Duration);
+}
+
+FVector ATaGBall::LobVelocity(float T) const
+{
+	const float Dur = FMath::Max(Net.Duration, 0.01f);
+	const FVector D = FVector(Net.Target) - FVector(Net.Pos);
+	return FVector(D.X / Dur, D.Y / Dur, D.Z / Dur + 0.5f * TaG::Gravity * (Dur - 2.f * T));
 }
 
 void ATaGBall::MakeLoose(const FVector& From, const FVector& Velocity, int32 TouchTeam)
@@ -299,6 +344,13 @@ FVector ATaGBall::HoldPoint(const ATaGCharacter* Who) const
 		const FVector Fwd = View.Vector();
 		const FVector Right = FRotationMatrix(View).GetUnitAxis(EAxis::Y);
 		const FVector Up = FRotationMatrix(View).GetUnitAxis(EAxis::Z);
+		if (Who->IsCloseFinish())
+		{
+			// Gathered low on the finishing side, then carried up to where it leaves the hand as the body rises
+			const float Side = Who->IsFinishingLeft() ? -1.f : 1.f;
+			const FVector Low = Who->GetEyeLocation() + Who->GetViewBobOffset() + Fwd * 74.f + Right * Side * 24.f - Up * 46.f;
+			return FMath::Lerp(Low, Who->GetFinishHold(), Who->GetFinishRise());
+		}
 		// The ball is in the hands, so it rides along with the view's step motion instead of floating level
 		FVector P = Who->GetEyeLocation() + Who->GetViewBobOffset() + Fwd * 100.f;
 		if (Who->IsChargingShot())
@@ -324,6 +376,12 @@ FVector ATaGBall::PassPosition(float T) const
 	const float Flat = FVector::Dist2D(From, To);
 	float Arc = Net.bThread ? 8.f : FMath::Clamp(Flat * 0.06f, 15.f, 70.f);
 	FVector P = FMath::Lerp(From, To, S);
+	if (Net.Style == 4)
+	{
+		// The alley-oop is a true lob: a parabola under gravity that ends where the hands will be
+		const float Time = S * Net.Duration;
+		return P + FVector(0.f, 0.f, 0.5f * TaG::Gravity * Time * (Net.Duration - Time));
+	}
 	if (Net.Style == 3)
 	{
 		Arc = FMath::Max(190.f, Flat * 0.2f); // the lob sails over everyone
@@ -341,6 +399,9 @@ FVector ATaGBall::PassPosition(float T) const
 
 void ATaGBall::OnRep_Net()
 {
+	// A shot leaving a hand: start from where this machine showed it and glide onto the replicated path
+	const bool bNewFlight = Net.State == ETaGBallState::Flight && ShownState != ETaGBallState::Flight;
+	const FVector Shown = GetActorLocation();
 	// Rebuild the local simulation from the snapshot, advanced to "now".
 	Sim.Pos = Net.Pos;
 	Sim.Vel = Net.Vel;
@@ -356,6 +417,17 @@ void ATaGBall::OnRep_Net()
 		bool bScored = false;
 		Sim.Step(Elapsed, bScored);
 	}
+	if (bNewFlight && FlightTime < 0.2f)
+	{
+		VisOffset = (Shown - Sim.Pos).GetClampedToMaxSize(160.f);
+		VisBlend = 0.12f;
+	}
+	if (Net.State == ETaGBallState::Held && Net.Holder && ShownState != ETaGBallState::Held && ShownState != ETaGBallState::Dead)
+	{
+		CatchOffset = (Shown - HoldPoint(Net.Holder)).GetClampedToMaxSize(120.f);
+		CatchBlend = 0.1f;
+	}
+	ShownState = Net.State;
 }
 
 void ATaGBall::Tick(float DeltaSeconds)
@@ -393,7 +465,12 @@ void ATaGBall::Tick(float DeltaSeconds)
 
 	if (Net.State == ETaGBallState::Held && Net.Holder)
 	{
-		const FVector P = HoldPoint(Net.Holder);
+		FVector P = HoldPoint(Net.Holder);
+		if (CatchBlend > 0.f)
+		{
+			CatchBlend = FMath::Max(0.f, CatchBlend - DeltaSeconds);
+			P += CatchOffset * (CatchBlend / 0.1f);
+		}
 		SetActorLocation(P);
 		// Dribble bounce sound
 		const float T = GetWorld()->GetTimeSeconds() * 7.5f;
@@ -404,6 +481,15 @@ void ATaGBall::Tick(float DeltaSeconds)
 		}
 	}
 
+	// The hand-off glide at a release (cosmetic: the simulation keeps the true position)
+	if (VisBlend > 0.f)
+	{
+		VisBlend = FMath::Max(0.f, VisBlend - DeltaSeconds);
+		if (Net.State == ETaGBallState::Flight)
+		{
+			SetActorLocation(Sim.Pos + VisOffset * (VisBlend / 0.12f));
+		}
+	}
 	// Cosmetic spin and the core glow (brighter with each pass in the chain)
 	if (Net.State == ETaGBallState::Flight || Net.State == ETaGBallState::Loose || Net.State == ETaGBallState::Pass)
 	{
@@ -641,6 +727,85 @@ void ATaGBall::TickPass(float Dt, bool bAuthority)
 				return;
 			}
 		}
+	}
+
+	// Alley-oop: near the rim a defender in the air can tip the lob away, and the cutter's hands meet it in the air
+	if (Net.Style == 4 && bAuthority)
+	{
+		const float S = FlightTime / FMath::Max(Net.Duration, 0.01f);
+		if (S > 0.55f)
+		{
+			for (TActorIterator<ATaGCharacter> It(GetWorld()); It; ++It)
+			{
+				ATaGCharacter* D = *It;
+				if (D->GetTeam() == PassTeam || !D->CanTouchBall() || PassRolled.Contains(D) || !D->GetCharacterMovement()->IsFalling())
+				{
+					continue;
+				}
+				if (FVector::Dist(D->GetBlockHandLocation(), P) < 50.f * D->GetHeroDef().ReachMul * D->GetReachFactor())
+				{
+					PassRolled.Add(D);
+					if (FMath::FRand() < 0.7f)
+					{
+						if (Receiver)
+						{
+							Receiver->ClearAlleyOop();
+						}
+						MakeLoose(P, (P - Prev).GetSafeNormal2D() * -250.f + FVector(0.f, 0.f, 150.f), D->GetTeam());
+						TaGAudio::PlayAt(this, TEXT("Block"), P, 1.f);
+						if (GM)
+						{
+							GM->OnAlleyOopStopped(D);
+						}
+						return;
+					}
+				}
+			}
+		}
+		const float CatchR = FlightTime > Net.Duration - 0.05f ? 75.f : 40.f;
+		if (S > 0.6f && Receiver && Receiver->CanTouchBall() && Receiver->GetCharacterMovement()->IsFalling()
+			&& FVector::Dist(Receiver->GetReachHands(), P) < CatchR)
+		{
+			LastCatchError = FVector::Dist(Receiver->GetReachHands(), P);
+			LastCatchPos = P;
+			GiveTo(Receiver);
+			TaGAudio::PlayAt(this, TEXT("Catch"), P, 1.f);
+			if (GM)
+			{
+				GM->OnPassCaught(Receiver);
+				GM->OnAlleyOopCaught(Receiver);
+			}
+			return;
+		}
+		if (FlightTime >= Net.Duration)
+		{
+			if (Receiver)
+			{
+				Receiver->ClearAlleyOop();
+			}
+			// Not met in the air: a receiver still under it keeps what is in reach; otherwise it drops by the rim
+			bool bReach = false;
+			if (Receiver && Receiver->CanTouchBall())
+			{
+				const FVector Feet = Receiver->GetFeetLocation();
+				bReach = FVector::Dist2D(Feet, P) < 95.f && P.Z < Receiver->GetReachHands().Z + 25.f;
+			}
+			if (bReach)
+			{
+				GiveTo(Receiver);
+				TaGAudio::PlayAt(this, TEXT("Catch"), P, 0.8f);
+				if (GM)
+				{
+					GM->OnPassCaught(Receiver);
+				}
+			}
+			else
+			{
+				MakeLoose(P, LobVelocity(Net.Duration), PassTeam);
+				NoPickupTime = 0.f;
+			}
+		}
+		return;
 	}
 
 	if (FlightTime >= Net.Duration)

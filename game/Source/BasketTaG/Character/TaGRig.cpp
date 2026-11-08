@@ -1,4 +1,5 @@
 #include "Character/TaGRig.h"
+#include "Core/TaGRules.h"
 #include "Character/TaGCharacter.h"
 #include "Core/TaGArtLib.h"
 #include "Components/StaticMeshComponent.h"
@@ -385,8 +386,9 @@ FVector UTaGRigComponent::ChainEndTarget(int32 Side) const
 	return SoleW - FootW.RotateVector(SoleSock[Side & 1]);
 }
 
-void UTaGRigComponent::UpdateFeet(float Dt, const FVector& Vel, bool bOnFloor, float Duty, float Sweep, float Lift, float Widen, float OutYaw)
+void UTaGRigComponent::UpdateFeet(float Dt, const FVector& Vel, bool bOnFloor, float Duty, float Sweep, float Lift, float Widen, float OutYaw, float FreqOverride)
 {
+	const bool bFitted = FreqOverride >= 0.f; // a run-up times the steps itself
 	const FTransform RigXf = GetComponentTransform();
 	const float GroundZ = RigXf.GetLocation().Z;
 	const float BodyYaw = RigXf.Rotator().Yaw;
@@ -447,7 +449,11 @@ void UTaGRigComponent::UpdateFeet(float Dt, const FVector& Vel, bool bOnFloor, f
 	const FVector Dir = Spd > 1.f ? V / Spd : FVector::ZeroVector;
 
 	// Standing still with the feet out of place (stopped mid-stride, turned on the spot): a few small steps.
-	if (Spd < 25.f && Feet[0].bPlanted && Feet[1].bPlanted)
+	if (bFitted)
+	{
+		bSettling = false;
+	}
+	else if (Spd < 25.f && Feet[0].bPlanted && Feet[1].bPlanted)
 	{
 		float Err = 0.f;
 		for (int32 i = 0; i < 2; ++i)
@@ -476,7 +482,13 @@ void UTaGRigComponent::UpdateFeet(float Dt, const FVector& Vel, bool bOnFloor, f
 	// The stance foot sweeps back exactly as fast as the body moves forward: cycles/s = speed * duty / sweep.
 	float Freq = 0.f;
 	float UseSweep = Sweep;
-	if (Spd >= 25.f || bSettling || bAnySwing)
+	if (bFitted)
+	{
+		// The stance foot still sweeps back as fast as the body moves: the stride follows the fitted cadence
+		Freq = FreqOverride;
+		UseSweep = Freq > 0.05f ? FMath::Max(Spd * Duty / Freq, 2.f) : Sweep;
+	}
+	else if (Spd >= 25.f || bSettling || bAnySwing)
 	{
 		Freq = SEff * Duty / Sweep;
 		if (Freq > 3.6f)
@@ -486,7 +498,7 @@ void UTaGRigComponent::UpdateFeet(float Dt, const FVector& Vel, bool bOnFloor, f
 		}
 	}
 	// A planted foot the body has run away from (sharp turns, shoves) is picked up at once.
-	for (int32 i = 0; i < 2 && Freq > 0.f; ++i)
+	for (int32 i = 0; i < 2 && Freq > 0.f && !bFitted; ++i)
 	{
 		if (Feet[i].bPlanted && FVector::Dist2D(Feet[i].PlantPos, Rest(i)) > 0.7f * LegLen)
 		{
@@ -663,7 +675,48 @@ void UTaGRigComponent::Animate(const FTaGPoseInput& In)
 	{
 		Widen += LegLen * 0.09f; // defensive stance: wide base
 	}
-	UpdateFeet(Dt, Vel, In.bOnFloor, Duty, Sweep, Lift, Widen, 8.f);
+	// ---------------- Run-up into a layup or dunk: the steps are timed so that the take-off foot (the one opposite the
+	// finishing hand) lifts exactly when the body leaves the floor. The gait phase runs at the rate that gets there,
+	// choosing the number of steps that keeps the cadence closest to the natural one for the speed.
+	float FreqOverride = -1.f;
+	if (In.RunUpLeft >= 0.f && In.bOnFloor && bFeetValid)
+	{
+		const float LiftOff = (In.bLeftHand ? 0.5f : 0.f) + Duty - 0.01f; // the take-off foot's last stance phase
+		if (!bRunUp)
+		{
+			bRunUp = true;
+			const float Natural = FMath::Clamp(FMath::Max(Spd, 0.9f * LegLen) * Duty / Sweep, 1.2f, 3.6f);
+			float Best = 1e9f;
+			RunUpPhaseLeft = FMath::Frac(LiftOff - GaitPhase) + 1.f;
+			for (int32 n = 0; n < 4; ++n)
+			{
+				const float Left = FMath::Frac(LiftOff - GaitPhase) + n;
+				const float F = Left / FMath::Max(In.RunUpLeft, 0.05f);
+				if (Left < 0.1f || F > 4.5f)
+				{
+					continue;
+				}
+				// A foot lands each time the phase passes a half cycle; the layup's rhythm is "one, two, up"
+				const int32 Downs = FMath::FloorToInt((GaitPhase + Left) * 2.f) - FMath::FloorToInt(GaitPhase * 2.f);
+				const float Cost = FMath::Abs(F - Natural) + (Downs < 2 ? 0.6f * Natural : 0.f);
+				if (Cost < Best)
+				{
+					Best = Cost;
+					RunUpPhaseLeft = Left;
+				}
+			}
+		}
+		// Hold just before the lift-off if the body is still on the floor at the planned time (a late update)
+		FreqOverride = In.RunUpLeft > 1e-3f ? FMath::Clamp(RunUpPhaseLeft / FMath::Max(In.RunUpLeft, Dt), 0.f, 8.f) : 0.f;
+		const float Step = FMath::Min(FreqOverride * Dt, RunUpPhaseLeft);
+		RunUpPhaseLeft -= Step;
+		FreqOverride = Dt > 0.f ? Step / Dt : 0.f;
+	}
+	else
+	{
+		bRunUp = false;
+	}
+	UpdateFeet(Dt, Vel, In.bOnFloor, Duty, Sweep, Lift, Widen, 8.f, FreqOverride);
 	const float FxL = FootForward(0, Duty) * Moving;
 	const float FxR = FootForward(1, Duty) * Moving;
 	const float Amp = FMath::Clamp(Spd / 500.f, 0.f, 1.f);
@@ -713,14 +766,51 @@ void UTaGRigComponent::Animate(const FTaGPoseInput& In)
 	{
 		const float K = FMath::Clamp(In.ShotCharge / 0.7f, 0.f, 1.f);
 		const ETaGShotType Ty = In.ShotType;
-		if (Ty == ETaGShotType::Layup || Ty == ETaGShotType::Euro || Ty == ETaGShotType::Dunk)
+		if (Ty == ETaGShotType::Layup || Ty == ETaGShotType::Euro || Ty == ETaGShotType::Dunk || Ty == ETaGShotType::AlleyOop
+			|| Ty == ETaGShotType::Floater)
 		{
-			ShR = FMath::Lerp(1.2f, 3.f, K); ElR = FMath::Lerp(1.2f, 0.05f, K); ShL = 1.f; ElL = 0.8f;
-			if (!In.bOnFloor)
+			// One-foot finishes. S = the finishing side, G = the other; Out > 0 swings the finishing arm outward
+			const bool bLeft = In.bLeftHand;
+			float& ShS = bLeft ? ShL : ShR; float& ElS = bLeft ? ElL : ElR; float& ShzS = bLeft ? ShzL : ShzR;
+			float& ShG = bLeft ? ShR : ShL; float& ElG = bLeft ? ElR : ElL; float& ShzG = bLeft ? ShzR : ShzL;
+			const float Out = bLeft ? -1.f : 1.f;
+			const bool bTwo = Ty == ETaGShotType::Dunk || Ty == ETaGShotType::AlleyOop;
+			if (In.bOnFloor)
 			{
-				HipL_ = 1.3f; KnL = -1.6f; HipR_ = 0.1f; KnR = -0.2f;
+				// The gather: the ball in both hands at the chest on the finishing side, elbows in
+				ShS = 0.7f; ElS = 1.75f; ShzS = 0.f;
+				ShG = 0.95f; ElG = 1.7f; ShzG = 0.35f * Out; // the other hand reaches across to the ball
+				Lean = 0.22f;
 			}
-			Lean = Ty == ETaGShotType::Dunk ? 0.3f : 0.15f;
+			else
+			{
+				const float Rise = In.FinishRise;
+				if (bTwo)
+				{
+					// Both hands take it up; an alley-oop is caught overhead and slammed down
+					ShS = ShG = FMath::Lerp(1.6f, 2.95f, Rise);
+					ElS = ElG = FMath::Lerp(1.3f, 0.15f, Rise);
+					ShzS = 0.08f * Out; ShzG = -0.08f * Out;
+					if (Ty == ETaGShotType::AlleyOop)
+					{
+						const float Down = FMath::Clamp(In.ActionT / 0.13f, 0.f, 1.f);
+						ShS = ShG = FMath::Lerp(2.95f, 1.7f, Down);
+						ElS = ElG = FMath::Lerp(0.1f, 0.35f, Down);
+					}
+				}
+				else
+				{
+					// One hand carries it up and lays it off the fingertips; the other arm stays out in front
+					ShS = FMath::Lerp(1.3f, 2.9f, Rise); ElS = FMath::Lerp(1.5f, 0.1f, Rise); ShzS = 0.06f * Out;
+					ShG = 1.25f; ElG = 1.35f; ShzG = -0.25f * Out;
+				}
+				// The finishing side's knee drives up (the swing leg adds height to a one-foot take-off); the take-off
+				// leg trails below
+				float& HipS = bLeft ? HipL_ : HipR_; float& KnS = bLeft ? KnL : KnR;
+				float& HipT = bLeft ? HipR_ : HipL_; float& KnT = bLeft ? KnR : KnL;
+				HipS = 1.5f; KnS = -1.7f; HipT = -0.12f; KnT = -0.3f;
+				Lean = FMath::Lerp(0.16f, 0.02f, Rise);
+			}
 		}
 		else
 		{
@@ -790,6 +880,12 @@ void UTaGRigComponent::Animate(const FTaGPoseInput& In)
 		break;
 	case ETaGAction::PassThrow:
 		ShL = 1.5f; ShR = 1.5f; ElL = 0.2f; ElR = 0.2f; Lean = 0.2f;
+		break;
+	case ETaGAction::Leap:
+		// Up at the lob: both arms reach for it, the right knee drives (a running one-foot take-off)
+		ShL = 2.85f; ShR = 2.85f; ElL = 0.2f; ElR = 0.2f; ShzL = -0.12f; ShzR = 0.12f;
+		HipR_ = 1.4f; KnR = -1.6f; HipL_ = -0.1f; KnL = -0.35f;
+		Lean = -0.05f; SideLean = 0.f;
 		break;
 	default:
 		break;
@@ -861,6 +957,17 @@ void UTaGRigComponent::Animate(const FTaGPoseInput& In)
 		-0.008f * FMath::Sin(TwoPi * (StepS - RunLow)), RunGait);
 	const FVector2D PelvisXY = MoveDirLocal * Surge + FVector2D(0.f, SwayY);
 	const float PelvisYaw = 2.f * (FxL - FxR) * GaitWeight * Fore;                          // up to 4 degrees each way
+	// A run-up drops the body on the second-last stride, keeps it low into the plant, and the take-off support lifts it
+	// again (Hay & Nohara 1990)
+	float RunUpDip = 0.f;
+	if (In.RunUpLeft >= 0.f && In.bOnFloor)
+	{
+		const float Stance = FTaGRules::RunUpStanceT;
+		const float D = 0.07f * LegLen;
+		RunUpDip = In.RunUpLeft > Stance
+			? -D * (1.f - FMath::SmoothStep(Stance, Stance + 0.3f, In.RunUpLeft))
+			: FMath::Lerp(-D, 0.25f * D, 1.f - In.RunUpLeft / Stance);
+	}
 	const float PelvisRoll = FMath::Lerp(4.f, 3.f, RunGait) * GaitWeight * Fore * StanceL;  // the swing side drops
 
 	const float R = FMath::Clamp(18.f * Dt, 0.f, 1.f);
@@ -897,7 +1004,7 @@ void UTaGRigComponent::Animate(const FTaGPoseInput& In)
 
 	// ---------------- Pelvis height: the pose, lowered so the legs reach the planted feet, squashed on landing
 	LandSquash = FMath::Max(0.f, LandSquash - Dt * 5.f);
-	const float PoseZ = PelvisRestZ + (CurHipsY - 0.95f) * 100.f * HeightScale - 0.08f * LegLen * LandSquash + BobZ;
+	const float PoseZ = PelvisRestZ + (CurHipsY - 0.95f) * 100.f * HeightScale - 0.08f * LegLen * LandSquash + BobZ + RunUpDip;
 	const FRotator PelvisRot(0.f, PelvisYaw, PelvisRoll);
 	Joints[Hips]->SetRelativeLocationAndRotation(FVector(PelvisXY.X, PelvisXY.Y, PoseZ - HipDrop * LegIKWeight), PelvisRot);
 	float Need = 0.f;
@@ -922,7 +1029,7 @@ void UTaGRigComponent::Animate(const FTaGPoseInput& In)
 	// crouch, and a slow breath when standing
 	const float Crouch = bNormal ? FMath::Min((CurHipsY - 0.95f) * 100.f * HeightScale, 0.f) : 0.f;
 	// The reach dip (HipDrop) stays out: it bends the legs to keep stretched feet planted, the head does not follow it
-	const float EyeZ = BobZ - 0.06f * LegLen * LandSquash + 0.5f * Crouch
+	const float EyeZ = BobZ + RunUpDip - 0.06f * LegLen * LandSquash + 0.5f * Crouch
 		+ 0.25f * HeightScale * FMath::Sin(IdleT * 1.7f) * (1.f - Moving);
 	HeadMotion = FVector(PelvisXY.X, PelvisXY.Y, FMath::Clamp(EyeZ, -14.f * HeightScale, 1.f * HeightScale));
 	DbgBob = BobZ; DbgCrouch = Crouch; DbgSide = SideMix; DbgRun = RunGait; DbgFroude = Froude; DbgSpd = Spd; DbgLeg = LegLen;

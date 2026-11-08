@@ -176,6 +176,10 @@ void ATaGCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLif
 	DOREPLIFETIME(ATaGCharacter, MarkPower);
 	DOREPLIFETIME(ATaGCharacter, RegenEnd);
 	DOREPLIFETIME(ATaGCharacter, ShieldEnd);
+	DOREPLIFETIME(ATaGCharacter, OopPoint);
+	DOREPLIFETIME(ATaGCharacter, OopTime);
+	DOREPLIFETIME(ATaGCharacter, OopVZ);
+	DOREPLIFETIME(ATaGCharacter, bOopSlam);
 }
 
 UAbilitySystemComponent* ATaGCharacter::GetAbilitySystemComponent() const
@@ -384,6 +388,10 @@ FVector ATaGCharacter::GetBallHoldLocation(float Time) const
 	const FVector Right = GetActorRightVector();
 	if (Action == ETaGAction::Shoot)
 	{
+		if (IsCloseFinish())
+		{
+			return GetFinishHold();
+		}
 		return Feet + Fwd * 30.f * S + FVector(0.f, 0.f, 205.f * S);
 	}
 	if (Action == ETaGAction::Gathered || Action == ETaGAction::PassThrow)
@@ -473,6 +481,7 @@ bool ATaGCharacter::IsForcedMove() const
 	case ETaGAction::Tackle:
 	case ETaGAction::Step:
 	case ETaGAction::ArtActive:
+	case ETaGAction::Leap:
 		return true;
 	case ETaGAction::Gathered:
 		return ActionT < TaG::GatherStepsT;
@@ -641,10 +650,16 @@ float ATaGCharacter::GetDesiredMaxSpeed() const
 		return TaG::StepSpeed * H.SpeedMul;
 	case ETaGAction::Shoot:
 	{
+		if (ShotType == ETaGShotType::AlleyOop)
+		{
+			return 900.f; // the leap's momentum carries on through the finish
+		}
 		float Speed = 0.f;
 		ShotMotion(Speed);
 		return Speed;
 	}
+	case ETaGAction::Leap:
+		return 900.f; // steered in the air by LeapSteer
 	case ETaGAction::Gathered:
 		return ActionT < TaG::GatherStepsT ? TaG::GatherStepSpeed : 0.f;
 	case ETaGAction::ContestStart:
@@ -707,6 +722,29 @@ FVector ATaGCharacter::ShotMotion(float& OutSpeed) const
 	const float Dist = ToRim.Size();
 	const FVector Tr = Dist > 1.f ? ToRim / Dist : GetActorForwardVector();
 	const float T = ActionT;
+	if (RunUp.bValid && (ShotType == ETaGShotType::Layup || ShotType == ETaGShotType::Dunk))
+	{
+		// Run in at the planned speed, plant (the take-off foot checks the run), then carry the kept speed up
+		const bool bGround = GetCharacterMovement()->IsMovingOnGround();
+		if (Dist < (ShotType == ETaGShotType::Dunk ? 45.f : 60.f) && bGround)
+		{
+			return FVector::ZeroVector;
+		}
+		const float Plant = RunUp.TakeoffT - FTaGRules::RunUpStanceT;
+		if (T < Plant)
+		{
+			OutSpeed = RunUp.ApproachSpeed;
+		}
+		else if (T < RunUp.TakeoffT || bGround)
+		{
+			OutSpeed = FMath::Lerp(RunUp.ApproachSpeed, RunUp.TakeoffSpeed, FMath::Clamp((T - Plant) / FTaGRules::RunUpStanceT, 0.f, 1.f));
+		}
+		else
+		{
+			OutSpeed = RunUp.TakeoffSpeed;
+		}
+		return Tr;
+	}
 	switch (ShotType)
 	{
 	case ETaGShotType::Layup:
@@ -811,7 +849,9 @@ void ATaGCharacter::OnLocalActionChanged(ETaGAction NewAction)
 
 void ATaGCharacter::OnRep_NetAction()
 {
-	const bool bImposed = IsImposed(NetAction.Action);
+	// The alley-oop finish is decided where the catch happens (the server): local prediction never holds it back
+	const bool bOopFinish = NetAction.Action == ETaGAction::Shoot && (NetAction.Variant & 0x7F) == static_cast<uint8>(ETaGShotType::AlleyOop);
+	const bool bImposed = IsImposed(NetAction.Action) || bOopFinish;
 	if (IsLocallyControlled() && GetWorld()->GetTimeSeconds() < PredictUntil && !bImposed)
 	{
 		if (NetAction.Action == Action)
@@ -819,7 +859,7 @@ void ATaGCharacter::OnRep_NetAction()
 			ActionVariant = NetAction.Variant;
 			if (Action == ETaGAction::Shoot)
 			{
-				ShotType = static_cast<ETaGShotType>(NetAction.Variant);
+				ShotType = static_cast<ETaGShotType>(NetAction.Variant & 0x7F);
 			}
 		}
 		return;
@@ -832,10 +872,11 @@ void ATaGCharacter::OnRep_NetAction()
 	ActionT = FMath::Max(0.f, ServerNow() - NetAction.ServerStart);
 	if (Action == ETaGAction::Shoot)
 	{
-		ShotType = static_cast<ETaGShotType>(ActionVariant);
+		ShotType = static_cast<ETaGShotType>(ActionVariant & 0x7F);
 		const FTaGShotTypeDef& St = FTaGRules::ShotType(ShotType);
-		ShotCharge = ActionT / (St.Meter * TaG::ShotMeterSeconds);
-		bShotJumped = St.JumpAt < 0.f || ActionT > St.JumpAt;
+		RestoreRunUp();
+		ShotCharge = ShotType == ETaGShotType::AlleyOop ? FTaGRules::RunUpApexCharge : ActionT / FMath::Max(ShotMeterSec, 0.1f);
+		bShotJumped = St.JumpAt < 0.f || ActionT > (RunUp.bValid ? RunUp.TakeoffT : St.JumpAt);
 	}
 	if (Old != Action && GetNetMode() != NM_DedicatedServer)
 	{
@@ -1023,25 +1064,49 @@ void ATaGCharacter::TickAction(float Dt)
 	case ETaGAction::Shoot:
 	{
 		const FTaGShotTypeDef& St = FTaGRules::ShotType(ShotType);
-		const float MeterSpeed = (IsCatchAndShoot() ? 1.6f : 1.f) * (GetShotMod() == ETaGArtFx::ShotQuick ? 1.7f : 1.f);
-		ShotCharge += Dt * MeterSpeed / (St.Meter * TaG::ShotMeterSeconds);
-		if (!bShotJumped && St.JumpAt >= 0.f && ActionT >= St.JumpAt && GetCharacterMovement()->IsMovingOnGround())
+		if (ShotType == ETaGShotType::AlleyOop)
+		{
+			// Caught in the air: thrown down (or laid in) a moment later, before landing. Only the server cancels it,
+			// since the owner may hear of the finish before it hears that the ball was caught.
+			if (bAuth && !HasBall())
+			{
+				SetAction(ETaGAction::None);
+			}
+			else if (bSim && ActionT >= (bOopSlam ? 0.13f : 0.17f))
+			{
+				ReleaseShot();
+			}
+			break;
+		}
+		// A run-up's meter is timed to its own jump (the top reads RunUpApexCharge); quick meters speed up the others
+		const float MeterSpeed = RunUp.bValid ? 1.f : (IsCatchAndShoot() ? 1.6f : 1.f) * (GetShotMod() == ETaGArtFx::ShotQuick ? 1.7f : 1.f);
+		ShotCharge += Dt * MeterSpeed / FMath::Max(ShotMeterSec, 0.1f);
+		const float JumpAt = RunUp.bValid ? RunUp.TakeoffT : St.JumpAt;
+		if (!bShotJumped && JumpAt >= 0.f && ActionT >= JumpAt && GetCharacterMovement()->IsMovingOnGround())
 		{
 			bShotJumped = true;
-			GetCharacterMovement()->JumpZVelocity = St.JumpVel * FMath::Sqrt(GetHeroDef().JumpMul);
+			GetCharacterMovement()->JumpZVelocity = RunUp.bValid ? RunUp.JumpVZ : St.JumpVel * FMath::Sqrt(GetHeroDef().JumpMul);
 			Jump();
 			bStopJumpNextTick = true;
 		}
+		// A run-up shot leaves the hand on the way down at the latest: it is never carried back to the floor
+		const bool bLanded = RunUp.bValid && bShotJumped && ActionT > JumpAt + 0.2f && GetCharacterMovement()->IsMovingOnGround();
 		if (bSim && !HasBall())
 		{
 			SetAction(ETaGAction::None);
 		}
-		else if (bSim && ShotCharge >= TaG::ShotAutoRelease)
+		else if (bSim && (ShotCharge >= TaG::ShotAutoRelease || bLanded))
 		{
 			ReleaseShot();
 		}
 		break;
 	}
+	case ETaGAction::Leap:
+		if (bSim && ActionT > 0.2f && GetCharacterMovement()->IsMovingOnGround())
+		{
+			SetAction(ETaGAction::None); // came down without the ball
+		}
+		break;
 	case ETaGAction::ArtStart:
 		if (bSim)
 		{
@@ -1161,9 +1226,44 @@ void ATaGCharacter::Tick(float DeltaSeconds)
 
 	if (bStopJumpNextTick)
 	{
-		bStopJumpNextTick = false;
-		StopJumping();
-		GetCharacterMovement()->JumpZVelocity = TaG::JumpVelocity * GetHeroDef().JumpMul;
+		// Released once the movement has taken the jump: its tick can come before or after this one, depending on who
+		// asked (the player's input, a bot, the game mode in tests)
+		if (++StopJumpWait >= 2 || GetCharacterMovement()->IsFalling())
+		{
+			bStopJumpNextTick = false;
+			StopJumpWait = 0;
+			StopJumping();
+			GetCharacterMovement()->JumpZVelocity = TaG::JumpVelocity * GetHeroDef().JumpMul;
+		}
+	}
+
+	// A lob on its way: the next jump is the leap that takes the hands up to it. Both machines set its take-off speed,
+	// so the owner's predicted jump and the server's replay of it agree; the server sees a remote player's leap begin
+	// from the jump itself.
+	{
+		UCharacterMovementComponent* Move = GetCharacterMovement();
+		if (HasAuthority() && OopTime > 0.f)
+		{
+			const ATaGBall* B = FindBall();
+			if (!B || B->GetBallState() != ETaGBallState::Pass || B->GetPassReceiver() != this)
+			{
+				ClearAlleyOop();
+			}
+		}
+		if (HasAlleyOop() && Action != ETaGAction::Shoot)
+		{
+			Move->JumpZVelocity = OopVZ;
+			bOopJumpZ = true;
+			if (HasAuthority() && !IsLocallyControlled() && Move->IsFalling() && CanStartLeap())
+			{
+				SetAction(ETaGAction::Leap, 0, FVector(OopPoint) - GetFeetLocation());
+			}
+		}
+		else if (bOopJumpZ)
+		{
+			bOopJumpZ = false;
+			Move->JumpZVelocity = TaG::JumpVelocity * GetHeroDef().JumpMul;
+		}
 	}
 
 	TickAction(DeltaSeconds);
@@ -1177,14 +1277,19 @@ void ATaGCharacter::Tick(float DeltaSeconds)
 	if (IsLocallyControlled() && IsForcedMove())
 	{
 		FVector Dir = ActionDir;
+		float Scale = 1.f;
 		if (Action == ETaGAction::Shoot)
 		{
 			float Speed = 0.f;
 			Dir = ShotMotion(Speed);
 		}
-		if (!Dir.IsNearlyZero())
+		else if (Action == ETaGAction::Leap)
 		{
-			AddMovementInput(Dir, 1.f);
+			Dir = LeapSteer(Scale);
+		}
+		if (!Dir.IsNearlyZero() && Scale > 0.f)
+		{
+			AddMovementInput(Dir, Scale);
 		}
 	}
 
@@ -1294,7 +1399,17 @@ void ATaGCharacter::InputReleased(ETaGInput Input)
 
 void ATaGCharacter::InputJump()
 {
-	if ((Action == ETaGAction::None || Action == ETaGAction::Gathered) && GetCharacterMovement()->IsMovingOnGround())
+	UCharacterMovementComponent* Move = GetCharacterMovement();
+	if (HasAlleyOop() && Move->IsMovingOnGround() && CanStartLeap())
+	{
+		// Up at the lob: a running one-foot leap, just high enough for the hands to meet it at the top
+		Move->JumpZVelocity = OopVZ;
+		SetAction(ETaGAction::Leap, 0, FVector(OopPoint) - GetFeetLocation());
+		Jump();
+		bStopJumpNextTick = true;
+		return;
+	}
+	if ((Action == ETaGAction::None || Action == ETaGAction::Gathered) && Move->IsMovingOnGround())
 	{
 		Jump();
 		bStopJumpNextTick = true;
@@ -1393,8 +1508,10 @@ ETaGShotType ATaGCharacter::ClassifyShot() const
 	const float Toward = (!W.IsNearlyZero() && ToRim.Size() > 1.f) ? FVector::DotProduct(W, ToRim.GetSafeNormal()) : 0.f;
 	if (Action == ETaGAction::Drive || Action == ETaGAction::DriveStart || Action == ETaGAction::Gathered || SinceDrive < 0.5f)
 	{
-		if (Nd < 1.9f) { return ETaGShotType::Dunk; }
-		if (Nd < 3.6f) { return ETaGShotType::Euro; }
+		// A running dunk needs room to plant and rise (about 2.6 m at drive speed); a body that cannot reach over the
+		// rim lays it in instead
+		if (Nd < 2.6f) { return CanDunk() ? ETaGShotType::Dunk : ETaGShotType::Layup; }
+		if (Nd < 3.8f) { return ETaGShotType::Euro; }
 	}
 	if (!GetCharacterMovement()->IsMovingOnGround())
 	{
@@ -1402,7 +1519,9 @@ ETaGShotType ATaGCharacter::ClassifyShot() const
 	}
 	if (Toward > 0.5f)
 	{
-		if (Nd < 3.2f) { return ETaGShotType::Layup; }
+		// Running in, a layup starts farther out: the two steps after the gather cover the ground
+		const float SpeedIn = ToRim.Size() > 1.f ? FMath::Max(0.f, FVector::DotProduct(GetVelocity(), ToRim.GetSafeNormal())) : 0.f;
+		if (Nd * 100.f < FTaGRules::LayupRange(SpeedIn)) { return ETaGShotType::Layup; }
 		if (Nd < 5.5f) { return ETaGShotType::Floater; }
 	}
 	if (Toward < -0.5f)
@@ -1421,7 +1540,12 @@ void ATaGCharacter::BeginShot()
 	bShotJumped = St.JumpAt < 0.f;
 	const float Lateral = FVector::DotProduct(WishDir(), GetActorRightVector());
 	ShotSide = FMath::Abs(Lateral) > 0.25f ? FMath::Sign(Lateral) : 1.f;
-	SetAction(ETaGAction::Shoot, static_cast<uint8>(ShotType));
+	// Layups and dunks: gather, two steps, take off. The take-off time travels as the action length and the finishing
+	// hand as bit 7 of the variant, so every machine shows the same steps.
+	RunUp = FTaGRules::PlanRunUp(GetHeroDef(), ShotType, GetFeetLocation(), GetVelocity(), Lateral);
+	ShotMeterSec = RunUp.bValid ? (RunUp.TakeoffT + RunUp.JumpVZ / TaG::Gravity) / FTaGRules::RunUpApexCharge : St.Meter * TaG::ShotMeterSeconds;
+	const uint8 Variant = static_cast<uint8>(ShotType) | (RunUp.bValid && RunUp.bLeftHand ? 0x80 : 0);
+	SetAction(ETaGAction::Shoot, Variant, FVector::ForwardVector, RunUp.bValid ? RunUp.TakeoffT : 0.f);
 }
 
 void ATaGCharacter::ReleaseShot()
@@ -1429,6 +1553,10 @@ void ATaGCharacter::ReleaseShot()
 	if (Action != ETaGAction::Shoot)
 	{
 		return;
+	}
+	if (ShotType == ETaGShotType::AlleyOop && ActionT < 0.12f)
+	{
+		return; // the slam has its own timing (TickAction)
 	}
 	const float Charge = ShotCharge;
 	const bool bContact = bShotContact;
@@ -1446,6 +1574,265 @@ void ATaGCharacter::ForceContactShot()
 {
 	bShotContact = true;
 	ReleaseShot();
+}
+
+// ================================================================ Layups, dunks and alley-oops
+
+float ATaGCharacter::GetRunUpTimeLeft() const
+{
+	if (Action != ETaGAction::Shoot || !RunUp.bValid)
+	{
+		return -1.f;
+	}
+	return FMath::Max(RunUp.TakeoffT - ActionT, 0.f);
+}
+
+bool ATaGCharacter::IsCloseFinish() const
+{
+	if (Action != ETaGAction::Shoot)
+	{
+		return false;
+	}
+	return ShotType == ETaGShotType::Layup || ShotType == ETaGShotType::Euro || ShotType == ETaGShotType::Dunk || ShotType == ETaGShotType::AlleyOop;
+}
+
+bool ATaGCharacter::IsFinishingLeft() const
+{
+	if (RunUp.bValid)
+	{
+		return RunUp.bLeftHand;
+	}
+	return ShotType == ETaGShotType::Euro && ShotSide < 0.f;
+}
+
+float ATaGCharacter::GetFinishRise() const
+{
+	if (Action != ETaGAction::Shoot)
+	{
+		return 0.f;
+	}
+	if (ShotType == ETaGShotType::AlleyOop)
+	{
+		return 1.f;
+	}
+	const FTaGShotTypeDef& St = FTaGRules::ShotType(ShotType);
+	const float TakeOff = RunUp.bValid ? RunUp.TakeoffT : St.JumpAt;
+	const float VZ = RunUp.bValid ? RunUp.JumpVZ : St.JumpVel * FMath::Sqrt(GetHeroDef().JumpMul);
+	const float TUp = FMath::Max(VZ / TaG::Gravity, 0.15f);
+	return FMath::SmoothStep(0.f, 1.f, FMath::Clamp((ActionT - TakeOff + 0.06f) / (TUp * 0.9f), 0.f, 1.f));
+}
+
+FVector ATaGCharacter::GetFinishHold() const
+{
+	if (ShotType == ETaGShotType::AlleyOop)
+	{
+		return GetReachHands(); // caught overhead
+	}
+	const FTaGHeroDef& H = GetHeroDef();
+	const float S = H.EyeHeight / 175.f;
+	const FVector Feet = GetFeetLocation();
+	const FVector Fwd = GetActorForwardVector();
+	const bool bLeft = IsFinishingLeft();
+	// Gathered at the chest on the finishing side, then carried up to the release as the body rises
+	const FVector Chest = Feet + Fwd * 26.f * S + GetActorRightVector() * (bLeft ? -12.f : 12.f) * S + FVector(0.f, 0.f, H.EyeHeight * 0.72f);
+	const FVector Top = ShotType == ETaGShotType::Dunk
+		? Feet + Fwd * 34.f * S + FVector(0.f, 0.f, H.EyeHeight * 1.3f)
+		: FTaGRules::LayupRelease(Feet, Fwd, H.EyeHeight, bLeft);
+	return FMath::Lerp(Chest, Top, GetFinishRise());
+}
+
+bool ATaGCharacter::CanDunk() const
+{
+	const FTaGHeroDef& H = GetHeroDef();
+	const float VZ = FTaGRules::ShotType(ETaGShotType::Dunk).JumpVel * FMath::Sqrt(H.JumpMul);
+	return FTaGRules::StandingReach(H) + VZ * VZ / (2.f * TaG::Gravity) >= TaG::RimZ + 15.f;
+}
+
+void ATaGCharacter::SetAlleyOop(const FTaGAlleyOop& Plan, float CatchServerTime)
+{
+	OopPoint = Plan.Catch;
+	OopTime = CatchServerTime;
+	OopVZ = Plan.LeapVZ;
+	bOopSlam = Plan.bSlam;
+	GetCharacterMovement()->JumpZVelocity = OopVZ;
+	bOopJumpZ = true;
+}
+
+float ATaGCharacter::GetAlleyOopJumpIn() const
+{
+	if (!HasAlleyOop())
+	{
+		return 99.f;
+	}
+	// Leave the floor so that the top of the leap comes as the ball arrives
+	return OopTime - OopVZ / TaG::Gravity - ServerNow();
+}
+
+FVector ATaGCharacter::GetReachHands() const
+{
+	const FTaGHeroDef& H = GetHeroDef();
+	const FVector Feet = GetFeetLocation();
+	FVector Fwd = HasAlleyOop() ? FVector(OopPoint.X - Feet.X, OopPoint.Y - Feet.Y, 0.f) : GetActorForwardVector();
+	Fwd.Z = 0.f;
+	Fwd = Fwd.Size() > 5.f ? Fwd.GetSafeNormal() : GetActorForwardVector();
+	return Feet + Fwd * 22.f * H.EyeHeight / 175.f + FVector(0.f, 0.f, FTaGRules::StandingReach(H));
+}
+
+void ATaGCharacter::StartAlleyOopFinish()
+{
+	ShotType = ETaGShotType::AlleyOop;
+	ShotCharge = FTaGRules::RunUpApexCharge;
+	bShotContact = false;
+	bShotJumped = true;
+	RunUp = FTaGRunUp();
+	ShotMeterSec = 1.f;
+	SetAction(ETaGAction::Shoot, static_cast<uint8>(ETaGShotType::AlleyOop));
+}
+
+void ATaGCharacter::RestoreRunUp()
+{
+	const FTaGShotTypeDef& St = FTaGRules::ShotType(ShotType);
+	if ((ShotType == ETaGShotType::Layup || ShotType == ETaGShotType::Dunk) && ActionLength > 0.f)
+	{
+		const bool bSame = RunUp.bValid && FMath::IsNearlyEqual(RunUp.TakeoffT, ActionLength, 0.05f);
+		const float Speed = bSame ? RunUp.ApproachSpeed : GetVelocity().Size2D();
+		RunUp.bValid = true;
+		RunUp.TakeoffT = ActionLength;
+		RunUp.JumpVZ = St.JumpVel * FMath::Sqrt(GetHeroDef().JumpMul);
+		RunUp.bLeftHand = (ActionVariant & 0x80) != 0;
+		RunUp.ApproachSpeed = Speed;
+		RunUp.TakeoffSpeed = Speed * (ShotType == ETaGShotType::Dunk ? 0.35f : 0.55f);
+	}
+	else
+	{
+		RunUp = FTaGRunUp();
+	}
+	ShotMeterSec = RunUp.bValid ? (RunUp.TakeoffT + RunUp.JumpVZ / TaG::Gravity) / FTaGRules::RunUpApexCharge : St.Meter * TaG::ShotMeterSeconds;
+}
+
+bool ATaGCharacter::CanStartLeap() const
+{
+	return Action == ETaGAction::None || Action == ETaGAction::Drive || Action == ETaGAction::DriveStart || Action == ETaGAction::Step;
+}
+
+FVector ATaGCharacter::LeapSteer(float& OutScale) const
+{
+	OutScale = 0.f;
+	if (!HasAlleyOop())
+	{
+		return FVector::ZeroVector;
+	}
+	// The velocity that brings the hands under the ball as it arrives, and a push (air control) toward it
+	const FVector Hands = GetReachHands();
+	const FVector To(OopPoint.X - Hands.X, OopPoint.Y - Hands.Y, 0.f);
+	const float Left = FMath::Max(OopTime - ServerNow(), 0.15f);
+	const FVector Want = (To / Left).GetClampedToMaxSize(700.f);
+	const FVector V(GetVelocity().X, GetVelocity().Y, 0.f);
+	const FVector Diff = Want - V;
+	const float D = Diff.Size();
+	if (D < 15.f)
+	{
+		return FVector::ZeroVector;
+	}
+	OutScale = FMath::Clamp(D / 250.f, 0.f, 1.f);
+	return Diff / D;
+}
+
+void ATaGCharacter::TickGaze(float Dt)
+{
+	AController* C = GetController();
+	if (!C || bThirdPerson)
+	{
+		return;
+	}
+	FVector Target;
+	float Rate = 4.5f;
+	if (Action == ETaGAction::Leap && HasAlleyOop())
+	{
+		const ATaGBall* B = FindBall();
+		const FVector BallAt = B ? B->GetActorLocation() : FVector(OopPoint);
+		const float ToRim = 1.f - FMath::Clamp((OopTime - ServerNow()) / 0.35f, 0.f, 1.f);
+		Target = FMath::Lerp(BallAt, TaG::RimCenter(), 0.6f * ToRim);
+		Rate = 7.f;
+		GazeAfterT = 1.2f;
+	}
+	else if (IsCloseFinish())
+	{
+		const bool bDown = ShotType == ETaGShotType::Dunk || ShotType == ETaGShotType::AlleyOop;
+		Target = TaG::RimCenter() + FVector(0.f, 0.f, bDown ? -10.f : 12.f);
+		Rate = ShotType == ETaGShotType::AlleyOop ? 9.f : 4.5f;
+		GazeAfterT = 1.2f;
+	}
+	else if (GazeAfterT > 0.f)
+	{
+		// After the release: keep watching the rim on the way down, then bring the eyes level once on the floor
+		GazeAfterT -= Dt;
+		FRotator R = C->GetControlRotation();
+		if (GetCharacterMovement()->IsMovingOnGround())
+		{
+			R.Pitch = FMath::FInterpTo(FRotator::NormalizeAxis(R.Pitch), -6.f, Dt, 4.f);
+		}
+		else
+		{
+			FRotator Want = (TaG::RimCenter() - Camera->GetComponentLocation()).Rotation();
+			Want.Pitch = FMath::Clamp(FRotator::NormalizeAxis(Want.Pitch), -75.f, 75.f);
+			R = FMath::RInterpTo(R, Want, Dt, 3.f);
+		}
+		R.Roll = 0.f;
+		C->SetControlRotation(R);
+		return;
+	}
+	else
+	{
+		return;
+	}
+	FRotator Want = (Target - Camera->GetComponentLocation()).Rotation();
+	Want.Pitch = FMath::Clamp(FRotator::NormalizeAxis(Want.Pitch), -75.f, 75.f);
+	FRotator New = FMath::RInterpTo(C->GetControlRotation(), Want, Dt, Rate);
+	New.Roll = 0.f;
+	C->SetControlRotation(New);
+}
+
+bool ATaGCharacter::PlaceFinishArms(float Dt)
+{
+	const bool bLeap = Action == ETaGAction::Leap;
+	if (!bLeap && !IsCloseFinish())
+	{
+		return false;
+	}
+	const FTaGHeroDef& H = GetHeroDef();
+	const float S = FMath::Clamp(H.EyeHeight / 175.f, 0.75f, 1.3f);
+	const FTransform CamXf = Camera->GetComponentTransform();
+	const ATaGBall* B = FindBall();
+	FVector HandC[2];
+	if (bLeap || !B || B->GetHolder() != this)
+	{
+		// Reaching up for the lob: both hands high in front, the forearms rising into the top of the view
+		HandC[0] = FVector(64.f, -22.f, 48.f) * S;
+		HandC[1] = FVector(64.f, 22.f, 48.f) * S;
+	}
+	else
+	{
+		const FVector BallC = CamXf.InverseTransformPosition(B->HoldPoint(this));
+		const bool bLeft = IsFinishingLeft();
+		const bool bTwo = ShotType == ETaGShotType::Dunk || ShotType == ETaGShotType::AlleyOop || GetFinishRise() < 0.35f;
+		const int32 Fin = bLeft ? 0 : 1;
+		// The finishing hand under the ball; the other on its side while gathered, then out in front as a guard
+		HandC[Fin] = BallC + FVector(-4.f, bLeft ? -6.f : 6.f, -12.f);
+		HandC[1 - Fin] = bTwo ? BallC + FVector(-2.f, bLeft ? 12.f : -12.f, -2.f) : FVector(46.f, bLeft ? 22.f : -22.f, -30.f) * S;
+	}
+	const bool bArtArms = FPArmL->GetStaticMesh() != TaGArt::EngineCylinder();
+	const float Len = 32.f * H.EyeHeight / 175.f;
+	for (int32 Side = 0; Side < 2; ++Side)
+	{
+		UStaticMeshComponent* Arm = Side == 0 ? FPArmL.Get() : FPArmR.Get();
+		// The forearm comes up to the hand from below and behind, a little out to its side; the mesh hangs along -Z
+		const FVector Elbow = HandC[Side] + FVector(-16.f, Side == 0 ? -8.f : 8.f, -28.f) * S;
+		const FRotator Rot = FRotationMatrix::MakeFromZX((Elbow - HandC[Side]).GetSafeNormal(), FVector::ForwardVector).Rotator();
+		const FVector Loc = bArtArms ? Elbow : Elbow + Rot.RotateVector(FVector(0.f, 0.f, -Len * 0.5f));
+		Arm->SetRelativeLocationAndRotation(Loc, Rot);
+	}
+	return true;
 }
 
 // ================================================================ Arts
@@ -1944,6 +2331,7 @@ void ATaGCharacter::SetTether(ATaGCharacter* Partner, float Seconds)
 void ATaGCharacter::ClearForNewPossession(const FVector& FeetPos, const FVector& LookAt)
 {
 	SetAction(ETaGAction::None);
+	ClearAlleyOop();
 	GetCharacterMovement()->StopMovementImmediately();
 	const FVector Pos = FeetPos + FVector(0.f, 0.f, GetCapsuleComponent()->GetScaledCapsuleHalfHeight() + 2.f);
 	FRotator Rot = (LookAt - Pos).Rotation();
@@ -2043,6 +2431,9 @@ void ATaGCharacter::TickVisuals(float Dt)
 	In.ActionT = ActionT;
 	In.ShotType = ShotType;
 	In.ShotCharge = ShotCharge;
+	In.RunUpLeft = bOnFloor ? GetRunUpTimeLeft() : -1.f;
+	In.FinishRise = GetFinishRise();
+	In.bLeftHand = IsFinishingLeft();
 	In.DribbleT = DribbleT;
 	In.DodgeSide = FVector::DotProduct(ActionDir, GetActorRightVector()) >= 0.f ? 1.f : -1.f;
 	uint8 Pretell = 0;
@@ -2099,6 +2490,29 @@ void ATaGCharacter::TickVisuals(float Dt)
 		}
 		TaGAudio::PlayAt(this, FootNames[FootSfx++ % 3], At, Loud * (bMyView ? 0.55f : 1.f), Pitch);
 		LastStepCount = Steps;
+	}
+	// Take-offs of layups, dunks and leaps: the plant foot pushes off with a squeak and a puff of dust; a slam shakes
+	// the dunker's own view
+	{
+		const bool bJumpFinish = (Action == ETaGAction::Shoot && (RunUp.bValid || ShotType == ETaGShotType::Euro || ShotType == ETaGShotType::Floater))
+			|| Action == ETaGAction::Leap;
+		if (bWasOnFloorAct && !bOnFloor && bJumpFinish)
+		{
+			const FVector At = Rig->GetFootWorld(IsFinishingLeft() ? 1 : 0);
+			TaGFx::Dust(this, At, 0.7f * FMath::Sqrt(Weight));
+			TaGAudio::PlayAt(this, FMath::RandBool() ? FName(TEXT("Squeak1")) : FName(TEXT("Squeak2")), At, 0.4f * (bMyView ? 0.6f : 1.f), FMath::FRandRange(1.f, 1.15f));
+		}
+		bWasOnFloorAct = bOnFloor;
+		const bool bAirFinish = Action == ETaGAction::Shoot && !bOnFloor && (ShotType == ETaGShotType::Dunk || ShotType == ETaGShotType::AlleyOop);
+		if (bWasAirFinish && !bAirFinish && !bOnFloor && bMyView)
+		{
+			AddCameraKick(0.7f);
+			if (ATaGPlayerController* KPC = Cast<ATaGPlayerController>(GetController()))
+			{
+				KPC->Feedback(0.6f, 0.15f, 0.6f);
+			}
+		}
+		bWasAirFinish = bAirFinish;
 	}
 	// Sneakers squeak on hard cuts and sudden stops at speed (not on gentle curves or walking)
 	SqueakCD -= Dt;
@@ -2179,6 +2593,7 @@ void ATaGCharacter::TickVisuals(float Dt)
 	// --- Camera and first-person arms (owner only)
 	if (IsLocallyControlled() && IsPlayerControlled())
 	{
+		TickGaze(Dt);
 		const FTaGHeroDef& H = GetHeroDef();
 		const float S = H.EyeHeight / 175.f;
 		float TargetZ = H.EyeHeight - H.CapsuleHalfHeight;
@@ -2216,7 +2631,8 @@ void ATaGCharacter::TickVisuals(float Dt)
 		const float Pitch = bUp ? 165.f : 98.f;
 		const float Reach = FMath::Clamp(S, 0.75f, 1.3f);
 		const bool bArtArms = FPArmL->GetStaticMesh() != TaGArt::EngineCylinder();
-		for (int32 Side = 0; Side < 2; ++Side)
+		const bool bFinishArms = bShow && PlaceFinishArms(Dt);
+		for (int32 Side = 0; Side < 2 && !bFinishArms; ++Side)
 		{
 			UStaticMeshComponent* Arm = Side == 0 ? FPArmL.Get() : FPArmR.Get();
 			const float Y = (Side == 0 ? -24.f : 24.f) * Reach;
@@ -2281,9 +2697,9 @@ void ATaGCharacter::OnMove(const FInputActionValue& Value)
 
 void ATaGCharacter::AddLook(float YawDeg, float PitchDeg)
 {
-	if (Action == ETaGAction::Shoot)
+	if (Action == ETaGAction::Shoot || Action == ETaGAction::Leap)
 	{
-		return; // lock-on owns the view while charging
+		return; // lock-on owns the view while charging (and while going up for a lob)
 	}
 	if (AController* C = GetController())
 	{

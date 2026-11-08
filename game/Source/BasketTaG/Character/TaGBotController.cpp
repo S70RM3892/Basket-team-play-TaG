@@ -73,6 +73,20 @@ void ATaGBotController::OnPossess(APawn* InPawn)
 {
 	Super::OnPossess(InPawn);
 	Queue.Reset();
+	LeapSlack = FMath::FRandRange(-0.06f, 0.06f);
+}
+
+void ATaGBotController::TestCut()
+{
+	ATaGCharacter* Me = Cast<ATaGCharacter>(GetPawn());
+	if (!Me)
+	{
+		return;
+	}
+	CuttingFor = 1.6f;
+	CutTimer = 9.f;
+	Wish(Me, Flat(TaG::RimFloor() - Me->GetFeetLocation()));
+	Press(Me, ETaGInput::Primary);
 }
 
 // ================================================================ Helpers
@@ -338,6 +352,10 @@ void ATaGBotController::Tick(float DeltaSeconds)
 			Do(Me, H);
 		}
 	}
+	if (Ball->GetBallState() != ETaGBallState::Pass)
+	{
+		bOopDefDecided = false;
+	}
 	if (ContestHold > 0.f)
 	{
 		ContestHold -= DeltaSeconds;
@@ -541,6 +559,7 @@ void ATaGBotController::Offense(ATaGCharacter* Me, ATaGBall* Ball, float Dt)
 	{
 		bHadBall = true;
 		HoldTime = 0.f;
+		bAttackRim = FMath::FRand() < 0.35f + 0.3f * Skill;
 		bTetherUsed = false;
 	}
 	HoldTime += Dt;
@@ -561,6 +580,12 @@ void ATaGBotController::Offense(ATaGCharacter* Me, ATaGBall* Ball, float Dt)
 		{
 			StartShot(Me);
 		}
+		return;
+	}
+	// Alley-oop: a teammate running at the rim and nobody waiting at the catch spot -> throw it up
+	const ETaGAction MyAct = Me->GetAction();
+	if ((MyAct == ETaGAction::None || MyAct == ETaGAction::Gathered || MyAct == ETaGAction::Drive) && !GM->NeedsClear(Me->GetTeam()) && TryAlleyOop(Me, Dt))
+	{
 		return;
 	}
 	if (Me->GetAction() == ETaGAction::Drive || Me->GetAction() == ETaGAction::Gathered)
@@ -690,6 +715,12 @@ void ATaGBotController::Offense(ATaGCharacter* Me, ATaGBall* Ball, float Dt)
 	}
 
 	const bool bOpen = DOpp > 230.f || !bBetween;
+	// An open lane: keep running and finish at the rim (a layup) instead of pulling up from the first open spot
+	const float SpeedIn = FMath::Max(0.f, FVector::DotProduct(Me->GetVelocity(), ToRim.GetSafeNormal()));
+	if (bAttackRim && !bBetween && Nd < 7.f && Nd * 100.f > FTaGRules::LayupRange(SpeedIn) - 20.f)
+	{
+		return;
+	}
 	if (bOpen && Nd < 8.f && FMath::FRand() < 0.75f)
 	{
 		PlanShot(Me, Nd, DOpp);
@@ -737,6 +768,41 @@ void ATaGBotController::Offense(ATaGCharacter* Me, ATaGBall* Ball, float Dt)
 	default:
 		break;
 	}
+}
+
+bool ATaGBotController::TryAlleyOop(ATaGCharacter* Me, float Dt)
+{
+	ATaGGameMode* GM = GetWorld()->GetAuthGameMode<ATaGGameMode>();
+	if (!GM || Me->GetCooldownLeft(ETaGSlot::Pass) > 0.f)
+	{
+		return false;
+	}
+	for (ATaGCharacter* M : GM->GetTeamPlayers(Me->GetTeam()))
+	{
+		if (M == Me)
+		{
+			continue;
+		}
+		const FTaGAlleyOop Oop = FTaGRules::PlanAlleyOop(Me, M);
+		if (!Oop.bValid)
+		{
+			continue;
+		}
+		// A defender waiting at the catch spot would meet the lob first
+		bool bClear = true;
+		for (TActorIterator<ATaGCharacter> It(GetWorld()); It && bClear; ++It)
+		{
+			bClear = It->GetTeam() == Me->GetTeam() || It->IsDown() || FVector::Dist2D(It->GetActorLocation(), Oop.Catch) > 130.f;
+		}
+		// Bots read a cut a moment late
+		if (!bClear || FMath::FRand() > Dt * (2.f + 4.f * Skill))
+		{
+			return false;
+		}
+		Face(Me, M->GetActorLocation(), 1.f, 1000.f);
+		return Press(Me, ETaGInput::PassSteal);
+	}
+	return false;
 }
 
 bool ATaGBotController::TryPass(ATaGCharacter* Me, bool bPressured)
@@ -816,9 +882,10 @@ void ATaGBotController::PlanShot(ATaGCharacter* Me, float Nd, float DefDist)
 	// Pick a shot type and enter its inputs (stick direction, jump) like a player would.
 	const FVector ToRim = Flat(TaG::RimFloor() - Me->GetFeetLocation()).GetSafeNormal();
 	int32 Plan = 0; // 0 auto, 1 drive-in, 2 stepback, 3 fade, 4 jumper
-	if (Nd < 3.2f)
+	const float SpeedIn = FMath::Max(0.f, FVector::DotProduct(Me->GetVelocity(), ToRim));
+	if (Nd * 100.f < FTaGRules::LayupRange(SpeedIn))
 	{
-		Plan = 1;
+		Plan = 1; // close enough for a run-up layup
 	}
 	else if (DefDist < 180.f)
 	{
@@ -1131,8 +1198,51 @@ void ATaGBotController::Loose(ATaGCharacter* Me, ATaGBall* Ball, float Dt)
 	}
 	else if (St == ETaGBallState::Pass)
 	{
-		// Read the pass: the receiver's defender steps toward the catch point
 		ATaGCharacter* Receiver = Ball->GetPassReceiver();
+		if (Ball->GetPassStyle() == 4 && Receiver == Me && Me->HasAlleyOop())
+		{
+			// Going up for the lob: run at the catch spot and leave the floor so the hands meet it at the top
+			const FVector C = Me->GetAlleyOopPoint();
+			const FVector To = Flat(C - Me->GetFeetLocation());
+			Wish(Me, To);
+			if (!Me->IsForcedMove())
+			{
+				Me->AddMovementInput(To.GetSafeNormal(), 1.f);
+			}
+			Face(Me, C, Dt, 12.f);
+			if (Me->GetAlleyOopJumpIn() <= LeapSlack * (1.2f - Skill) && Me->GetCharacterMovement()->IsMovingOnGround())
+			{
+				Me->InputJump();
+			}
+			return;
+		}
+		if (Ball->GetPassStyle() == 4 && Receiver && Receiver->GetTeam() != Me->GetTeam() && Receiver->HasAlleyOop())
+		{
+			// Rim protection: the defender nearest the catch spot goes up to meet the lob
+			const FVector C = Receiver->GetAlleyOopPoint();
+			const float MyD = FVector::Dist2D(Me->GetActorLocation(), C);
+			bool bNearest = MyD < 600.f;
+			for (TActorIterator<ATaGCharacter> It(GetWorld()); It && bNearest; ++It)
+			{
+				bNearest = *It == Me || It->GetTeam() != Me->GetTeam() || FVector::Dist2D(It->GetActorLocation(), C) >= MyD;
+			}
+			if (bNearest)
+			{
+				Steer(Me, Flat(C), 10.f);
+				Face(Me, C, Dt, 12.f);
+				const float Up = TaG::JumpVelocity * Me->GetHeroDef().JumpMul / TaG::Gravity;
+				if (!bOopDefDecided && Receiver->GetAlleyOopTime() - Me->ServerNow() < Up + 0.04f && MyD < 170.f)
+				{
+					bOopDefDecided = true;
+					if (FMath::FRand() < 0.25f + 0.45f * Skill)
+					{
+						Me->InputJump();
+					}
+				}
+				return;
+			}
+		}
+		// Read the pass: the receiver's defender steps toward the catch point
 		if (Receiver && Receiver->GetTeam() != Me->GetTeam() && MyMan(Me) == Receiver)
 		{
 			Target = Flat(FMath::Lerp(Bp, Receiver->GetActorLocation(), 0.6f));

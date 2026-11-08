@@ -1101,10 +1101,6 @@ void ATaGGameMode::ResolveShot(ATaGCharacter* Shooter, float Charge, bool bConta
 	{
 		S->Stats(Team).Perfects++;
 		Popup(TEXT("パーフェクト・リリース！"), -1);
-		if (!bAutoTest)
-		{
-			S->MulticastWorldFx(1, Shooter->GetEyeLocation() + Shooter->GetActorForwardVector() * 40.f, Team);
-		}
 	}
 	if (S->bTutorial)
 	{
@@ -1134,7 +1130,7 @@ void ATaGGameMode::ResolveShot(ATaGCharacter* Shooter, float Charge, bool bConta
 		}
 	}
 
-	const bool bMake = FMath::FRand() < E.Chance;
+	const bool bMake = bForceMakes || FMath::FRand() < E.Chance;
 	const bool bValid = !NeedsClear(Team);
 	const FVector Feet = Shooter->GetFeetLocation();
 	const ETaGArtFx ShotMod = Shooter->GetShotMod();
@@ -1153,7 +1149,30 @@ void ATaGGameMode::ResolveShot(ATaGCharacter* Shooter, float Charge, bool bConta
 		Angle = FMath::Max(Angle, St.Angle);
 	}
 	FVector Vel = FTaGBallSim::SolveLaunch(From, Target, Angle);
-	if (E.Type == ETaGShotType::Dunk && E.Distance < 220.f)
+	const bool bSlam = (E.Type == ETaGShotType::Dunk || (E.Type == ETaGShotType::AlleyOop && Shooter->IsOopSlam())) && E.Distance < 220.f;
+	bLastShotOop = E.Type == ETaGShotType::AlleyOop;
+	bLastLayupBank = false;
+	LayupsTaken += E.Type == ETaGShotType::Layup ? 1 : 0;
+	DunksTaken += E.Type == ETaGShotType::Dunk ? 1 : 0;
+	if (!bSlam && (E.Type == ETaGShotType::Layup || E.Type == ETaGShotType::Euro || E.Type == ETaGShotType::AlleyOop))
+	{
+		// One hand at the top of the jump: off the glass from the angles, a finger roll over the front rim otherwise
+		From = E.Type == ETaGShotType::AlleyOop ? Shooter->GetReachHands()
+			: FTaGRules::LayupRelease(Feet, Shooter->GetActorForwardVector(), Shooter->GetHeroDef().EyeHeight, Shooter->IsFinishingLeft());
+		Vel = FTaGBallSim::SolveLayup(From, Target, bMake, bLastLayupBank);
+		for (int32 Try = 0; !bMake && Try < 4 && FTaGBallSim::Scores(From, Vel); ++Try)
+		{
+			const float A = FMath::FRandRange(0.f, 2.f * UE_PI);
+			Target = TaG::RimCenter() + FVector(FMath::Cos(A), FMath::Sin(A), 0.f) * FMath::FRandRange(26.f, 36.f) + FVector(0.f, 0.f, 2.f);
+			Vel = FTaGBallSim::SolveLayup(From, Target, false, bLastLayupBank);
+		}
+		LayupBanks += bLastLayupBank ? 1 : 0;
+	}
+	if (bSlam && !bAutoTest)
+	{
+		S->MulticastWorldFx(4, TaG::RimCenter(), Team); // the rim takes the hit
+	}
+	if (bSlam)
 	{
 		// Dunk: hammer it down through the rim
 		FVector Away(Feet.X - TaG::RimX, Feet.Y, 0.f);
@@ -1192,6 +1211,10 @@ void ATaGGameMode::ResolveShot(ATaGCharacter* Shooter, float Charge, bool bConta
 	{
 		BlockMult *= 0.3f;
 	}
+	if (E.bPerfect && !bAutoTest)
+	{
+		S->MulticastWorldFx(1, From, Team); // a golden flash where the ball leaves the hand
+	}
 	Ball->LaunchShot(From, Vel, Shooter, E.Points, bValid, BlockMult);
 	bShotInFlight = true;
 	bLastShotTeamPlay = PossessionPasses > 0;
@@ -1208,6 +1231,21 @@ void ATaGGameMode::LaunchPass(ATaGCharacter* Passer, ATaGCharacter* Receiver, ui
 	if (!Ball || !Passer || !Receiver || Ball->GetHolder() != Passer)
 	{
 		return;
+	}
+	// A pass to a teammate running at the rim goes up as an alley-oop: a lob to where the hands will be at the top of
+	// the leap (plain passes and lobs; threads and curves keep their own flight)
+	if (Style == 0 || Style == 3)
+	{
+		const FTaGAlleyOop Oop = FTaGRules::PlanAlleyOop(Passer, Receiver);
+		if (Oop.bValid)
+		{
+			Ball->LaunchAlleyOop(Passer, Receiver, Oop);
+			LastPasser = Passer;
+			GS()->Stats(Passer->GetTeam()).Passes++;
+			OopThrown++;
+			Popup(TEXT("アリウープのパス！"), Passer->GetTeam());
+			return;
+		}
 	}
 	Ball->LaunchPass(Passer, Receiver, Style);
 	LastPasser = Passer;
@@ -1241,6 +1279,40 @@ void ATaGGameMode::OnPassCaught(ATaGCharacter* Receiver)
 	}
 }
 
+void ATaGGameMode::OnAlleyOopCaught(ATaGCharacter* Receiver)
+{
+	if (!Receiver)
+	{
+		return;
+	}
+	OopCaught++;
+	if (SnapMode == TEXT("AlleyOop"))
+	{
+		TestCatchAt = TestT;
+		TestCatchErr = Ball ? Ball->GetLastCatchError() : -1.f;
+		TestCatchZ = Ball ? Ball->GetLastCatchPos().Z : 0.f;
+		TestCatchDt = Receiver->ServerNow() - Receiver->GetAlleyOopTime();
+	}
+	Receiver->StartAlleyOopFinish();
+}
+
+void ATaGGameMode::OnAlleyOopStopped(ATaGCharacter* D)
+{
+	OopStopped++;
+	ATaGGameState* S = GS();
+	if (!S || !D)
+	{
+		return;
+	}
+	S->Stats(D->GetTeam()).Blocks++;
+	if (ATaGPlayerState* P = PS(D)) { P->Stats.Blocks++; }
+	if (!bAutoTest && Ball)
+	{
+		S->MulticastWorldFx(2, Ball->GetActorLocation(), D->GetTeam());
+	}
+	Popup(FString::Printf(TEXT("アリウープを阻止！ %s"), D->GetHeroDef().Name), D->GetTeam());
+}
+
 void ATaGGameMode::OnPassIntercepted(ATaGCharacter* D)
 {
 	if (!D)
@@ -1261,6 +1333,11 @@ void ATaGGameMode::OnBasket(ATaGCharacter* Shooter, int32 Points, bool bValid)
 	ATaGGameState* S = GS();
 	const int32 Team = Shooter ? Shooter->GetTeam() : S->PossessionTeam;
 	bShotInFlight = false;
+	bTestScored = true;
+	if (bValid && bLastShotOop)
+	{
+		OopMade++;
+	}
 	if (!bValid)
 	{
 		EndPossession(Team, 0);
@@ -1300,6 +1377,7 @@ void ATaGGameMode::OnBasket(ATaGCharacter* Shooter, int32 Points, bool bValid)
 void ATaGGameMode::OnShotMissed(bool bTouchedRim)
 {
 	bShotInFlight = false;
+	bTestMissed = true;
 	if (bTouchedRim)
 	{
 		if (ATaGGameState* S = GS())
@@ -1421,6 +1499,8 @@ void ATaGGameMode::LogStats() const
 				C->GetTeam(), C->GetHeroDef().Key, P->Stats.Points, P->Stats.Shots, P->Stats.Assists, P->Stats.Steals, P->Stats.Blocks, P->Stats.Rebounds, P->Stats.ReadWins, P->Stats.ReadLosses);
 		}
 	}
+	UE_LOG(LogTaG, Display, TEXT("STATS finishes layups=%d bank=%d dunks=%d alleyoop_thrown=%d caught=%d stopped=%d made=%d"),
+		LayupsTaken, LayupBanks, DunksTaken, OopThrown, OopCaught, OopStopped, OopMade);
 	UE_LOG(LogTaG, Display, TEXT("STATS match_time=%.1f size=%d"), S->MatchTime, S->TeamSize);
 }
 
@@ -1744,6 +1824,541 @@ void ATaGGameMode::RunShotTest()
 	}
 	UE_LOG(LogTaG, Display, TEXT("SHOTTEST total planned_makes_in=%d/%d (%.0f%%)  planned_misses_that_went_in=%d/%d (%.0f%%)"),
 		MakeOk, MakeTotal, 100.f * MakeOk / FMath::Max(MakeTotal, 1), MissIn, MissTotal, 100.f * MissIn / FMath::Max(MissTotal, 1));
+
+	// Layups from the hand at the top of the jump (FTaGRules::LayupRelease): every angle around the rim, small to XL
+	// bodies, low to high jumps, the top of the jump close to or farther from the rim
+	int32 LayOk = 0, LayTotal = 0, LayBank = 0, LayMissIn = 0, LayMissTotal = 0;
+	for (const float Eye : { 140.f, 175.f, 210.f, 250.f })
+	{
+		for (float Bearing = -85.f; Bearing <= 85.f; Bearing += 17.f)
+		{
+			for (const FVector2D ApexLift : { FVector2D(60.f, 30.f), FVector2D(85.f, 60.f), FVector2D(110.f, 95.f), FVector2D(85.f, 95.f) })
+			{
+				const float B = FMath::DegreesToRadians(Bearing);
+				const FVector Feet(TaG::RimX + FMath::Cos(B) * ApexLift.X, FMath::Sin(B) * ApexLift.X, ApexLift.Y);
+				const FVector From = FTaGRules::LayupRelease(Feet, FVector(TaG::RimX - Feet.X, -Feet.Y, 0.f), Eye, Bearing > 0.f);
+				const float Z = From.Z;
+				const float Reach = FVector2D(From.X - TaG::RimX, From.Y).Size();
+				bool bBank = false;
+				const FVector V = FTaGBallSim::SolveLayup(From, TaG::RimCenter() + FVector(0.f, 0.f, 2.f), true, bBank);
+				const bool bIn = FTaGBallSim::Scores(From, V);
+				LayTotal++;
+				LayOk += bIn ? 1 : 0;
+				LayBank += bBank ? 1 : 0;
+				if (!bIn)
+				{
+					UE_LOG(LogTaG, Display, TEXT("SHOTTEST layup fail reach=%.0f bearing=%.0f z=%.0f"), Reach, Bearing, Z);
+				}
+				for (int32 T = 0; T < 4; ++T)
+				{
+					const float A = 2.f * UE_PI * T / 4.f;
+					const FVector Off = FVector(FMath::Cos(A), FMath::Sin(A), 0.f) * 26.f;
+					bool bMissBank = false;
+					const FVector MV = FTaGBallSim::SolveLayup(From, TaG::RimCenter() + FVector(0.f, 0.f, 2.f) + Off, false, bMissBank);
+					LayMissTotal++;
+					LayMissIn += FTaGBallSim::Scores(From, MV) ? 1 : 0;
+				}
+			}
+		}
+	}
+	UE_LOG(LogTaG, Display, TEXT("SHOTTEST layups planned_makes_in=%d/%d (bank %d)  planned_misses_that_went_in=%d/%d"), LayOk, LayTotal, LayBank, LayMissIn, LayMissTotal);
+}
+
+// ================================================================ Tests: layups and alley-oops
+
+void ATaGGameMode::TestShotAt(const FString& Name, bool bUI)
+{
+	const FString File = FPaths::ProjectSavedDir() / TEXT("Screenshots") / FString::Printf(TEXT("TaGSnap_%s_%s.png"), *SnapMode, *Name);
+	FScreenshotRequest::RequestScreenshot(File, bUI, false);
+	UE_LOG(LogTaG, Display, TEXT("SNAP requested %s"), *File);
+}
+
+void ATaGGameMode::TestSideCamera(const FVector& From, const FVector& To)
+{
+	UWorld* World = GetWorld();
+	ACameraActor* Cam = Cast<ACameraActor>(TestCam);
+	if (!Cam)
+	{
+		FActorSpawnParameters Params;
+		Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+		Cam = World->SpawnActor<ACameraActor>(ACameraActor::StaticClass(), FTransform::Identity, Params);
+		TestCam = Cam;
+		if (!Cam)
+		{
+			return;
+		}
+		Cam->GetCameraComponent()->SetFieldOfView(55.f);
+		Cam->GetCameraComponent()->bConstrainAspectRatio = false;
+	}
+	const FVector Dir = FVector(To - From).GetSafeNormal2D();
+	FVector Perp(-Dir.Y, Dir.X, 0.f);
+	if (Perp.X < 0.f)
+	{
+		Perp = -Perp; // from the court side
+	}
+	const FVector Mid = FMath::Lerp(From, To, 0.62f);
+	Cam->SetActorLocation(Mid + Perp * 720.f + FVector(0.f, 0.f, 175.f));
+	Cam->SetActorRotation((Mid + FVector(0.f, 0.f, 150.f) - Cam->GetActorLocation()).Rotation());
+	if (ATaGPlayerController* PC = Cast<ATaGPlayerController>(World->GetFirstPlayerController()))
+	{
+		PC->bExternalView = true;
+		PC->SetViewTarget(Cam);
+	}
+}
+
+void ATaGGameMode::TickLayupTest(float Dt)
+{
+	// -TaGSnap=Layup (1on1, the bot stands aside): the player runs at the rim from five spots and finishes; the log has
+	// the planned and real take-off, which foot left the floor, the steps after the gather, the foot slip, the top of
+	// the jump against the release, and whether it went off the glass
+	SnapTimer += Dt;
+	ATaGGameState* S = GS();
+	ATaGPlayerController* PC = Cast<ATaGPlayerController>(GetWorld()->GetFirstPlayerController());
+	if (!S || !PC)
+	{
+		return;
+	}
+	if (S->Phase == ETaGPhase::Lobby && SnapTimer > 1.5f)
+	{
+		FString HeroKey;
+		if (FParse::Value(FCommandLine::Get(), TEXT("TaGHero="), HeroKey))
+		{
+			SetPlayerHero(PC, TaGHeroes::FromKey(HeroKey));
+		}
+		StartMatch();
+		return;
+	}
+	ATaGCharacter* Me = Cast<ATaGCharacter>(PC->GetPawn());
+	if (S->Phase != ETaGPhase::Playing || !Me || !Ball)
+	{
+		return;
+	}
+	if (TestStage == 0)
+	{
+		if (!bLive)
+		{
+			return;
+		}
+		for (ATaGBotController* B : Bots)
+		{
+			if (B)
+			{
+				B->SetScript(ATaGBotController::EScript::Idle);
+			}
+		}
+		if (GEngine && GEngine->GameViewport)
+		{
+			GEngine->GameViewport->RemoveAllViewportWidgets();
+		}
+		bForceMakes = true;
+		TestStage = 1;
+		TestCase = 0;
+		TestT = -1.f;
+	}
+	struct FCase { const TCHAR* Name; FVector Start; bool bDrive; bool bSide; };
+	static const FCase Cases[] = {
+		{ TEXT("RightWing"), FVector(TaG::RimX + 424.f, -424.f, 0.f), false, true },
+		{ TEXT("LeftWing"), FVector(TaG::RimX + 424.f, 424.f, 0.f), false, false },
+		{ TEXT("Middle"), FVector(TaG::RimX + 600.f, 0.f, 0.f), false, false },
+		{ TEXT("Baseline"), FVector(TaG::RimX + 30.f, 600.f, 0.f), false, true },
+		{ TEXT("DriveDunk"), FVector(TaG::RimX + 650.f, -160.f, 0.f), true, true },
+	};
+	constexpr int32 NumCases = UE_ARRAY_COUNT(Cases);
+	if (TestCase >= NumCases)
+	{
+		UE_LOG(LogTaG, Display, TEXT("LAYUPTEST done hero=%s%s"), Me->GetHeroDef().Key, *TestSummary);
+		FPlatformMisc::RequestExit(false);
+		TestCase = 1000;
+		return;
+	}
+	const FCase& C = Cases[TestCase];
+	UTaGRigComponent* Rig = Me->GetRig();
+	if (TestT < 0.f)
+	{
+		Me->ClearForNewPossession(C.Start, TaG::RimCenter());
+		Ball->GiveTo(Me);
+		bLive = true;
+		bRestartAfterDead = false;
+		S->ShotClock = TaG::ShotClock;
+		TestT = 0.f;
+		TestT0 = -1.f;
+		TestTakeoff = -1.f;
+		TestApexT = -1.f;
+		TestApexZ = 0.f;
+		TestRelease = -1.f;
+		TestFootErr = 0.f;
+		TestPlanted = -1;
+		TestTakeoffFoot = -1;
+		TestStepLog.Reset();
+		TestShot = 0;
+		bTestScored = false;
+		bTestMissed = false;
+		bTestPressed = false;
+		bTestDriven = false;
+		TestDoneT = -1.f;
+		if (C.bSide)
+		{
+			Me->SetThirdPerson(true);
+			TestSideCamera(C.Start, TaG::RimFloor());
+		}
+		else
+		{
+			Me->SetThirdPerson(false);
+			PC->bExternalView = false;
+			PC->SetViewTarget(Me);
+		}
+		return;
+	}
+	TestT += Dt;
+	const FVector Feet = Me->GetFeetLocation();
+	const FVector ToRim = FVector(TaG::RimX - Feet.X, -Feet.Y, 0.f).GetSafeNormal();
+	const bool bGround = Me->GetCharacterMovement()->IsMovingOnGround();
+	if (!bTestPressed)
+	{
+		// Run at the rim like a player, then start the shot inside the range
+		if (TestT > 0.3f)
+		{
+			Me->SetTestStick(ToRim);
+			if (!Me->IsForcedMove())
+			{
+				Me->AddMovementInput(ToRim, 1.f);
+			}
+		}
+		const float SpeedIn = FMath::Max(0.f, FVector::DotProduct(Me->GetVelocity(), ToRim));
+		const float Dist = TaG::DistToRim(Feet);
+		if (C.bDrive && !bTestDriven && TestT > 0.6f)
+		{
+			bTestDriven = true;
+			Me->InputPressed(ETaGInput::Primary);
+		}
+		const bool bInRange = C.bDrive
+			? (Dist < 250.f && (Me->GetAction() == ETaGAction::Drive || Me->GetAction() == ETaGAction::Gathered))
+			: (TestT > 0.8f && Dist < FTaGRules::LayupRange(SpeedIn) - 20.f);
+		if (bInRange)
+		{
+			Me->InputPressed(ETaGInput::Shoot);
+			bTestPressed = Me->GetAction() == ETaGAction::Shoot;
+			if (bTestPressed)
+			{
+				TestT0 = TestT;
+				TestSteps0 = Rig ? Rig->GetStepCount() : 0;
+				TestLastStepCount = TestSteps0;
+				const FTaGRunUp& R = Me->GetRunUp();
+				UE_LOG(LogTaG, Display, TEXT("LAYUPTEST %s start type=%s dist=%.0f speed_in=%.0f plan takeoff=%.2fs approach=%.0f keep=%.0f vz=%.0f hand=%s"),
+					C.Name, FTaGRules::ShotType(Me->GetShotType()).Name, Dist, SpeedIn, R.TakeoffT, R.ApproachSpeed, R.TakeoffSpeed, R.JumpVZ,
+					R.bLeftHand ? TEXT("L") : TEXT("R"));
+			}
+		}
+		if (TestT > 6.f)
+		{
+			UE_LOG(LogTaG, Warning, TEXT("LAYUPTEST %s never got into range"), C.Name);
+			TestCase++;
+			TestT = -1.f;
+		}
+		return;
+	}
+	const float T = TestT - TestT0;
+	Me->SetTestStick(ToRim);
+	if (Rig && TestTakeoff < 0.f)
+	{
+		if (Rig->GetStepCount() != TestLastStepCount)
+		{
+			TestLastStepCount = Rig->GetStepCount();
+			TestStepLog += FString::Printf(TEXT(" %s@%.2f"), Rig->GetLastStepSide() == 0 ? TEXT("L") : TEXT("R"), T);
+		}
+		const bool bL = Rig->IsFootPlanted(0);
+		const bool bR = Rig->IsFootPlanted(1);
+		if (bL != bR)
+		{
+			TestPlanted = bL ? 0 : 1;
+		}
+		if (bGround)
+		{
+			TestFootErr = FMath::Max(TestFootErr, FMath::Max(Rig->GetFootError(0), Rig->GetFootError(1)));
+		}
+	}
+	if (TestTakeoff < 0.f && !bGround)
+	{
+		TestTakeoff = T;
+		TestTakeoffFoot = TestPlanted;
+	}
+	if (TestTakeoff >= 0.f && !bGround && TestRelease < 0.f && Feet.Z > TestApexZ)
+	{
+		TestApexZ = Feet.Z;
+		TestApexT = T;
+	}
+	// Let go at the top: the meter's perfect middle
+	if (TestRelease < 0.f && Me->GetAction() == ETaGAction::Shoot && Me->GetShotCharge() >= FTaGRules::RunUpApexCharge)
+	{
+		Me->InputReleased(ETaGInput::Shoot);
+	}
+	if (TestRelease < 0.f && Me->GetAction() != ETaGAction::Shoot)
+	{
+		TestRelease = T;
+		TestReleaseZ = Feet.Z;
+		TestHandOff = Ball->GetHandOff();
+	}
+	// The gather, the plant, the take-off, the top, the ball on its way
+	const FTaGRunUp& R = Me->GetRunUp();
+	const float TUp = R.JumpVZ / TaG::Gravity;
+	const float Shots[5] = { 0.04f, R.TakeoffT - FTaGRules::RunUpStanceT, R.TakeoffT + 0.03f, R.TakeoffT + TUp, R.TakeoffT + TUp + 0.3f };
+	if (TestShot < 5 && T >= Shots[TestShot])
+	{
+		TestShotAt(FString::Printf(TEXT("%s_%d"), C.Name, TestShot), false);
+		TestShot++;
+	}
+	if (TestDoneT < 0.f && TestRelease >= 0.f && (bTestScored || bTestMissed || T > TestRelease + 3.f))
+	{
+		TestDoneT = TestT;
+		const FString Line = FString::Printf(TEXT(" | %s takeoff=%.2f/%.2f foot=%s hand=%s steps=[%s ] foot_err=%.1fcm apex=%.0fcm@%.2f release=%.2f@%.0fcm handoff=%.0fcm bank=%d %s"),
+			C.Name, TestTakeoff, R.TakeoffT, TestTakeoffFoot == 0 ? TEXT("L") : (TestTakeoffFoot == 1 ? TEXT("R") : TEXT("?")),
+			R.bLeftHand ? TEXT("L") : TEXT("R"), *TestStepLog, TestFootErr, TestApexZ, TestApexT, TestRelease, TestReleaseZ, TestHandOff,
+			bLastLayupBank ? 1 : 0, bTestScored ? TEXT("IN") : TEXT("OUT"));
+		UE_LOG(LogTaG, Display, TEXT("LAYUPTEST%s"), *Line);
+		TestSummary += Line;
+	}
+	if (TestDoneT >= 0.f && TestT - TestDoneT > 1.2f)
+	{
+		TestCase++;
+		TestT = -1.f;
+	}
+}
+
+void ATaGGameMode::TickOopTest(float Dt)
+{
+	// -TaGSnap=AlleyOop (2on2, the defenders stand aside): the player throws it up to a cutting bot (first person, then
+	// from the side), and a bot throws it up to the player cutting to the rim, who jumps when the prompt says so
+	SnapTimer += Dt;
+	ATaGGameState* S = GS();
+	ATaGPlayerController* PC = Cast<ATaGPlayerController>(GetWorld()->GetFirstPlayerController());
+	if (!S || !PC)
+	{
+		return;
+	}
+	if (S->Phase == ETaGPhase::Lobby && SnapTimer > 1.5f)
+	{
+		FString HeroKey;
+		if (FParse::Value(FCommandLine::Get(), TEXT("TaGHero="), HeroKey))
+		{
+			SetPlayerHero(PC, TaGHeroes::FromKey(HeroKey));
+		}
+		StartMatch();
+		return;
+	}
+	ATaGCharacter* Me = Cast<ATaGCharacter>(PC->GetPawn());
+	if (S->Phase != ETaGPhase::Playing || !Me || !Ball)
+	{
+		return;
+	}
+	ATaGCharacter* Mate = nullptr;
+	for (ATaGCharacter* P : GetTeamPlayers(Me->GetTeam()))
+	{
+		if (P != Me)
+		{
+			Mate = P;
+		}
+	}
+	ATaGBotController* MateAI = Mate ? Cast<ATaGBotController>(Mate->GetController()) : nullptr;
+	if (!Mate || !MateAI)
+	{
+		return;
+	}
+	if (TestStage == 0)
+	{
+		if (!bLive)
+		{
+			return;
+		}
+		for (ATaGBotController* B : Bots)
+		{
+			ATaGCharacter* P = B ? Cast<ATaGCharacter>(B->GetPawn()) : nullptr;
+			if (P && P->GetTeam() != Me->GetTeam())
+			{
+				B->SetScript(ATaGBotController::EScript::Idle);
+			}
+		}
+		MateAI->Skill = 1.f;
+		bForceMakes = true;
+		TestStage = 1;
+		TestCase = 0;
+		TestT = -1.f;
+	}
+	struct FCase { const TCHAR* Name; bool bMeReceives; bool bSide; };
+	static const FCase Cases[] = {
+		{ TEXT("Pass"), false, false },
+		{ TEXT("PassSide"), false, true },
+		{ TEXT("Receive"), true, false },
+	};
+	constexpr int32 NumCases = UE_ARRAY_COUNT(Cases);
+	if (TestCase >= NumCases)
+	{
+		UE_LOG(LogTaG, Display, TEXT("OOPTEST done%s"), *TestSummary);
+		FPlatformMisc::RequestExit(false);
+		TestCase = 1000;
+		return;
+	}
+	const FCase& C = Cases[TestCase];
+	ATaGCharacter* Cutter = C.bMeReceives ? Me : Mate;
+	ATaGCharacter* Thrower = C.bMeReceives ? Mate : Me;
+	if (TestT < 0.f)
+	{
+		const FVector Top(TaG::RimX + 680.f, 40.f, 0.f);
+		const FVector Wing(TaG::RimX + 470.f, C.bMeReceives ? 430.f : -430.f, 0.f);
+		Thrower->ClearForNewPossession(Top, Wing);
+		Cutter->ClearForNewPossession(Wing, TaG::RimCenter());
+		if (C.bMeReceives)
+		{
+			Ball->SetDead();
+		}
+		else
+		{
+			Ball->GiveTo(Me);
+		}
+		bLive = true;
+		bRestartAfterDead = false;
+		S->ShotClock = TaG::ShotClock;
+		TestT = 0.f;
+		TestT0 = -1.f;
+		TestShot = 0;
+		bTestScored = false;
+		bTestMissed = false;
+		bTestPressed = false;
+		bTestDriven = false;
+		TestLeapLate = 99.f;
+		TestCatchAt = -1.f;
+		TestCatchErr = -1.f;
+		TestCatchZ = 0.f;
+		TestCatchDt = 99.f;
+		TestDoneT = -1.f;
+		if (C.bSide)
+		{
+			Me->SetThirdPerson(true);
+			TestSideCamera(Wing, TaG::RimFloor());
+		}
+		else
+		{
+			Me->SetThirdPerson(false);
+			PC->bExternalView = false;
+			PC->SetViewTarget(Me);
+		}
+		return;
+	}
+	TestT += Dt;
+	const bool bLob = Ball->GetBallState() == ETaGBallState::Pass && Ball->GetPassStyle() == 4;
+	if (!C.bMeReceives)
+	{
+		// The bot cuts; the player throws it up as soon as the cut allows a lob, then watches the rim
+		if (!bTestDriven && TestT > 0.4f)
+		{
+			bTestDriven = true;
+			MateAI->TestCut();
+		}
+		if (!bTestPressed && TestT > 0.5f && FTaGRules::PlanAlleyOop(Me, Mate).bValid)
+		{
+			const FRotator Face = (Mate->GetActorLocation() - Me->GetEyeLocation()).Rotation();
+			PC->SetControlRotation(FRotator(0.f, Face.Yaw, 0.f));
+			Me->InputPressed(ETaGInput::PassSteal);
+			bTestPressed = true;
+		}
+		if (bTestPressed && TestT0 >= 0.f && !C.bSide)
+		{
+			const FRotator Want = (Mate->GetAlleyOopPoint() - Me->GetEyeLocation()).Rotation();
+			PC->SetControlRotation(FMath::RInterpTo(PC->GetControlRotation(), FRotator(FMath::Clamp(Want.Pitch, -30.f, 30.f), Want.Yaw, 0.f), Dt, 5.f));
+		}
+	}
+	else
+	{
+		// The player cuts from the wing; the bot at the top gets the ball once the cut is on and throws it up
+		const FVector Feet = Me->GetFeetLocation();
+		const FVector Goal = Me->HasAlleyOop() ? Me->GetAlleyOopPoint() : TaG::RimFloor();
+		const FVector ToGoal = FVector(Goal.X - Feet.X, Goal.Y - Feet.Y, 0.f).GetSafeNormal();
+		if (TestT > 0.3f && Me->GetCharacterMovement()->IsMovingOnGround() && TestCatchAt < 0.f)
+		{
+			// Running in, the player looks where the ball will be met
+			if (Me->HasAlleyOop() && Me->GetAction() != ETaGAction::Leap)
+			{
+				PC->SetControlRotation(FMath::RInterpTo(PC->GetControlRotation(), FRotator(10.f, ToGoal.Rotation().Yaw, 0.f), Dt, 8.f));
+			}
+			Me->SetTestStick(ToGoal);
+			if (!Me->IsForcedMove())
+			{
+				Me->AddMovementInput(ToGoal, 1.f);
+			}
+			if (!bTestDriven && TestT > 0.45f)
+			{
+				bTestDriven = true;
+				Me->InputPressed(ETaGInput::Primary); // a cut
+			}
+		}
+		if (TestT > 0.6f && !bTestPressed)
+		{
+			bTestPressed = true;
+			Ball->GiveTo(Mate);
+		}
+		// Jump when the prompt says now
+		if (Me->HasAlleyOop() && Me->GetAlleyOopJumpIn() <= 0.f && Me->GetCharacterMovement()->IsMovingOnGround())
+		{
+			Me->InputJump();
+		}
+	}
+	if (bLob && TestT0 < 0.f)
+	{
+		TestT0 = TestT;
+		const FVector CP = Cutter->GetAlleyOopPoint();
+		UE_LOG(LogTaG, Display, TEXT("OOPTEST %s thrown by %s to %s: flight=%.2fs catch=(%.0f,%.0f,%.0f) leap_vz=%.0f slam=%d"),
+			C.Name, Thrower->GetHeroDef().Key, Cutter->GetHeroDef().Key, Cutter->GetAlleyOopTime() - Cutter->ServerNow(), CP.X, CP.Y, CP.Z,
+			Cutter->GetCharacterMovement()->JumpZVelocity, Cutter->IsOopSlam() ? 1 : 0);
+	}
+	if (TestLeapLate > 90.f && Cutter->GetAction() == ETaGAction::Leap && Cutter->HasAlleyOop())
+	{
+		TestLeapLate = -Cutter->GetAlleyOopJumpIn();
+	}
+	// Screenshots: the lob up, the leap, the catch, the slam, through the net
+	if (TestT0 >= 0.f)
+	{
+		const bool bUI = C.bMeReceives;
+		if (TestShot == 0 && TestT > TestT0 + 0.25f)
+		{
+			TestShotAt(FString::Printf(TEXT("%s_0"), C.Name), bUI);
+			TestShot++;
+		}
+		else if (TestShot == 1 && Cutter->GetAction() == ETaGAction::Leap && Cutter->GetVelocity().Z < 120.f)
+		{
+			TestShotAt(FString::Printf(TEXT("%s_1"), C.Name), bUI);
+			TestShot++;
+		}
+		else if (TestShot == 2 && TestCatchAt >= 0.f)
+		{
+			TestShotAt(FString::Printf(TEXT("%s_2"), C.Name), bUI);
+			TestShot++;
+		}
+		else if (TestShot == 3 && TestCatchAt >= 0.f && TestT > TestCatchAt + 0.16f)
+		{
+			TestShotAt(FString::Printf(TEXT("%s_3"), C.Name), bUI);
+			TestShot++;
+		}
+		else if (TestShot == 4 && TestCatchAt >= 0.f && TestT > TestCatchAt + 0.4f)
+		{
+			TestShotAt(FString::Printf(TEXT("%s_4"), C.Name), bUI);
+			TestShot++;
+		}
+	}
+	const bool bOver = bTestScored || bTestMissed || (TestT0 >= 0.f && !bLob && TestCatchAt < 0.f && Ball->GetBallState() != ETaGBallState::Held)
+		|| TestT > 9.f;
+	if (TestDoneT < 0.f && bOver && (TestT0 >= 0.f || TestT > 9.f))
+	{
+		TestDoneT = TestT;
+		const FString Line = FString::Printf(TEXT(" | %s receiver=%s thrown=%d leap_late=%.2fs caught=%d catch_err=%.0fcm catch_z=%.0fcm catch_dt=%.2fs %s"),
+			C.Name, Cutter->GetHeroDef().Key, TestT0 >= 0.f ? 1 : 0, TestLeapLate > 90.f ? -1.f : TestLeapLate, TestCatchAt >= 0.f ? 1 : 0,
+			TestCatchErr, TestCatchZ, TestCatchDt, bTestScored ? TEXT("IN") : TEXT("NO"));
+		UE_LOG(LogTaG, Display, TEXT("OOPTEST%s"), *Line);
+		TestSummary += Line;
+	}
+	if (TestDoneT >= 0.f && TestT - TestDoneT > 1.2f)
+	{
+		TestCase++;
+		TestT = -1.f;
+	}
 }
 
 void ATaGGameMode::TickGait(float Dt)
@@ -1899,6 +2514,16 @@ void ATaGGameMode::TickSnap(float Dt)
 	if (SnapMode == TEXT("Gait"))
 	{
 		TickGait(Dt);
+		return;
+	}
+	if (SnapMode == TEXT("Layup"))
+	{
+		TickLayupTest(Dt);
+		return;
+	}
+	if (SnapMode == TEXT("AlleyOop"))
+	{
+		TickOopTest(Dt);
 		return;
 	}
 	SnapTimer += Dt;
