@@ -144,6 +144,10 @@ protected:
 	UPROPERTY() TArray<TObjectPtr<ATaGCharacter>> GaitChars;
 	UPROPERTY() TObjectPtr<AActor> GaitCam;
 	float GaitErr[4] = { 0.f, 0.f, 0.f, 0.f };
+	float GaitBobMin[4] = { 1e9f, 1e9f, 1e9f, 1e9f };
+	float GaitBobMax[4] = { -1e9f, -1e9f, -1e9f, -1e9f };
+	float GaitStartT[4] = { -1.f, -1.f, -1.f, -1.f };
+	float GaitStopT[4] = { -1.f, -1.f, -1.f, -1.f };
 	int32 GaitSteps[4] = { 0, 0, 0, 0 };
 	int32 GaitShot = 0;
 	float GaitHitchT = -10.f;

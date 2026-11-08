@@ -14,7 +14,7 @@ The game project (`game/BasketTaG.uproject`) is never opened, built or run by th
 | Folder | Contents |
 |---|---|
 | `blender/` | `sdf.py` (signed-distance modelling + surface nets), `sdfbake.py` (SDF → decimated mesh, outline hull, width fit), `heroes.py` (rig, feature library, build), `hero_designs.py` (one recipe per hero), `tagmesh.py` (mesh toolkit, `Part`, slot order), `palette.py` (colours per mesh and slot), `ball.py`, `court.py`, `city.py`, `sky.py`, `build_assets.py` (builds everything and exports FBX), `render_previews.py`, `scene_util.py` |
-| `audio/` | `synth_sfx.py` (27 sound effects, 16-bit mono 44.1 kHz) |
+| `audio/` | `synth_sfx.py` (32 sound effects incl. three footfalls and two sneaker squeaks, 16-bit mono 44.1 kHz), `synth_music.py` (two music loops) |
 | `import/` | `import_all.py` (runs in Unreal: MPC + materials, FBX import, material instances, sockets, portraits, sounds), `verify.py` (runs in Unreal: checks and the manifest), `copy_to_game.py` |
 | `assetproj/` | `TaGAssets.uproject`, a content-only helper project (PythonScriptPlugin + EditorScriptingUtilities, no C++) |
 | `art/` | `roster.json` (the 30 heroes), `manifest.json`, `verify_report.txt`, `previews/`, `CREDITS.md` |

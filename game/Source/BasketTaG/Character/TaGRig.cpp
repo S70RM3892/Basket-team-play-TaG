@@ -515,6 +515,7 @@ void UTaGRigComponent::UpdateFeet(float Dt, const FVector& Vel, bool bOnFloor, f
 			F.PlantPos = FVector(F.Current.X, F.Current.Y, GroundZ);
 			F.PlantYaw = F.CurYaw;
 			StepCount++;
+			LastStepSide = i;
 		}
 		else if (!bStance && F.bPlanted)
 		{
@@ -631,9 +632,18 @@ void UTaGRigComponent::Animate(const FTaGPoseInput& In)
 	if (Spd > 15.f)
 	{
 		const FVector L = RigXf.InverseTransformVectorNoScale(Vel / Spd);
-		const FVector2D Want(L.X, L.Y);
-		const FVector2D Blend = MoveDirLocal + (Want - MoveDirLocal) * FMath::Clamp(Dt * 12.f, 0.f, 1.f);
-		MoveDirLocal = Blend.IsNearlyZero() ? Want : Blend.GetSafeNormal();
+		const FVector2D Want = FVector2D(L.X, L.Y).GetSafeNormal();
+		if (FVector2D::DotProduct(Want, MoveDirLocal) < -0.3f && FMath::Abs(Want.Y) > 0.7f && FMath::Abs(MoveDirLocal.Y) > 0.7f)
+		{
+			// A sideways reversal flips at once: blending would pass through forward for a few frames and turn the
+			// level defensive slide into a bouncing run. Forward/back reversals keep the blend (their feet slip less).
+			MoveDirLocal = Want;
+		}
+		else
+		{
+			const FVector2D Blend = MoveDirLocal + (Want - MoveDirLocal) * FMath::Clamp(Dt * 12.f, 0.f, 1.f);
+			MoveDirLocal = Blend.IsNearlyZero() ? Want : Blend.GetSafeNormal();
+		}
 	}
 	const float FwdW = FMath::Max(MoveDirLocal.X, 0.f);
 	const float BackW = FMath::Max(-MoveDirLocal.X, 0.f);
@@ -824,6 +834,35 @@ void UTaGRigComponent::Animate(const FTaGPoseInput& In)
 	}
 	LegIKWeight = FMath::FInterpConstantTo(LegIKWeight, bLegIK ? 1.f : 0.f, Dt, 7.f);
 
+	// ---------------- Body motion locked to the steps
+	// Walking vaults over a stiff stance leg (inverted pendulum): the pelvis is lowest in double support and highest at
+	// mid-stance (Saunders, Inman & Eberhart 1953; Cavagna, Heglund & Taylor 1977). Running bounces on a compressing
+	// leg (spring-mass): lowest at mid-stance, highest in flight (Blickhan 1989; McMahon & Cheng 1990). People change
+	// gait near a Froude number v^2/(gL) of 0.5 (Alexander 1989). Walking moves the pelvis about 4-5 cm up and down and
+	// running about 6-10 cm; the body sways over the stance foot, the pelvis turns about 4 degrees with the leading leg
+	// and drops on the swing side (Perry & Burnfield 2010). The speed also pulses within each step instead of gliding.
+	const float Froude = Spd * Spd / (980.f * LegLen);
+	const float RunGait = FMath::SmoothStep(0.38f, 0.62f, Froude);
+	const float Pace = FMath::Clamp(Froude / 0.3f, 0.f, 1.f);   // a stroll barely bobs
+	const float TwoPi = 2.f * UE_PI;
+	const float StepS = FMath::Frac(2.f * GaitPhase);           // 0 at each touchdown
+	const float WalkLow = Duty - 0.5f;                           // middle of the double support, in steps
+	const float RunLow = Duty;                                   // mid-stance, in steps
+	const float WalkDip = 0.5f + 0.5f * FMath::Cos(TwoPi * (StepS - WalkLow));
+	const float RunDip = 0.5f + 0.5f * FMath::Cos(TwoPi * (StepS - RunLow));
+	GaitWeight = FMath::FInterpTo(GaitWeight, In.bOnFloor ? Moving * LegIKWeight : 0.f, Dt, 8.f);
+	const float Fore = 1.f - SideMix;                            // sway, surge, turn and tilt belong to forward/back travel
+	const float SideK = FMath::SmoothStep(0.6f, 0.95f, SideMix); // a defensive slide keeps the head level
+	const float BobZ = -LegLen * GaitWeight * (1.f - 0.6f * SideK) * FMath::Lerp(0.015f + 0.05f * Pace * WalkDip, 0.035f + 0.085f * RunDip, RunGait);
+	const float StanceL = FMath::Cos(TwoPi * (GaitPhase - 0.5f * Duty)); // +1 at mid-stance on the left foot, -1 on the right
+	const float SwayY = -LegLen * GaitWeight * Fore * FMath::Lerp(0.022f, 0.01f, RunGait) * StanceL;
+	// Walking is fastest in double support, running slowest at mid-stance: a small surge along the travel
+	const float Surge = LegLen * GaitWeight * Fore * FMath::Lerp(0.012f * Pace * FMath::Sin(TwoPi * (StepS - WalkLow)),
+		-0.008f * FMath::Sin(TwoPi * (StepS - RunLow)), RunGait);
+	const FVector2D PelvisXY = MoveDirLocal * Surge + FVector2D(0.f, SwayY);
+	const float PelvisYaw = 2.f * (FxL - FxR) * GaitWeight * Fore;                          // up to 4 degrees each way
+	const float PelvisRoll = FMath::Lerp(4.f, 3.f, RunGait) * GaitWeight * Fore * StanceL;  // the swing side drops
+
 	const float R = FMath::Clamp(18.f * Dt, 0.f, 1.f);
 	CurHipsY = FMath::Lerp(CurHipsY, HipsY, R);
 	CurLean = LerpAngle(CurLean, Lean, R);
@@ -842,7 +881,8 @@ void UTaGRigComponent::Animate(const FTaGPoseInput& In)
 	// ---------------- Upper body
 	Joints[Pivot]->SetRelativeRotation(FRotator(Deg(CurTilt), Deg(CurSpin), 0.f));
 	const float Twist = -0.08f * (FxL - FxR) * Mix(1.f, 0.8f, 0.2f); // shoulders turn against the stride
-	Joints[Spine]->SetRelativeRotation(FRotator(-Deg(CurLean), Deg(Twist), Deg(CurSideLean)));
+	// The spine takes back most of the pelvic tilt so the shoulders stay level
+	Joints[Spine]->SetRelativeRotation(FRotator(-Deg(CurLean), Deg(Twist), Deg(CurSideLean) - 0.85f * PelvisRoll));
 	if (Joints[Neck])
 	{
 		// The head stays nearly level while the body leans
@@ -857,8 +897,9 @@ void UTaGRigComponent::Animate(const FTaGPoseInput& In)
 
 	// ---------------- Pelvis height: the pose, lowered so the legs reach the planted feet, squashed on landing
 	LandSquash = FMath::Max(0.f, LandSquash - Dt * 5.f);
-	const float PoseZ = PelvisRestZ + (CurHipsY - 0.95f) * 100.f * HeightScale - 0.08f * LegLen * LandSquash;
-	Joints[Hips]->SetRelativeLocation(FVector(0.f, 0.f, PoseZ - HipDrop * LegIKWeight));
+	const float PoseZ = PelvisRestZ + (CurHipsY - 0.95f) * 100.f * HeightScale - 0.08f * LegLen * LandSquash + BobZ;
+	const FRotator PelvisRot(0.f, PelvisYaw, PelvisRoll);
+	Joints[Hips]->SetRelativeLocationAndRotation(FVector(PelvisXY.X, PelvisXY.Y, PoseZ - HipDrop * LegIKWeight), PelvisRot);
 	float Need = 0.f;
 	if (bFeetValid && LegIKWeight > 0.f)
 	{
@@ -875,7 +916,16 @@ void UTaGRigComponent::Animate(const FTaGPoseInput& In)
 	}
 	HipDrop = Need > HipDrop ? FMath::FInterpTo(HipDrop, Need, Dt, 25.f) : FMath::FInterpTo(HipDrop, Need, Dt, 10.f);
 	HipDrop = FMath::Clamp(HipDrop, 0.f, 0.3f * LegLen);
-	Joints[Hips]->SetRelativeLocation(FVector(0.f, 0.f, PoseZ - HipDrop * LegIKWeight));
+	Joints[Hips]->SetRelativeLocationAndRotation(FVector(PelvisXY.X, PelvisXY.Y, PoseZ - HipDrop * LegIKWeight), PelvisRot);
+
+	// ---------------- What the eyes do (first-person camera): the step-locked pelvis motion, the landing dip, half of a
+	// crouch, and a slow breath when standing
+	const float Crouch = bNormal ? FMath::Min((CurHipsY - 0.95f) * 100.f * HeightScale, 0.f) : 0.f;
+	// The reach dip (HipDrop) stays out: it bends the legs to keep stretched feet planted, the head does not follow it
+	const float EyeZ = BobZ - 0.06f * LegLen * LandSquash + 0.5f * Crouch
+		+ 0.25f * HeightScale * FMath::Sin(IdleT * 1.7f) * (1.f - Moving);
+	HeadMotion = FVector(PelvisXY.X, PelvisXY.Y, FMath::Clamp(EyeZ, -14.f * HeightScale, 1.f * HeightScale));
+	DbgBob = BobZ; DbgCrouch = Crouch; DbgSide = SideMix; DbgRun = RunGait; DbgFroude = Froude; DbgSpd = Spd; DbgLeg = LegLen;
 
 	// ---------------- Legs
 	SolveLeg(0, FRotator(Deg(Cur[6]), 0.f, 0.f).Quaternion(), FRotator(Deg(CurKnee[0]), 0.f, 0.f).Quaternion());
@@ -894,6 +944,12 @@ float UTaGRigComponent::GetFootError(int32 Side) const
 		return 0.f;
 	}
 	return FVector::Dist(End->GetComponentLocation(), ChainEndTarget(Side));
+}
+
+FString UTaGRigComponent::DebugHead() const
+{
+	return FString::Printf(TEXT("eye=%.1f bob=%.1f crouch=%.1f squash=%.2f gw=%.2f side=%.2f run=%.2f fr=%.2f spd=%.0f leg=%.0f"),
+		HeadMotion.Z, DbgBob, DbgCrouch, LandSquash, GaitWeight, DbgSide, DbgRun, DbgFroude, DbgSpd, DbgLeg);
 }
 
 FString UTaGRigComponent::DebugFeet() const

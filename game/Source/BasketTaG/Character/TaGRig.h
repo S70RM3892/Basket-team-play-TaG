@@ -60,6 +60,16 @@ public:
 	bool IsFootPlanted(int32 Side) const { return Feet[Side & 1].bPlanted; }
 	/** Counts touchdowns; effects compare it with their last value to spawn dust at the new footprint. */
 	int32 GetStepCount() const { return StepCount; }
+	/** Which foot made the last touchdown (0 left, 1 right): footstep sounds and dust go there. */
+	int32 GetLastStepSide() const { return LastStepSide; }
+	/**
+	 * How the eyes move with the steps, in rig space (cm; X forward, Y right, Z up): the step-locked bob, sway and surge
+	 * of the pelvis, plus the landing dip and part of a crouch. The first-person camera follows its position only: the
+	 * head translates with the body while its rotation stays steady to hold the gaze (Pozzo, Berthoz & Lefort 1990).
+	 */
+	FVector GetHeadMotion() const { return HeadMotion; }
+	/** Test: the parts of the head motion (step bob, crouch, landing dip) and the gait state. */
+	FString DebugHead() const;
 	float GetPelvisRestHeight() const { return PelvisRestZ; }
 	bool UsesArt() const { return bArt; }
 	/** Test: how far the posed sole ended up from where the gait wanted it (IK reach), cm. */
@@ -112,6 +122,10 @@ protected:
 	float LandSquash = 0.f;
 	float IdleT = 0.f;
 	int32 StepCount = 0;
+	int32 LastStepSide = 0;
+	float GaitWeight = 0.f;     // 1 while the legs walk or run on the IK; fades out when standing or airborne
+	FVector HeadMotion = FVector::ZeroVector;
+	float DbgBob = 0.f, DbgCrouch = 0.f, DbgSide = 0.f, DbgRun = 0.f, DbgFroude = 0.f, DbgSpd = 0.f, DbgLeg = 0.f;
 	FVector2D MoveDirLocal = FVector2D(1.f, 0.f);
 	float ThighLen = 45.f;
 	float ShinLen = 45.f;

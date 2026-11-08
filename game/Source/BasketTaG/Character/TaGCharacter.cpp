@@ -123,7 +123,11 @@ ATaGCharacter::ATaGCharacter(const FObjectInitializer& ObjectInitializer)
 	Move->JumpZVelocity = TaG::JumpVelocity;
 	Move->GravityScale = 1.f;
 	Move->AirControl = 0.25f;
-	Move->GroundFriction = 8.f;
+	Move->GroundFriction = 8.f;      // turning: the velocity swings to the stick within about 0.15 s
+	// Stopping uses its own, much lower friction: from a run the body needs about a step to stop instead of halting
+	// at once (x BrakingFrictionFactor 2 = 1.2 per second, with GetDesiredBraking on top).
+	Move->bUseSeparateBrakingFriction = true;
+	Move->BrakingFriction = 0.6f;
 	Move->bOrientRotationToMovement = false;
 	Move->NavAgentProps.bCanCrouch = false;
 
@@ -257,6 +261,7 @@ void ATaGCharacter::ApplyHeroBody()
 		}
 	}
 	CameraBoom->SetRelativeLocation(FVector(0.f, 0.f, H.EyeHeight - H.CapsuleHalfHeight));
+	BoomBaseZ = H.EyeHeight - H.CapsuleHalfHeight;
 	Rig->SetRelativeLocation(FVector(0.f, 0.f, -H.CapsuleHalfHeight));
 	GetCharacterMovement()->JumpZVelocity = TaG::JumpVelocity * H.JumpMul;
 	ContestField->SetRelativeLocation(FVector(90.f, 0.f, H.EyeHeight * 0.75f - H.CapsuleHalfHeight));
@@ -663,16 +668,21 @@ float ATaGCharacter::GetDesiredAcceleration() const
 		return 8000.f;
 	}
 	const FTaGHeroDef& H = GetHeroDef();
-	return TaG::Accel * H.AccelMul * (IsInZone() ? 1.2f : 1.f);
+	const float Base = TaG::Accel * H.AccelMul * (IsInZone() ? 1.2f : 1.f);
+	// Free running: this is the push from a standstill; UTaGMovementComponent::CalcVelocity fades it with the speed
+	// already made in the push direction (a force-velocity line, Samozino et al. 2016)
+	return Action == ETaGAction::None ? Base * 1.8f : Base;
 }
 
 float ATaGCharacter::GetDesiredBraking() const
 {
 	if (Action != ETaGAction::None)
 	{
-		return 2400.f;
+		return 4800.f; // startups and recoveries plant the feet
 	}
-	return TaG::Accel * GetHeroDef().AccelMul;
+	// Letting go of the stick at full speed stops the body in about 0.3 s (a step) instead of at once: team-sport players
+	// brake at roughly 5-10 m/s2 at most (Harper, Carling & Kiely 2019), a game can afford a little more.
+	return 1300.f * GetHeroDef().AccelMul;
 }
 
 FVector ATaGCharacter::WishDir() const
@@ -2046,26 +2056,67 @@ void ATaGCharacter::TickVisuals(float Dt)
 	}
 	In.bBraced = IsInvulnerable() || IsRootedWall();
 	In.Dt = Dt;
+	// The drawn body turns over a few frames when the facing jumps (bots face a pass target at once); the capsule and
+	// the aim keep the exact facing. The planted feet stay put, so the body steps around. First person stays exact.
+	{
+		const float ActorYaw = GetActorRotation().Yaw;
+		if (!bVisYawInit)
+		{
+			VisYaw = ActorYaw;
+			bVisYawInit = true;
+		}
+		const bool bExact = IsLocallyControlled() && IsPlayerControlled() && !bThirdPerson;
+		const float Turn = FMath::FindDeltaAngleDegrees(VisYaw, ActorYaw);
+		VisYaw = bExact ? ActorYaw : FRotator::NormalizeAxis(VisYaw + FMath::Clamp(Turn * FMath::Min(1.f, Dt * 14.f), -900.f * Dt, 900.f * Dt));
+		Rig->SetRelativeRotation(FRotator(0.f, FMath::FindDeltaAngleDegrees(ActorYaw, VisYaw), 0.f));
+	}
 	Rig->Animate(In);
 	Rig->SetTeamColor(TeamC);
 
-	// Footfalls kick up dust when running; landings make a bigger puff
+	// Every footfall is heard (CONCEPT.md: opponents are tracked by their footsteps), heavier heroes deeper and louder;
+	// running steps kick up dust, and landings thud
 	const int32 Steps = Rig->GetStepCount();
-	if (Steps != LastStepCount)
+	const bool bLanded = bOnFloor && !bWasOnFloorVis;
+	bWasOnFloorVis = bOnFloor;
+	const float Weight = FMath::Clamp(GetHeroDef().Weight, 0.5f, 3.f);
+	const bool bMyView = IsLocallyControlled() && IsPlayerControlled() && !bThirdPerson;
+	if (Steps != LastStepCount || bLanded)
 	{
 		const float Run = FMath::Clamp((In.Speed - 250.f) / 450.f, 0.f, 1.f);
-		const float Weight = FMath::Clamp(GetHeroDef().Weight, 0.5f, 3.f);
-		if (Run > 0.f || Steps - LastStepCount > 1)
+		const FVector At = Rig->GetFootWorld(Rig->GetLastStepSide());
+		if (Run > 0.f || bLanded)
 		{
-			for (int32 Side = 0; Side < 2; ++Side)
-			{
-				if (Rig->IsFootPlanted(Side))
-				{
-					TaGFx::Dust(this, Rig->GetFootWorld(Side), (0.5f + Run) * FMath::Sqrt(Weight) * 0.6f);
-				}
-			}
+			TaGFx::Dust(this, At, (bLanded ? 1.3f : 0.5f + Run) * FMath::Sqrt(Weight) * 0.6f);
 		}
+		static const FName FootNames[3] = { FName(TEXT("Foot1")), FName(TEXT("Foot2")), FName(TEXT("Foot3")) };
+		const float Heavy = FMath::Clamp((Weight - 0.6f) / 2.f, 0.f, 1.f);
+		float Loud = FMath::Clamp(0.14f + In.Speed / 750.f, 0.14f, 0.75f) * FMath::Lerp(0.85f, 1.3f, Heavy);
+		float Pitch = FMath::Clamp(1.12f - 0.12f * (Weight - 1.f), 0.75f, 1.2f) * FMath::FRandRange(0.94f, 1.06f);
+		if (bLanded)
+		{
+			Loud = FMath::Min(1.f, Loud * 1.5f);
+			Pitch *= 0.85f;
+		}
+		TaGAudio::PlayAt(this, FootNames[FootSfx++ % 3], At, Loud * (bMyView ? 0.55f : 1.f), Pitch);
 		LastStepCount = Steps;
+	}
+	// Sneakers squeak on hard cuts and sudden stops at speed (not on gentle curves or walking)
+	SqueakCD -= Dt;
+	{
+		const FVector V2(V.X, V.Y, 0.f);
+		const float Sp = V2.Size();
+		const float PrevSp = PrevVisVel.Size();
+		const float TurnRate = (Sp > 1.f && PrevSp > 1.f && Dt > 0.f)
+			? FMath::RadiansToDegrees(FMath::Acos(FMath::Clamp(FVector::DotProduct(V2 / Sp, PrevVisVel / PrevSp), -1.f, 1.f))) / Dt : 0.f;
+		const float Decel = Dt > 0.f ? (PrevSp - Sp) / Dt : 0.f;
+		if (bOnFloor && SqueakCD <= 0.f && ((PrevSp > 260.f && Sp > 150.f && TurnRate > 300.f) || (PrevSp > 300.f && Decel > 1600.f)))
+		{
+			const int32 Side = Rig->IsFootPlanted(0) ? 0 : 1;
+			TaGAudio::PlayAt(this, FMath::RandBool() ? FName(TEXT("Squeak1")) : FName(TEXT("Squeak2")), Rig->GetFootWorld(Side),
+				0.45f * (bMyView ? 0.6f : 1.f), FMath::FRandRange(0.92f, 1.1f));
+			SqueakCD = 0.5f;
+		}
+		PrevVisVel = V2;
 	}
 	// The zone: gold motes rising around the body
 	if (IsInZone())
@@ -2133,8 +2184,13 @@ void ATaGCharacter::TickVisuals(float Dt)
 		float TargetZ = H.EyeHeight - H.CapsuleHalfHeight;
 		if (Action == ETaGAction::Down) { TargetZ -= H.EyeHeight * 0.6f; }
 		else if (Action == ETaGAction::TackleStart) { TargetZ -= 25.f; }
-		const FVector BoomLoc = CameraBoom->GetRelativeLocation();
-		CameraBoom->SetRelativeLocation(FVector(0.f, 0.f, FMath::FInterpTo(BoomLoc.Z, TargetZ, Dt, 12.f)));
+		// The eyes ride on the steps: the head moves up and down, sways and surges with the body (rig head motion,
+		// scaled by the "視点の揺れ" setting). Only in first person; the third-person camera stays steady.
+		BoomBaseZ = FMath::FInterpTo(BoomBaseZ, TargetZ, Dt, 12.f);
+		const ATaGPlayerController* BobPC = Cast<ATaGPlayerController>(GetController());
+		const FVector Head = bThirdPerson ? FVector::ZeroVector : Rig->GetHeadMotion() * (BobPC ? BobPC->ViewBob : 1.f);
+		CameraBoom->SetRelativeLocation(FVector(Head.X, Head.Y, BoomBaseZ + Head.Z));
+		ViewBobWorld = GetActorRotation().RotateVector(Head);
 		CameraBoom->TargetArmLength = FMath::FInterpTo(CameraBoom->TargetArmLength, bThirdPerson ? 330.f * FMath::Max(1.f, S) : 0.f, Dt, 10.f);
 		CameraBoom->SocketOffset = bThirdPerson ? FVector(0.f, 60.f, 50.f) : FVector::ZeroVector;
 		const ATaGPlayerController* MyPC = Cast<ATaGPlayerController>(GetController());

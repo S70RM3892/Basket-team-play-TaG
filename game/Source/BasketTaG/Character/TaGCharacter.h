@@ -231,6 +231,8 @@ public:
 
 	// ------------------------------------------------ Camera
 	void SetThirdPerson(bool bTPS);
+	/** The first-person camera's step motion in world space (things held in view move with it). */
+	FVector GetViewBobOffset() const { return ViewBobWorld; }
 	bool IsThirdPerson() const { return bThirdPerson; }
 	UTaGRigComponent* GetRig() const { return Rig; }
 	/** Local camera shake (hits, read losses); decays on its own. */
@@ -339,6 +341,14 @@ protected:
 	float KickAmp = 0.f;
 	float KickT = 0.f;
 	int32 LastStepCount = 0;
+	float BoomBaseZ = 81.f;               // first-person eye height above the capsule centre, before the step bob
+	FVector PrevVisVel = FVector::ZeroVector;
+	float SqueakCD = 0.f;
+	int32 FootSfx = 0;
+	bool bWasOnFloorVis = true;
+	float VisYaw = 0.f;                   // where the drawn body faces; turns toward the actor's yaw over a few frames
+	bool bVisYawInit = false;
+	FVector ViewBobWorld = FVector::ZeroVector; // what the first-person camera moves with the steps, world space
 	float AmbientT = 0.f;
 	float ZoneFxT = 0.f;
 	/** Particles that make each hero recognisable at a glance (sparks, fireflies, frost, steam...). */

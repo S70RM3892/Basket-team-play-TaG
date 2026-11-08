@@ -94,6 +94,8 @@ public:
 	UPROPERTY(Config) bool bInvertStickY = true;
 	UPROPERTY(Config) bool bInvertMouseY = false;
 	UPROPERTY(Config) float FieldOfView = 95.f;
+	/** First-person head motion with the steps (0 = off, 1 = as the body moves, 1.5 = stronger). */
+	UPROPERTY(Config) float ViewBob = 1.f;
 	UPROPERTY(Config) float MasterVolume = 1.f;
 	UPROPERTY(Config) float MusicVolume = 0.6f;
 	UPROPERTY(Config) bool bVibration = true;

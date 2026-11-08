@@ -1822,7 +1822,7 @@ void ATaGGameMode::TickGait(float Dt)
 		case 2: // defensive side shuffle, facing +X
 			Move = FVector(0.f, FMath::Fmod(T, 2.4f) < 1.2f ? 1.f : -1.f, 0.f);
 			break;
-		default: // diagonal: forward-left, then back-right
+		default: // walks (a light stick) diagonally: forward-left, then back-right
 			Move = FMath::Fmod(T, 3.f) < 1.5f ? FVector(0.7f, -0.7f, 0.f) : FVector(-0.7f, 0.7f, 0.f);
 			break;
 		}
@@ -1830,8 +1830,25 @@ void ATaGGameMode::TickGait(float Dt)
 		{
 			Move = FVector::ZeroVector; // stop: the feet should settle under the hips
 		}
+		const float StickIn = i == 3 ? 0.45f : 1.f;
+		// An AI controller copies the pawn's facing back into its control rotation every tick, so a plain
+		// SetControlRotation does nothing: give it a focal point in the wanted direction instead
+		if (AAIController* AIC = Cast<AAIController>(Ctrl))
+		{
+			AIC->SetFocalPoint(C->GetActorLocation() + FRotator(0.f, Yaw, 0.f).Vector() * 10000.f);
+		}
 		Ctrl->SetControlRotation(FRotator(0.f, Yaw, 0.f));
-		C->AddMovementInput(Move, 1.f);
+		C->AddMovementInput(Move, StickIn);
+		// Start: time to 90 % of the speed the stick asks for; stop: time from letting go to standing
+		const float Sp = C->GetVelocity().Size2D();
+		if (GaitStartT[i] < 0.f && T > 0.f && Sp >= 0.9f * StickIn * C->GetDesiredMaxSpeed())
+		{
+			GaitStartT[i] = T;
+		}
+		if (GaitStopT[i] < 0.f && T > 7.f && Sp < 15.f)
+		{
+			GaitStopT[i] = T - 7.f;
+		}
 		if (UTaGRigComponent* Rig = C->GetRig())
 		{
 			// Measure steady walking only: frames right after a hitch (screenshots) are skipped.
@@ -1843,6 +1860,16 @@ void ATaGGameMode::TickGait(float Dt)
 					UE_LOG(LogTaG, Display, TEXT("GAITTEST walker=%d t=%.2f err=%.1f %s"), i, T, E, *Rig->DebugFeet());
 				}
 				GaitErr[i] = FMath::Max(GaitErr[i], E);
+				if (T > 2.f && T < 7.f)
+				{
+					if (FMath::Frac(T * 4.f) < Dt * 4.f)
+					{
+						UE_LOG(LogTaG, Display, TEXT("GAITHEAD walker=%d t=%.2f %s"), i, T, *Rig->DebugHead());
+					}
+					const float Hz = Rig->GetHeadMotion().Z;
+					GaitBobMin[i] = FMath::Min(GaitBobMin[i], Hz);
+					GaitBobMax[i] = FMath::Max(GaitBobMax[i], Hz);
+				}
 			}
 			GaitSteps[i] = Rig->GetStepCount();
 		}
@@ -1859,8 +1886,8 @@ void ATaGGameMode::TickGait(float Dt)
 	{
 		for (int32 i = 0; i < 4; ++i)
 		{
-			UE_LOG(LogTaG, Display, TEXT("GAITTEST walker=%d hero=%s steps=%d max_foot_error=%.2fcm"), i,
-				TaGHeroes::Get(Heroes[i]).Key, GaitSteps[i], GaitErr[i]);
+			UE_LOG(LogTaG, Display, TEXT("GAITTEST walker=%d hero=%s steps=%d max_foot_error=%.2fcm head_bob=%.1fcm start90=%.2fs stop=%.2fs"), i,
+				TaGHeroes::Get(Heroes[i]).Key, GaitSteps[i], GaitErr[i], GaitBobMax[i] - GaitBobMin[i], GaitStartT[i], GaitStopT[i]);
 		}
 		FPlatformMisc::RequestExit(false);
 	}

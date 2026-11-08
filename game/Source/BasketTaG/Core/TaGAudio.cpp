@@ -76,7 +76,7 @@ namespace
 
 namespace TaGAudio
 {
-	void PlayAt(const UObject* WorldContext, FName Sound, const FVector& Location, float Volume)
+	void PlayAt(const UObject* WorldContext, FName Sound, const FVector& Location, float Volume, float Pitch)
 	{
 		if (!CanPlay(WorldContext))
 		{
@@ -84,7 +84,7 @@ namespace TaGAudio
 		}
 		if (USoundBase* S = Find(Sound))
 		{
-			UGameplayStatics::PlaySoundAtLocation(WorldContext, S, Location, FRotator::ZeroRotator, Volume, 1.f, 0.f, Attenuation());
+			UGameplayStatics::PlaySoundAtLocation(WorldContext, S, Location, FRotator::ZeroRotator, Volume, Pitch, 0.f, Attenuation());
 		}
 	}
 

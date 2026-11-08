@@ -14,6 +14,7 @@ import_all.py - runs INSIDE Unreal (content-only helper project tools/assetproj/
    adds missing ones from assets.json and normalises rotation/scale
 5. tools/build/wav/*.wav -> /Game/Audio/SFX/<Name> (SoundWave), AmbientLoop looping (skip with -nosounds)
    (-materialsonly: steps 1 and 3 only, for material fixes: -script="C:/TaG/tools/import/import_all.py -materialsonly")
+   (-soundsonly: step 5 only, for new or changed sound effects)
 6. tools/build/portraits/T_Portrait_<Key>.png -> /Game/Art/UI (UI textures, no mips)
 """
 import json
@@ -551,7 +552,8 @@ def import_sounds():
     if not os.path.isdir(WAV_DIR):
         log("no WAV directory", WAV_DIR)
         return []
-    wavs = sorted(f for f in os.listdir(WAV_DIR) if f.lower().endswith(".wav"))
+    # MusicMenu / MusicMatch also land in build/wav (tools/audio/synth_music.py) but go to /Game/Audio/Music
+    wavs = sorted(f for f in os.listdir(WAV_DIR) if f.lower().endswith(".wav") and not f.startswith("Music"))
     tasks = []
     for f in wavs:
         t = unreal.AssetImportTask()
@@ -588,6 +590,13 @@ def main():
     for a in sys.argv:
         if a.startswith("-only="):
             only = a.split("=", 1)[1].split(",")
+    if "-soundsonly" in sys.argv:
+        import_sounds()
+        eal.save_directory("/Game/Audio", only_if_is_dirty=False, recursive=True)
+        log("sounds only: done in %.1fs" % (time.time() - t0))
+        with open(LOG_PATH, "w", encoding="utf-8") as f:
+            f.write("\n".join(_log) + "\n")
+        return
     mpc = make_mpc()
     base = {"M_TaGBase": make_toon_material("M_TaGBase", "opaque", mpc),
             "M_TaGTranslucent": make_toon_material("M_TaGTranslucent", "translucent", mpc),

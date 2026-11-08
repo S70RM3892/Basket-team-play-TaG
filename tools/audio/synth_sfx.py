@@ -352,6 +352,29 @@ def step():
     return mix(d, thud, scuff * 0.35)
 
 
+def foot(seed, f0):
+    """A footfall: rubber sole on a sport court. A soft low thud from the heel, a short sole tick, a faint scuff."""
+    d = 0.14
+    thud = osc(sweep(f0, f0 * 0.6, d), d) * expdec(d, 0.022)
+    body = bandpass_fft(noise(d, seed), 250, 1400) * expdec(d, 0.02)
+    tick = bandpass_fft(noise(d, seed + 1), 2500, 7000) * expdec(d, 0.005)
+    scuff = bandpass_fft(noise(d, seed + 2), 900, 3000) * ar(d, 0.012, 0.03)
+    # the body and the tick carry it on small (phone) speakers, which barely play the low thud
+    return mix(d, thud * 0.7, body * 1.6, tick * 0.6, scuff * 0.35)
+
+
+def squeak(seed, f0, f1, d):
+    """A sneaker squeak on a hard court (a hard cut or stop): the sole sticks and slips, a squeal with harmonics."""
+    t = t_axis(d)
+    r = rng(seed)
+    f = glide(f0, f1, d * 0.45, d) * (1 + 0.02 * np.sin(2 * np.pi * 23 * t + r.uniform(0, 6.28)))
+    tone = osc(f, d) + 0.45 * osc(f * 2, d) + 0.18 * osc(f * 3, d) + 0.06 * osc(f * 4.02, d)
+    chatter = 0.7 + 0.3 * np.sin(2 * np.pi * 62 * t)
+    env = np.clip(t / 0.012, 0, 1) * np.clip((d - t) / 0.05, 0, 1) * (0.6 + 0.4 * np.exp(-t / 0.08))
+    hiss = bandpass_fft(noise(d, seed), 3000, 9000) * env * 0.08
+    return tone * chatter * env + hiss
+
+
 def down():
     d = 1.0
     t = t_axis(d)
@@ -463,6 +486,9 @@ SOUNDS = [
     ("Drive", drive), ("Dodge", dodge), ("ContestHum", contest_hum), ("TackleCue", tackle_cue), ("Step", step),
     ("Down", down), ("Revive", revive), ("ArtCue", art_cue), ("UIMove", ui_move), ("UIConfirm", ui_confirm),
     ("CityPowerUp", city_power_up), ("AmbientLoop", ambient_loop),
+    # footfalls (three takes so steps do not repeat) and sneaker squeaks for hard cuts and stops
+    ("Foot1", lambda: foot(51, 105)), ("Foot2", lambda: foot(53, 95)), ("Foot3", lambda: foot(55, 118)),
+    ("Squeak1", lambda: squeak(41, 1500, 2300, 0.2)), ("Squeak2", lambda: squeak(43, 1900, 1550, 0.16)),
 ]
 
 

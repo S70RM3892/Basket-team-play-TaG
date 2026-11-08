@@ -10,7 +10,7 @@ class UObject;
  */
 namespace TaGAudio
 {
-	void PlayAt(const UObject* WorldContext, FName Sound, const FVector& Location, float Volume = 1.f);
+	void PlayAt(const UObject* WorldContext, FName Sound, const FVector& Location, float Volume = 1.f, float Pitch = 1.f);
 	void Play2D(const UObject* WorldContext, FName Sound, float Volume = 1.f);
 	void PlayAmbient(const UObject* WorldContext);
 

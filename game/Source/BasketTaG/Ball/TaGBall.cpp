@@ -299,7 +299,8 @@ FVector ATaGBall::HoldPoint(const ATaGCharacter* Who) const
 		const FVector Fwd = View.Vector();
 		const FVector Right = FRotationMatrix(View).GetUnitAxis(EAxis::Y);
 		const FVector Up = FRotationMatrix(View).GetUnitAxis(EAxis::Z);
-		FVector P = Who->GetEyeLocation() + Fwd * 100.f;
+		// The ball is in the hands, so it rides along with the view's step motion instead of floating level
+		FVector P = Who->GetEyeLocation() + Who->GetViewBobOffset() + Fwd * 100.f;
 		if (Who->IsChargingShot())
 		{
 			P -= Up * 16.f;

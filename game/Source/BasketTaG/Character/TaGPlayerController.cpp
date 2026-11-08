@@ -156,6 +156,7 @@ void ATaGPlayerController::ApplySettings()
 {
 	LookSensitivity = FMath::Clamp(FMath::RoundToFloat(LookSensitivity * 10.f) / 10.f, 0.2f, 3.f);
 	FieldOfView = FMath::Clamp(FieldOfView, 80.f, 110.f);
+	ViewBob = FMath::Clamp(FMath::RoundToFloat(ViewBob * 4.f) / 4.f, 0.f, 1.5f);
 	MasterVolume = FMath::Clamp(MasterVolume, 0.f, 1.f);
 	MusicVolume = FMath::Clamp(MusicVolume, 0.f, 1.f);
 	if (IsLocalController())

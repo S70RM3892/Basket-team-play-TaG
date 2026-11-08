@@ -1295,6 +1295,13 @@ TSharedRef<SWidget> TaGUI::MakeSettings(FPCPtr PC, TSharedPtr<SWidget>& OutFocus
 				]
 				+ SVerticalBox::Slot().AutoHeight().Padding(0.f, 4.f)
 				[
+					SettingRow(TEXT("視点の揺れ"), Stepper(
+						[PC, Percent]() { return Percent(PC.IsValid() ? PC->ViewBob : 1.f); },
+						[Apply]() { Apply([](ATaGPlayerController& P) { P.ViewBob -= 0.25f; }); },
+						[Apply]() { Apply([](ATaGPlayerController& P) { P.ViewBob += 0.25f; }); }))
+				]
+				+ SVerticalBox::Slot().AutoHeight().Padding(0.f, 4.f)
+				[
 					SettingRow(TEXT("全体の音量"), Stepper(
 						[PC, Percent]() { return Percent(PC.IsValid() ? PC->MasterVolume : 1.f); },
 						[Apply]() { Apply([](ATaGPlayerController& P) { P.MasterVolume -= 0.1f; }); },
