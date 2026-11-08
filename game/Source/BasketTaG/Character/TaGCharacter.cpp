@@ -728,6 +728,31 @@ void ATaGCharacter::SetAction(ETaGAction NewAction, uint8 Variant, const FVector
 		{
 			TaGAudio::PlayAt(this, Sound, GetActorLocation(), NewAction == ETaGAction::TackleStart ? 1.f : 0.7f);
 		}
+		OnLocalActionChanged(NewAction);
+	}
+}
+
+void ATaGCharacter::OnLocalActionChanged(ETaGAction NewAction)
+{
+	if (!IsLocallyControlled() || !IsPlayerControlled())
+	{
+		return;
+	}
+	ATaGPlayerController* PC = Cast<ATaGPlayerController>(GetController());
+	if (!PC)
+	{
+		return;
+	}
+	switch (NewAction)
+	{
+	case ETaGAction::Down:
+		PC->Feedback(1.f, 0.35f, 1.3f);
+		break;
+	case ETaGAction::Stagger:
+		PC->Feedback(0.5f, 0.15f, 0.6f);
+		break;
+	default:
+		break;
 	}
 }
 
@@ -766,6 +791,7 @@ void ATaGCharacter::OnRep_NetAction()
 		{
 			TaGAudio::PlayAt(this, Sound, GetActorLocation(), 0.7f);
 		}
+		OnLocalActionChanged(Action);
 	}
 }
 
@@ -992,7 +1018,8 @@ void ATaGCharacter::TickServerChecks(float Dt)
 			}
 			FVector To = It->GetActorLocation() - GetActorLocation();
 			To.Z = 0.f;
-			const float Reach = TaG::TackleRange + It->GetCapsuleComponent()->GetScaledCapsuleRadius() - 25.f;
+			// A dodge that slid out of the tackle's path still beat it (evade > tackle): reach the dodger a bit farther.
+			const float Reach = TaG::TackleRange + It->GetCapsuleComponent()->GetScaledCapsuleRadius() - 25.f + (It->IsDodging() ? 90.f : 0.f);
 			if (To.Size() < Reach && (To.Size() < 40.f || FVector::DotProduct(To.GetSafeNormal(), GetActorForwardVector()) > 0.2f))
 			{
 				bTackleResolved = true;
@@ -1904,10 +1931,13 @@ void ATaGCharacter::TickVisuals(float Dt)
 	In.DribbleT = DribbleT;
 	In.DodgeSide = FVector::DotProduct(ActionDir, GetActorRightVector()) >= 0.f ? 1.f : -1.f;
 	uint8 Pretell = 0;
-	if (IsPretelling(Pretell))
+	const bool bPretelling = IsPretelling(Pretell);
+	if (bPretelling)
 	{
 		In.bPretellTackle = Pretell == 1;
 		In.bPretellContest = Pretell == 2;
+		In.bPretellDrive = Pretell == 3;
+		In.bPretellShot = Pretell == 4;
 	}
 	In.Dt = Dt;
 	Rig->Animate(In);
@@ -1940,12 +1970,15 @@ void ATaGCharacter::TickVisuals(float Dt)
 	default:
 		if (In.bPretellTackle) { Tell = FLinearColor(1.f, 0.45f, 0.1f); }
 		else if (In.bPretellContest) { Tell = FLinearColor(1.f, 0.2f, 0.2f); }
+		else if (In.bPretellDrive) { Tell = FLinearColor(0.4f, 0.8f, 1.f); }
+		else if (In.bPretellShot) { Tell = TaG::GoldColor(); }
 		else if (IsInZone()) { Tell = TaG::GoldColor(); }
 		break;
 	}
 	const bool bFirstReady = MyRole == 2 ? IsReady(ETaGSlot::Tackle) : IsReady(ETaGSlot::Drive);
 	const bool bSecondReady = MyRole == 2 ? IsReady(ETaGSlot::Contest) : IsReady(ETaGSlot::Dodge);
-	Rig->SetGlow(Tell, bFirstReady ? 6.f : 0.2f, bSecondReady ? 6.f : 0.2f);
+	// A tell glows bright on both arms so it reads from across the court.
+	Rig->SetGlow(Tell, bPretelling ? 10.f : (bFirstReady ? 6.f : 0.2f), bPretelling ? 10.f : (bSecondReady ? 6.f : 0.2f));
 
 	// --- Contest field (directional) in front of the defender
 	const bool bField = (Action == ETaGAction::Contest || Action == ETaGAction::ContestStart) && !IsSonicContest();
@@ -1963,11 +1996,18 @@ void ATaGCharacter::TickVisuals(float Dt)
 		CameraBoom->SetRelativeLocation(FVector(0.f, 0.f, FMath::FInterpTo(BoomLoc.Z, TargetZ, Dt, 12.f)));
 		CameraBoom->TargetArmLength = FMath::FInterpTo(CameraBoom->TargetArmLength, bThirdPerson ? 330.f * FMath::Max(1.f, S) : 0.f, Dt, 10.f);
 		CameraBoom->SocketOffset = bThirdPerson ? FVector(0.f, 60.f, 50.f) : FVector::ZeroVector;
-		float Fov = 95.f + (IsInZone() ? 6.f : 0.f);
+		const ATaGPlayerController* MyPC = Cast<ATaGPlayerController>(GetController());
+		float Fov = (MyPC ? MyPC->FieldOfView : 95.f) + (IsInZone() ? 6.f : 0.f);
 		if (IsScoped() && !bThirdPerson) { Fov = 58.f; }
 		Camera->SetFieldOfView(FMath::FInterpTo(Camera->FieldOfView, Fov, Dt, 10.f));
+		// Camera kick: a short, decaying shake on hits and lost reads (real time, so slow motion does not stretch it).
+		const float RealDt = FApp::GetDeltaTime();
+		KickT += RealDt;
+		KickAmp *= FMath::Exp(-RealDt * 7.f);
+		const float ShakePitch = FMath::Sin(KickT * 47.f) * KickAmp * 1.6f;
+		const float ShakeYaw = FMath::Sin(KickT * 39.f + 1.3f) * KickAmp * 1.1f;
 		const FRotator CamRot = Camera->GetRelativeRotation();
-		Camera->SetRelativeRotation(FRotator(0.f, 0.f, FMath::FInterpTo(CamRot.Roll, Action == ETaGAction::Down && !bThirdPerson ? 20.f : 0.f, Dt, 8.f)));
+		Camera->SetRelativeRotation(FRotator(ShakePitch, ShakeYaw, FMath::FInterpTo(CamRot.Roll, Action == ETaGAction::Down && !bThirdPerson ? 20.f : 0.f, Dt, 8.f)));
 
 		const bool bUp = Action == ETaGAction::Contest || Action == ETaGAction::ContestStart || (!bOnFloor && MyRole != 1);
 		const bool bShow = !bThirdPerson && (MyRole != 1 || Action == ETaGAction::Shoot) && Action != ETaGAction::Down;
@@ -2062,7 +2102,8 @@ void ATaGCharacter::OnLookMouse(const FInputActionValue& Value)
 	const FVector2D V = Value.Get<FVector2D>();
 	const ATaGPlayerController* PC = Cast<ATaGPlayerController>(GetController());
 	const float Sens = PC ? PC->GetLookSensitivity() : 1.f;
-	AddLook(V.X * MouseDegPerCount * Sens, V.Y * MouseDegPerCount * Sens);
+	const float Invert = PC && PC->bInvertMouseY ? -1.f : 1.f;
+	AddLook(V.X * MouseDegPerCount * Sens, V.Y * MouseDegPerCount * Sens * Invert);
 }
 
 void ATaGCharacter::OnLookStick(const FInputActionValue& Value)
@@ -2071,7 +2112,9 @@ void ATaGCharacter::OnLookStick(const FInputActionValue& Value)
 	const float Dt = FApp::GetDeltaTime();
 	const ATaGPlayerController* PC = Cast<ATaGPlayerController>(GetController());
 	const float Sens = PC ? PC->GetLookSensitivity() : 1.f;
-	AddLook(V.X * FMath::Abs(V.X) * StickYawRate * Dt * Sens, V.Y * FMath::Abs(V.Y) * StickPitchRate * Dt * Sens);
+	// Stick up arrives as +Y; bInvertStickY (the default after the first playtest) turns that into looking down.
+	const float Invert = !PC || PC->bInvertStickY ? -1.f : 1.f;
+	AddLook(V.X * FMath::Abs(V.X) * StickYawRate * Dt * Sens, V.Y * FMath::Abs(V.Y) * StickPitchRate * Dt * Sens * Invert);
 }
 
 void ATaGCharacter::OnJumpPressed()

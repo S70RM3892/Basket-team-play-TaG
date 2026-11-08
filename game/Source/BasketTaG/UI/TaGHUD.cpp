@@ -63,11 +63,15 @@ void ATaGHUD::Tick(float DeltaSeconds)
 		return;
 	}
 	const bool bPause = PC->IsPauseMenuOpen();
-	if (!bBuiltOnce || GS->Phase != ShownPhase || bPause != bShownPause)
+	const bool bSettings = PC->IsSettingsOpen();
+	const bool bTutorialEnd = GS->IsTutorialFinished();
+	if (!bBuiltOnce || GS->Phase != ShownPhase || bPause != bShownPause || bSettings != bShownSettings || bTutorialEnd != bShownTutorialEnd)
 	{
 		bBuiltOnce = true;
 		ShownPhase = GS->Phase;
 		bShownPause = bPause;
+		bShownSettings = bSettings;
+		bShownTutorialEnd = bTutorialEnd;
 		RebuildMenu();
 	}
 }
@@ -81,23 +85,34 @@ void ATaGHUD::RebuildMenu()
 	TWeakObjectPtr<ATaGPlayerController> PC = Cast<ATaGPlayerController>(GetOwningPlayerController());
 	FocusTarget.Reset();
 	TSharedPtr<SWidget> Content;
-	switch (ShownPhase)
+	if (bShownSettings)
 	{
-	case ETaGPhase::Title:
-		Content = TaGUI::MakeTitle(PC, FocusTarget);
-		break;
-	case ETaGPhase::Lobby:
-		Content = TaGUI::MakeLobby(PC, FocusTarget);
-		break;
-	case ETaGPhase::Results:
-		Content = TaGUI::MakeResults(PC, FocusTarget);
-		break;
-	default:
-		if (bShownPause)
+		Content = TaGUI::MakeSettings(PC, FocusTarget);
+	}
+	else
+	{
+		switch (ShownPhase)
 		{
-			Content = TaGUI::MakePause(PC, FocusTarget);
+		case ETaGPhase::Title:
+			Content = TaGUI::MakeTitle(PC, FocusTarget);
+			break;
+		case ETaGPhase::Lobby:
+			Content = TaGUI::MakeLobby(PC, FocusTarget);
+			break;
+		case ETaGPhase::Results:
+			Content = TaGUI::MakeResults(PC, FocusTarget);
+			break;
+		default:
+			if (bShownTutorialEnd)
+			{
+				Content = TaGUI::MakeTutorialDone(PC, FocusTarget);
+			}
+			else if (bShownPause)
+			{
+				Content = TaGUI::MakePause(PC, FocusTarget);
+			}
+			break;
 		}
-		break;
 	}
 	if (Content.IsValid())
 	{

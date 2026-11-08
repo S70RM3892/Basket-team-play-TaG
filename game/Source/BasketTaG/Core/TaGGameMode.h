@@ -44,6 +44,14 @@ public:
 	bool IsLive() const { return bLive; }
 	bool IsTestMode() const { return bAutoTest || bShotTest; }
 
+	// ------------------------------------------------ Tutorial (TaGTutorial.h)
+	void StartTutorial(APlayerController* PC);
+	/** Moves to the next lesson (bSkip: from the pause menu, no praise). */
+	void TutorialAdvance(bool bSkip);
+	/** The scripted bot's attempt is over and the player did not answer it: show a hint and set the lesson up again. */
+	void TutorialRetry(const FString& Hint, float Delay = 1.2f);
+	bool IsTutorial() const;
+
 	// ------------------------------------------------ Queries
 	bool NeedsClear(int32 Team) const;
 	float GetShotClockLeft() const;
@@ -93,6 +101,20 @@ protected:
 	// Read-win slow motion (real time)
 	double HitstopUntil = 0.0;
 	double SlowmoUntil = 0.0;
+
+	// Tutorial
+	float TutorialAdvanceT = 0.f;   // > 0: lesson cleared, the next one starts soon
+	float TutorialResetT = 0.f;     // > 0: the lesson is set up again soon
+	int32 TutorialShots = 0;
+	float TutorialMoved = 0.f;
+	FVector TutorialLastPos = FVector::ZeroVector;
+	bool bTutorialHasLastPos = false;
+	void TickTutorial(float Dt);
+	void TutorialProgress(int32 Amount);
+	void TutorialOnReadWin(ATaGCharacter* Winner, const FString& Rule);
+	int32 TutorialAttackTeam() const;
+	void ApplyTutorialScripts();
+	ATaGCharacter* TutorialPlayer() const;
 
 	// Test modes
 	bool bAutoTest = false;

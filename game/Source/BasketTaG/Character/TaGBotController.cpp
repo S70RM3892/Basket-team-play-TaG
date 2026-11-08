@@ -209,7 +209,8 @@ void ATaGBotController::Do(ATaGCharacter* Me, EHand Hand)
 		}
 		else if (Press(Me, ETaGInput::Secondary))
 		{
-			ContestHold = FMath::FRandRange(0.6f, 1.f);
+			// The tutorial bot holds its contest up long enough to be driven past.
+			ContestHold = Script == EScript::Normal ? FMath::FRandRange(0.6f, 1.f) : 1.15f;
 		}
 		break;
 	case EHand::Steal:
@@ -257,6 +258,14 @@ void ATaGBotController::Tick(float DeltaSeconds)
 	{
 		Wish(Me, FVector::ZeroVector);
 		Face(Me, TaG::RimCenter(), DeltaSeconds, 4.f);
+		if (ScriptPhase != 0 || ScriptT != 0.f)
+		{
+			// A lesson is being set up again: start the script over, from the other side this time.
+			ScriptPhase = 0;
+			ScriptT = 0.f;
+			ScriptSide = -ScriptSide;
+			Queue.Reset();
+		}
 		return;
 	}
 
@@ -278,6 +287,11 @@ void ATaGBotController::Tick(float DeltaSeconds)
 		{
 			Me->InputReleased(ETaGInput::Secondary);
 		}
+	}
+	if (Script != EScript::Normal)
+	{
+		TickScript(Me, Ball, DeltaSeconds);
+		return;
 	}
 
 	ATaGCharacter* Holder = Ball->GetHolder();
@@ -311,6 +325,142 @@ void ATaGBotController::Tick(float DeltaSeconds)
 	default:
 		bHadBall = false;
 		Loose(Me, Ball, DeltaSeconds);
+		break;
+	}
+}
+
+// ================================================================ Tutorial scripts
+
+void ATaGBotController::SetScript(EScript InScript)
+{
+	Script = InScript;
+	ScriptPhase = 0;
+	ScriptT = 0.f;
+	Queue.Reset();
+	ContestHold = 0.f;
+}
+
+void ATaGBotController::TickScript(ATaGCharacter* Me, ATaGBall* Ball, float Dt)
+{
+	ATaGGameMode* GM = GetWorld()->GetAuthGameMode<ATaGGameMode>();
+	ATaGCharacter* Opp = Me->FindNearestOpponent();
+	const bool bHold = Ball->GetBallState() == ETaGBallState::Held && Ball->GetHolder() == Me;
+	ScriptT += Dt;
+	uint8 Pt = 0;
+
+	switch (Script)
+	{
+	case EScript::Idle:
+		// Out of the way in the corner, watching the ball.
+		Steer(Me, FVector(90.f, -640.f, 0.f), 40.f);
+		Face(Me, Ball->GetActorLocation(), Dt, 6.f);
+		break;
+
+	case EScript::ContestOnClose:
+	case EScript::TackleOnClose:
+	{
+		if (!Opp)
+		{
+			break;
+		}
+		// Guard the handler between them and the rim, then show the tell and commit when they come close.
+		const bool bContest = Script == EScript::ContestOnClose;
+		const FVector Hp = Flat(Opp->GetFeetLocation());
+		const FVector ToRim = Flat(TaG::RimFloor() - Hp);
+		// 2 m off the handler: close enough to tackle, far enough that the whole body (and its tell) is in view.
+		const FVector Gp = Hp + ToRim.GetSafeNormal() * FMath::Min(200.f, ToRim.Size() * 0.6f);
+		if (Me->GetAction() == ETaGAction::None)
+		{
+			Steer(Me, Gp, 20.f);
+		}
+		Face(Me, Opp->GetActorLocation(), Dt, 12.f);
+		const float D = FVector::Dist2D(Opp->GetActorLocation(), Me->GetActorLocation());
+		if (ScriptPhase == 0 && ScriptT > 1.2f && Opp->HasBall() && D < (bContest ? 330.f : 260.f)
+			&& Me->GetAction() == ETaGAction::None && !Me->IsPretelling(Pt))
+		{
+			Me->ResetHandCooldowns();
+			// Short tells, so answering right when the color shows up is on time: the contest then stays up
+			// for over a second (drive any time), the tackle lands ~0.2 s after its tell (dodge right away).
+			const float Tell = bContest ? 0.2f : 0.35f;
+			Me->SetPretell(bContest ? 2 : 1, Tell);
+			Queue.Add({ Tell, bContest ? EHand::Contest : EHand::Tackle });
+			ScriptPhase = 1;
+			ScriptT = 0.f;
+		}
+		else if (ScriptPhase == 1 && ScriptT > 2.4f)
+		{
+			ScriptPhase = 0; // next attempt
+			ScriptT = 0.f;
+		}
+		break;
+	}
+
+	case EScript::DriveAttack:
+	{
+		if (!bHold)
+		{
+			Wish(Me, FVector::ZeroVector);
+			Face(Me, Ball->GetActorLocation(), Dt, 6.f);
+			break;
+		}
+		// Drive past the defender on one side (alternating every attempt).
+		const FVector ToRim = Flat(TaG::RimFloor() - Me->GetFeetLocation()).GetSafeNormal();
+		const FVector Side = FVector::CrossProduct(FVector::UpVector, ToRim) * ScriptSide;
+		Wish(Me, (ToRim + Side * 0.55f).GetSafeNormal());
+		Face(Me, TaG::RimCenter(), Dt, 8.f);
+		if (ScriptPhase == 0 && ScriptT > 1.4f)
+		{
+			Me->ResetHandCooldowns();
+			Me->SetPretell(3, 0.45f);
+			Queue.Add({ 0.45f, EHand::Drive });
+			ScriptPhase = 1;
+			ScriptT = 0.f;
+		}
+		else if (ScriptPhase == 1 && ScriptT > 0.9f && Me->GetAction() == ETaGAction::None)
+		{
+			// The drive never started: the defender hit during the tell.
+			ScriptPhase = 2;
+			if (GM)
+			{
+				GM->TutorialRetry(TEXT("早すぎた。前のめりになって走り出すところにタックル"));
+			}
+		}
+		break;
+	}
+
+	case EScript::ShootAttack:
+	{
+		if (!bHold)
+		{
+			Wish(Me, FVector::ZeroVector);
+			Face(Me, Ball->GetActorLocation(), Dt, 6.f);
+			break;
+		}
+		Face(Me, TaG::RimCenter(), Dt, 8.f);
+		Wish(Me, FVector::ZeroVector);
+		if (Me->IsChargingShot())
+		{
+			if (Me->GetShotCharge() >= 0.72f)
+			{
+				Me->InputReleased(ETaGInput::Shoot);
+			}
+			break;
+		}
+		if (ScriptPhase == 0 && ScriptT > 1.4f)
+		{
+			Me->SetPretell(4, 0.5f);
+			ScriptPhase = 1;
+			ScriptT = 0.f;
+		}
+		else if (ScriptPhase == 1 && ScriptT > 0.5f)
+		{
+			ScriptPhase = 2;
+			Press(Me, ETaGInput::Shoot);
+		}
+		break;
+	}
+
+	default:
 		break;
 	}
 }

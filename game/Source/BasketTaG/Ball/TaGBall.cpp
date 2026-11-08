@@ -56,6 +56,94 @@ void ATaGBall::BeginPlay()
 		Mesh->SetWorldScale3D(FVector(TaG::BallRadius * 2.f / 100.f));
 		GlowMat = TaGArt::PaintSlot(Mesh, NAME_None, FLinearColor(0.95f, 0.38f, 0.08f), 0.f);
 	}
+
+	if (GetNetMode() != NM_DedicatedServer)
+	{
+		constexpr int32 NumSegs = 12;
+		for (int32 i = 0; i < NumSegs; ++i)
+		{
+			UStaticMeshComponent* S = NewObject<UStaticMeshComponent>(this);
+			S->SetupAttachment(RootComponent);
+			S->SetUsingAbsoluteLocation(true);
+			S->SetUsingAbsoluteRotation(true);
+			S->SetUsingAbsoluteScale(true);
+			S->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+			S->SetCastShadow(false);
+			S->SetStaticMesh(TaGArt::EngineCylinder());
+			S->SetVisibility(false);
+			S->RegisterComponent();
+			TrailSegs.Add(S);
+			TrailMats.Add(TaGArt::PaintSlot(S, NAME_None, FLinearColor(1.f, 0.55f, 0.2f), 4.f, true, 0.5f));
+			TrailAge.Add(10.f);
+			TrailA.Add(FVector::ZeroVector);
+			TrailB.Add(FVector::ZeroVector);
+		}
+	}
+}
+
+void ATaGBall::TickTrail(float Dt)
+{
+	if (TrailSegs.Num() == 0)
+	{
+		return;
+	}
+	constexpr float Life = 0.3f;
+	const FVector Now = GetActorLocation();
+	const bool bMoving = Net.State == ETaGBallState::Flight || Net.State == ETaGBallState::Pass;
+	if (bMoving)
+	{
+		if (!bTrailActive)
+		{
+			bTrailActive = true;
+			TrailLast = Now;
+			TrailTimer = 0.f;
+		}
+		TrailTimer += Dt;
+		if (TrailTimer >= 0.025f && FVector::DistSquared(Now, TrailLast) > 16.f)
+		{
+			TrailTimer = 0.f;
+			const int32 i = TrailNext;
+			TrailNext = (TrailNext + 1) % TrailSegs.Num();
+			TrailAge[i] = 0.f;
+			TrailA[i] = TrailLast;
+			TrailB[i] = Now;
+			TrailLast = Now;
+			// Passes chain the core glow: the trail warms from orange to gold with each pass in the possession.
+			const FLinearColor C = FMath::Lerp(FLinearColor(1.f, 0.5f, 0.18f), TaG::GoldColor(), FMath::Clamp(Chain / 4.f, 0.f, 1.f));
+			TaGArt::SetGlow(TrailMats[i], C, 4.f + Chain);
+		}
+	}
+	else
+	{
+		bTrailActive = false;
+	}
+	for (int32 i = 0; i < TrailSegs.Num(); ++i)
+	{
+		UStaticMeshComponent* S = TrailSegs[i];
+		TrailAge[i] += Dt;
+		const float K = 1.f - TrailAge[i] / Life;
+		if (K <= 0.f)
+		{
+			if (S->IsVisible())
+			{
+				S->SetVisibility(false);
+			}
+			continue;
+		}
+		const FVector D = TrailB[i] - TrailA[i];
+		const float Len = FMath::Max(D.Size(), 1.f);
+		const float Thick = TaG::BallRadius * 1.5f * K;
+		S->SetWorldLocationAndRotation((TrailA[i] + TrailB[i]) * 0.5f, FRotationMatrix::MakeFromZ(D / Len).ToQuat());
+		S->SetWorldScale3D(FVector(Thick / 100.f, Thick / 100.f, Len / 100.f));
+		if (TrailMats[i])
+		{
+			TrailMats[i]->SetScalarParameterValue(TEXT("Opacity"), 0.55f * K);
+		}
+		if (!S->IsVisible())
+		{
+			S->SetVisibility(true);
+		}
+	}
 }
 
 // ================================================================ Server API
@@ -310,6 +398,7 @@ void ATaGBall::Tick(float DeltaSeconds)
 		const float Pulse = 0.6f + 0.4f * FMath::Sin(GetWorld()->GetTimeSeconds() * (4.f + Chain * 2.f));
 		TaGArt::SetGlow(GlowMat, FLinearColor(1.f, 0.55f + 0.1f * Chain, 0.15f + 0.15f * Chain), Chain > 0 ? (1.5f + Chain * 2.5f) * Pulse : 0.f);
 	}
+	TickTrail(DeltaSeconds);
 }
 
 void ATaGBall::PlayContactSounds(uint8 Contacts)

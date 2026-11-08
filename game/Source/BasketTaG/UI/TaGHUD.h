@@ -33,6 +33,8 @@ protected:
 	TSharedPtr<SWidget> FocusTarget;
 	ETaGPhase ShownPhase = ETaGPhase::Title;
 	bool bShownPause = false;
+	bool bShownSettings = false;
+	bool bShownTutorialEnd = false;
 	bool bBuiltOnce = false;
 	int32 ShownLobbyVersion = -1;
 };

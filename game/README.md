@@ -18,7 +18,10 @@ Unreal Engine 5.8.4、C++、Gameplay Ability System（GAS）、Enhanced Input。
 | BOT | 試合ごとの「クセ」、弱いBOTは技の前に構えが見える。チームでは、空いたスポットへの移動、カット、空いた味方へのパス、マンツーマンとヘルプ、リバウンド、固有技 | Godot版ai_brain.gd |
 | 友達と遊ぶ | プライベートロビー：ホストになる／IPアドレスで参加。足りない枠はBOTが埋める。途中で抜けた人はBOTが引き継ぐ | STRATEGY §3.3 |
 | 世界 | 積層都市ナギサ・テツバ地区の屋上コート、夕方。**点を取ったチームの地区に明かりが灯る**（11点で全部） | WORLD §1、§6 |
-| 画面 | タイトル、ヒーロー選択（ロビー）、試合中の表示（スコア、ショットクロック、シュートメーターと成功率、手と技のクールダウン、頭上の名前とパス先）、ポーズ、結果（攻撃1回あたりの得点を「1対1」と「連携」に分けて表示） | |
+| 画面 | タイトル、ヒーロー選択（ロビー）、試合中の表示（スコア、ショットクロック、シュートメーターと成功率、手と技のクールダウン、頭上の名前とパス先）、ポーズ、設定、結果（攻撃1回あたりの得点を「1対1」と「連携」に分けて表示） | |
+| チュートリアル | 1on1で9レッスン：移動、シュート、パーフェクト・リリース、突破、読み合い4つ（突破＞シュート妨害、かわし＞タックル、タックル＞突破、シュート妨害＞シュート）、技。BOTが色つきの予兆（赤＝妨害、オレンジ＝タックル、水色＝突破、金＝シュート）を見せてから動くので、それに答えて覚える。できなかったときはヒントを出してやり直す。初回はタイトルでいちばん上に出る | RULES_V1 §3、Godot版v0.2（弱いBOTの予兆） |
+| 演出 | BGM2曲（メニュー用の夕方の湾、試合用のテツバの工業ビート。numpyで合成）、読み勝ち・読まれた・ダウン・自チームの得点で振動とカメラの揺れ、シュートとパスの光の尾（パスをつなぐほど金色に） | WORLD §7 |
+| 設定 | 視点の感度、右スティックの上下（既定はリバース）、マウスの上下、視野角、全体とBGMの音量、振動。端末ごとに保存 | |
 
 ### ヒーロー
 
@@ -45,10 +48,15 @@ Unreal Engine 5.8.4、C++、Gameplay Ability System（GAS）、Enhanced Input。
 | ヒーローの技1 / 技2 | C / V | LT / Y |
 | カメラ（一人称 / 三人称） | T | View |
 | ポーズ | Esc | Start |
+| メニューで戻る | Esc | B |
+
+- **右スティックの上下は、既定で「リバース」（上に倒すと下を向く）**。最初の試遊で「上下が反対」と指摘があったため。設定で「ノーマル」に戻せる。マウスの上下は別に切り替えられる
+- タッチ操作（画面上のスティックとボタン）は入れていない。スマホでもコントローラーで遊ぶ前提（Androidの標準の仮想スティックも出さない）
 
 ## 見た目と音
 - 選手は、関節ごとの硬いパーツを手続き的に動かしている（Godot版の `rig.gd` を移植）。**Blenderで作ったパーツ（`/Game/Art/Heroes/<ヒーロー>/SM_<ヒーロー>_<部位>`）があればそれを使い、なければエンジンの基本図形で組む。**
-- コートと街（`/Game/Art/Court`、`/Game/Art/City`）、効果音（`/Game/Audio/SFX`）も同じで、無い場合はエンジンの図形と無音で動く。
+- コートと街（`/Game/Art/Court`、`/Game/Art/City`）、効果音（`/Game/Audio/SFX`）、BGM（`/Game/Audio/Music`）も同じで、無い場合はエンジンの図形と無音で動く。
+- BGMは `tools/audio/synth_music.py`（numpyで合成、継ぎ目なくループ）で作り、`tools/import/import_music.py` で取り込む。メニューとチュートリアルは MusicMenu、試合は MusicMatch に切り替わる（1.2秒のクロスフェード）。
 - 素材の作り方とUEへの取り込み方は [tools/README.md](../tools/README.md) にある。
 
 ## ビルドと起動
@@ -61,10 +69,16 @@ Windows用のパッケージ版（`build/win/Windows/BasketTaG.exe`）も作れ�
 
 ### Android APK
 ```bash
-"C:/Epic Games/UE_5.8/Engine/Build/BatchFiles/RunUAT.bat" BuildCookRun -project="C:/TaG/game/BasketTaG.uproject" -platform=Android -cookflavor=ASTC -clientconfig=Development -build -cook -stage -pak -package -archive -archivedirectory="C:/TaG/build/ue" -nop4 -utf8output -unattended
+"C:/Epic Games/UE_5.8/Engine/Build/BatchFiles/RunUAT.bat" BuildCookRun -project="C:/TaG/game/BasketTaG.uproject" -platform=Android -cookflavor=ASTC -clientconfig=Shipping -build -cook -stage -pak -package -archive -archivedirectory="C:/TaG/build/ue_ship" -nop4 -utf8output -unattended -nocompileeditor
+# 署名をv1・v2・v3の3方式にし直す（古い端末や、端末ごとの検査の差に備える）
+SDK="$LOCALAPPDATA/Android/Sdk/build-tools/36.0.0"
+"$SDK/zipalign" -f -p 4 BasketTaG-arm64.apk aligned.apk
+"$SDK/apksigner.bat" sign --ks "$USERPROFILE/.android/debug.keystore" --ks-pass pass:android --ks-key-alias androiddebugkey --key-pass pass:android --v1-signing-enabled true --v2-signing-enabled true --v3-signing-enabled true --out TaG.apk aligned.apk
+"$SDK/apksigner.bat" verify --verbose TaG.apk
 ```
 - Android SDK（`%LOCALAPPDATA%\Android\Sdk`、NDK r27c）とJDK 21が必要。環境変数は `ANDROID_HOME`、`NDKROOT`、`JAVA_HOME`
-- 今はDevelopmentビルドで、デバッグ署名。配布用の署名鍵はまだない
+- Shippingビルド（検証レイヤーなどの開発用ライブラリが入らず、小さい）。署名はデバッグ鍵。配布用の署名鍵はまだない
+- versionCode は `Config/DefaultEngine.ini` の `StoreVersion`（いまは2）。上書きインストールするときは前より大きくする
 
 ## 友達と遊ぶ（同じLAN、またはポート開放済みの回線）
 1. ホスト：タイトルで「友達と遊ぶ：ホストになる」。ロビーの右上に、友達に伝えるアドレスが出る
@@ -82,10 +96,16 @@ P="C:/TaG/game/BasketTaG.uproject"
 "$UE" "$P" -game -nullrhi -unattended -TaGInputTest -TaGHero=Hayate -stdout       # 人間の入力経路（Enhanced Input→GAS→選手）に入力を流し込んで確かめる
 "$UE" "$P" "/Engine/Maps/Entry?listen?Lobby=1?TeamSize=2" -game -nullrhi -TaGNetHost   # ネット対戦のホスト（クライアントが来たら開始）
 "$UE" "$P" 127.0.0.1 -game -nullrhi -TaGNetClient                                  # 上のホストに参加して、見えている状態を記録
-"C:/Epic Games/UE_5.8/Engine/Binaries/Win64/UnrealEditor.exe" "$P" -game -windowed -TaGSnap=Play -TaGHero=Gantetsu   # Title / Lobby / Play / TPS / Defense / Results のスクリーンショット
+"C:/Epic Games/UE_5.8/Engine/Binaries/Win64/UnrealEditor.exe" "$P" -game -windowed -TaGTutorialTest       # チュートリアルを本物の入力経路で最後まで遊ぶ（BOTの予兆に答える）
+"C:/Epic Games/UE_5.8/Engine/Binaries/Win64/UnrealEditor.exe" "$P" -game -windowed -TaGSnap=Play -TaGHero=Gantetsu   # Title / Lobby / Play / TPS / Defense / Results / Settings / Tutorial（-TaGLesson=N）/ TutorialDone / Trail のスクリーンショット
 ```
 
-### 最新の結果（2026-11-08）
+### 最新の結果（2026-11-08、2回目）
+- **tutorialtest**：チュートリアルの9レッスンを、入力を流し込む自動プレイで最後まで通過した（41.5秒。読み合いの4レッスンはどれも1回目で成功）
+- **回帰**：shottest 400/400、inputtest（突破・シュート・技・ポーズ・カメラ）正常、autotest 1on1（7-11、220秒）と3on3（11-3、166秒）が最後まで進行
+- **画面**：タイトル（チュートリアルを先頭に）、設定、チュートリアルのレッスン表示と完了画面、シュートの光の尾をスクリーンショットで確認した
+
+### 1回目の結果（2026-11-08）
 - **shottest**：入るはずのシュートが、打点4種（体格S〜XL）×0.8〜9m×5方向×ジャンプの有無のすべてで入った（400/400）
 - **inputtest**：人間の入力から、突破、シュート（溜め→離す）、技、ポーズ、カメラ切替が動いた
 - **ネット対戦**：同じPCでホストとクライアントを起動し、クライアントが接続して試合の状態（フェーズ、選手4人、自分のヒーローとチーム、ショットクロック）を受け取れた
@@ -102,18 +122,20 @@ P="C:/TaG/game/BasketTaG.uproject"
 | `Core/TaGGameMode.*` | ロビー、チーム分け、試合の進行、じゃんけんの判定、計測、検証用のモード |
 | `Core/TaGGameState.*`、`TaGPlayerState.*` | 全員に同期する状態（フェーズ、スコア、チームの計測値）、個人の選択と成績 |
 | `Core/TaGStage.*` | 屋上コートと街。得点に応じて地区の窓が灯る |
-| `Core/TaGAudio.*`、`TaGArtLib.*` | 効果音と、Blender製の素材の読み込み |
+| `Core/TaGAudio.*`、`TaGArtLib.*` | 効果音とBGM（場面で切り替え、音量）、Blender製の素材の読み込み |
+| `Core/TaGTutorial.*` | チュートリアルのレッスン（題、説明、目標、どちらが攻めるか）。進行は `TaGGameMode` |
 | `Ball/TaGBallSim.*`、`TaGBall.*` | ボールの物理（自前の放物線）、パス、インターセプト、ネット同期 |
 | `Character/TaGCharacter.*` | 選手：行動の状態機械（じゃんけんの手、シュート、パス、固有技）、ダウンと復帰、見た目 |
 | `Character/TaGRig.*` | 関節モデルと手続き的なアニメーション |
 | `Character/TaGArtActors.*` | 鉄の壁、フィールド、光の線、残像 |
 | `Character/TaGMovementComponent.*` | 行動ごとの速さと加速（クライアント予測と整合） |
-| `Character/TaGBotController.*` | BOT |
-| `Character/TaGPlayerController.*` | 入力、メニュー操作、ロビーのRPC、検証用の入力 |
+| `Character/TaGBotController.*` | BOT（チュートリアルでは、予兆を見せてから1つの手を出す台本で動く） |
+| `Character/TaGPlayerController.*` | 入力、設定（保存）、振動、メニュー操作、ロビーのRPC、検証用の入力 |
 | `Abilities/*` | 入力チャンネルごとのGameplay Ability（予測あり）、GameplayTag |
-| `UI/*` | Slateの画面（タイトル、ロビー、HUD、ポーズ、結果） |
+| `UI/*` | Slateの画面（タイトル、ロビー、HUD、チュートリアルの表示、ポーズ、設定、結果） |
 
 ## まだのこと
-- 人が実際に遊んで手触りを確かめる（ロックオン、視点の感度、技のタイミング）
-- インターネット越しのマッチング（Steamなど）、配布用の署名とShippingビルド
+- 人が実際に遊んで手触りを確かめる（ロックオン、視点の感度、技のタイミング、チュートリアルの予兆の長さ）
+- Android実機での動作確認（インストールできるか、コントローラーの割り当て、性能）
+- インターネット越しのマッチング（Steamなど）、配布用の署名鍵
 - 5on5、追加ヒーロー、モーションキャプチャ等の本格的なアニメーション（[ROSTER.md](../docs/ROSTER.md) の拡張の棚）

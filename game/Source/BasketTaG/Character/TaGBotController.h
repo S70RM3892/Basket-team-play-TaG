@@ -30,7 +30,20 @@ public:
 	/** The habit shown at the end of a match (prototype v0.2: "answer check"). */
 	FString HabitText() const;
 
+	/**
+	 * Tutorial lessons (TaGTutorial.h) replace the brain with a script: stand aside, or show one clear tell
+	 * (red contest, orange tackle, cyan drive, gold shot) and then do it, so the player can answer it.
+	 */
+	enum class EScript : uint8 { Normal, Idle, ContestOnClose, TackleOnClose, DriveAttack, ShootAttack };
+	void SetScript(EScript InScript);
+
 protected:
+	EScript Script = EScript::Normal;
+	float ScriptT = 0.f;
+	int32 ScriptPhase = 0;
+	float ScriptSide = 1.f;
+	void TickScript(ATaGCharacter* Me, ATaGBall* Ball, float Dt);
+
 	enum class EHand : uint8 { Tackle, Contest, Wait, Steal, Drive, Dodge, Shoot };
 
 	void Offense(ATaGCharacter* Me, ATaGBall* Ball, float Dt);

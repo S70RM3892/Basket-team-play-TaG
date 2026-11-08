@@ -101,6 +101,18 @@ protected:
 	TSet<TWeakObjectPtr<ATaGCharacter>> PassRolled;
 	float SoundCooldown = 0.f;
 
+	// Cosmetic trail behind shots and passes: a small ring of segments reused over and over (no spawning).
+	UPROPERTY() TArray<TObjectPtr<UStaticMeshComponent>> TrailSegs;
+	UPROPERTY() TArray<TObjectPtr<UMaterialInstanceDynamic>> TrailMats;
+	TArray<float> TrailAge;
+	TArray<FVector> TrailA;
+	TArray<FVector> TrailB;
+	int32 TrailNext = 0;
+	float TrailTimer = 0.f;
+	FVector TrailLast = FVector::ZeroVector;
+	bool bTrailActive = false;
+	void TickTrail(float Dt);
+
 	void PushNet();
 	void TickAuthority(float Dt);
 	void TickPass(float Dt, bool bAuthority);

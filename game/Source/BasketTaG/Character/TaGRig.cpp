@@ -426,6 +426,14 @@ void UTaGRigComponent::Animate(const FTaGPoseInput& In)
 	{
 		ShL = 2.2f; ShR = 2.2f;
 	}
+	else if (In.bPretellDrive && bNormal)
+	{
+		HipsY = 0.86f; Lean = 0.65f; KnL = -0.8f; KnR = -0.4f; HipL_ = 0.6f; ShL = 0.7f; ShR = -0.5f;
+	}
+	else if (In.bPretellShot && bNormal)
+	{
+		ShL = 1.7f; ShR = 1.7f; ElL = 0.9f; ElR = 0.9f; KnL = -0.5f; KnR = -0.5f; HipsY = 0.9f;
+	}
 
 	const float R = FMath::Clamp(18.f * In.Dt, 0.f, 1.f);
 	CurHipsY = FMath::Lerp(CurHipsY, HipsY, R);

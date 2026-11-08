@@ -25,6 +25,8 @@ struct FTaGPoseInput
 	float DodgeSide = 1.f;
 	bool bPretellTackle = false;
 	bool bPretellContest = false;
+	bool bPretellDrive = false;   // tutorial bot: about to drive (leans forward)
+	bool bPretellShot = false;    // tutorial bot: about to shoot (ball up)
 	float Dt = 0.f;
 };
 

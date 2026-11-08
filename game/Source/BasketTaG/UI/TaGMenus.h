@@ -50,4 +50,6 @@ namespace TaGUI
 	TSharedRef<SWidget> MakeLobby(TWeakObjectPtr<ATaGPlayerController> PC, TSharedPtr<SWidget>& OutFocus);
 	TSharedRef<SWidget> MakeResults(TWeakObjectPtr<ATaGPlayerController> PC, TSharedPtr<SWidget>& OutFocus);
 	TSharedRef<SWidget> MakePause(TWeakObjectPtr<ATaGPlayerController> PC, TSharedPtr<SWidget>& OutFocus);
+	TSharedRef<SWidget> MakeSettings(TWeakObjectPtr<ATaGPlayerController> PC, TSharedPtr<SWidget>& OutFocus);
+	TSharedRef<SWidget> MakeTutorialDone(TWeakObjectPtr<ATaGPlayerController> PC, TSharedPtr<SWidget>& OutFocus);
 }

@@ -6,6 +6,7 @@
 #include "Core/TaGHeroData.h"
 #include "Core/TaGPlayerState.h"
 #include "Core/TaGRules.h"
+#include "Core/TaGTutorial.h"
 #include "Core/TaGTypes.h"
 #include "EngineUtils.h"
 #include "Framework/Application/SlateApplication.h"
@@ -92,6 +93,64 @@ namespace
 		const float Left = Me->GetCooldownLeft(Slot);
 		return Left > 0.05f ? FString::Printf(TEXT("%.1f"), Left) : TEXT("OK");
 	}
+
+	/** A button whose label follows a value (settings toggles). */
+	TSharedRef<SWidget> ValueButton(TFunction<FText()> Label, TFunction<void()> OnClick, float Width = 400.f, TSharedPtr<SWidget>* OutFocus = nullptr)
+	{
+		TSharedRef<SButton> B = SNew(SButton)
+			.ButtonColorAndOpacity(FLinearColor(0.22f, 0.25f, 0.3f, 1.f))
+			.ContentPadding(FMargin(14.f, 8.f))
+			.HAlign(HAlign_Center)
+			.OnClicked_Lambda([OnClick]() { if (OnClick) { OnClick(); } return FReply::Handled(); })
+			[
+				SNew(SBox).WidthOverride(Width).HAlign(HAlign_Center)
+				[
+					SNew(STextBlock).Font(TaGUI::Font(18.f)).ColorAndOpacity(FLinearColor::White).Text_Lambda([Label]() { return Label ? Label() : FText::GetEmpty(); })
+				]
+			];
+		if (OutFocus && !OutFocus->IsValid())
+		{
+			*OutFocus = B;
+		}
+		return B;
+	}
+
+	/** One settings line: name, then either [−] value [＋] or a single toggle button. */
+	TSharedRef<SWidget> SettingRow(const TCHAR* Name, TSharedRef<SWidget> Control)
+	{
+		return SNew(SHorizontalBox)
+			+ SHorizontalBox::Slot().AutoWidth().VAlign(VAlign_Center)
+			[
+				SNew(SBox).WidthOverride(250.f)
+				[
+					SNew(STextBlock).Font(TaGUI::Font(20.f)).Text(T(Name))
+				]
+			]
+			+ SHorizontalBox::Slot().AutoWidth().VAlign(VAlign_Center)
+			[
+				Control
+			];
+	}
+
+	TSharedRef<SWidget> Stepper(TFunction<FText()> Value, TFunction<void()> OnMinus, TFunction<void()> OnPlus, TSharedPtr<SWidget>* OutFocus = nullptr)
+	{
+		return SNew(SHorizontalBox)
+			+ SHorizontalBox::Slot().AutoWidth()
+			[
+				Button(T(TEXT("−")), OnMinus, false, OutFocus, nullptr, 19.f)
+			]
+			+ SHorizontalBox::Slot().AutoWidth().VAlign(VAlign_Center)
+			[
+				SNew(SBox).WidthOverride(296.f).HAlign(HAlign_Center)
+				[
+					SNew(STextBlock).Font(TaGUI::Font(20.f)).Text_Lambda([Value]() { return Value ? Value() : FText::GetEmpty(); })
+				]
+			]
+			+ SHorizontalBox::Slot().AutoWidth()
+			[
+				Button(T(TEXT("＋")), OnPlus, false, nullptr, nullptr, 19.f)
+			];
+	}
 }
 
 FSlateFontInfo TaGUI::Font(float Size, bool bBold)
@@ -114,6 +173,12 @@ FReply STaGRoot::OnKeyDown(const FGeometry& MyGeometry, const FKeyEvent& InKeyEv
 {
 	const FKey Key = InKeyEvent.GetKey();
 	if ((Key == EKeys::Escape || Key == EKeys::Gamepad_Special_Right) && PC.IsValid())
+	{
+		PC->TogglePauseMenu();
+		return FReply::Handled();
+	}
+	// B backs out of the settings and the pause menu (only reaches here while a menu has focus).
+	if (Key == EKeys::Gamepad_FaceButton_Right && PC.IsValid() && (PC->IsSettingsOpen() || PC->IsPauseMenuOpen()))
 	{
 		PC->TogglePauseMenu();
 		return FReply::Handled();
@@ -287,6 +352,12 @@ TSharedRef<SWidget> TaGUI::MakeMatchHUD(FPCPtr PC)
 		];
 	}
 
+	auto InTutorial = [PC]()
+	{
+		const ATaGGameState* S = GetGS(PC);
+		return S && S->bTutorial && S->Phase == ETaGPhase::Playing;
+	};
+
 	return SNew(SOverlay)
 		.Visibility_Lambda([Playing]() { return Playing() ? EVisibility::HitTestInvisible : EVisibility::Collapsed; })
 		// Player markers
@@ -307,10 +378,65 @@ TSharedRef<SWidget> TaGUI::MakeMatchHUD(FPCPtr PC)
 				return FSlateColor(C);
 			})
 		]
+		// Tutorial lesson (instead of the score)
+		+ SOverlay::Slot().HAlign(HAlign_Center).VAlign(VAlign_Top).Padding(0.f, 14.f)
+		[
+			SNew(SBorder).BorderImage(White()).BorderBackgroundColor(Panel).Padding(FMargin(24.f, 10.f))
+			.Visibility_Lambda([PC, InTutorial]()
+			{
+				const ATaGGameState* S = GetGS(PC);
+				return InTutorial() && S && !S->IsTutorialFinished() ? EVisibility::HitTestInvisible : EVisibility::Collapsed;
+			})
+			[
+				SNew(SBox).WidthOverride(860.f)
+				[
+					SNew(SVerticalBox)
+					+ SVerticalBox::Slot().AutoHeight()
+					[
+						SNew(SHorizontalBox)
+						+ SHorizontalBox::Slot().FillWidth(1.f).VAlign(VAlign_Center)
+						[
+							SNew(STextBlock).Font(Font(24.f)).ColorAndOpacity(Teal)
+							.Text_Lambda([PC]()
+							{
+								const ATaGGameState* S = GetGS(PC);
+								if (!S) { return FText::GetEmpty(); }
+								return T(FString::Printf(TEXT("レッスン %d / %d   %s"), S->TutorialStep + 1, TaGTutorial::NumLessons(), TaGTutorial::Get(S->TutorialStep).Title));
+							})
+						]
+						+ SHorizontalBox::Slot().AutoWidth().VAlign(VAlign_Center)
+						[
+							SNew(STextBlock).Font(Font(22.f)).ColorAndOpacity(TaG::GoldColor())
+							.Text_Lambda([PC]()
+							{
+								const ATaGGameState* S = GetGS(PC);
+								if (!S) { return FText::GetEmpty(); }
+								return T(FString::Printf(TEXT("%d / %d %s"), S->TutorialProgress, S->TutorialGoal, TaGTutorial::Get(S->TutorialStep).Unit));
+							})
+						]
+					]
+					+ SVerticalBox::Slot().AutoHeight().Padding(0.f, 6.f, 0.f, 0.f)
+					[
+						SNew(STextBlock).Font(Font(17.f)).AutoWrapText(true)
+						.Text_Lambda([PC]()
+						{
+							const ATaGGameState* S = GetGS(PC);
+							return S ? T(TaGTutorial::Get(S->TutorialStep).Text) : FText::GetEmpty();
+						})
+					]
+					+ SVerticalBox::Slot().AutoHeight().Padding(0.f, 4.f, 0.f, 0.f)
+					[
+						SNew(STextBlock).Font(Font(13.f, false)).ColorAndOpacity(FLinearColor(0.75f, 0.78f, 0.82f))
+						.Text(T(TEXT("ポーズ（Start / Esc）から、このレッスンをとばせる")))
+					]
+				]
+			]
+		]
 		// Score and clock
 		+ SOverlay::Slot().HAlign(HAlign_Center).VAlign(VAlign_Top).Padding(0.f, 14.f)
 		[
 			SNew(SBorder).BorderImage(White()).BorderBackgroundColor(Panel).Padding(FMargin(22.f, 6.f))
+			.Visibility_Lambda([InTutorial]() { return InTutorial() ? EVisibility::Collapsed : EVisibility::HitTestInvisible; })
 			[
 				SNew(SVerticalBox)
 				+ SVerticalBox::Slot().AutoHeight().HAlign(HAlign_Center)
@@ -387,10 +513,18 @@ TSharedRef<SWidget> TaGUI::MakeMatchHUD(FPCPtr PC)
 				.Text_Lambda([PC]() { const ATaGGameState* S = GetGS(PC); return S ? S->GetBanner().Rule : FText::GetEmpty(); })
 			]
 		]
-		// Popups
-		+ SOverlay::Slot().HAlign(HAlign_Center).VAlign(VAlign_Top).Padding(0.f, 150.f)
+		// Popups (below the lesson panel in the tutorial)
+		+ SOverlay::Slot().HAlign(HAlign_Center).VAlign(VAlign_Top)
 		[
-			PopupBox
+			SNew(SVerticalBox)
+			+ SVerticalBox::Slot().AutoHeight()
+			[
+				SNew(SBox).HeightOverride_Lambda([InTutorial]() { return FOptionalSize(InTutorial() ? 200.f : 150.f); })
+			]
+			+ SVerticalBox::Slot().AutoHeight()
+			[
+				PopupBox
+			]
 		]
 		// Crosshair
 		+ SOverlay::Slot().HAlign(HAlign_Center).VAlign(VAlign_Center)
@@ -532,6 +666,8 @@ TSharedRef<SWidget> TaGUI::MakeTitle(FPCPtr PC, TSharedPtr<SWidget>& OutFocus)
 		.Font(Font(18.f, false))
 		.Text(T(PC.IsValid() ? PC->LastJoinAddress : TEXT("127.0.0.1")))
 		.MinDesiredWidth(220.f);
+	// First launch: the tutorial is the highlighted choice; afterwards, straight into a 3on3.
+	const bool bLearned = PC.IsValid() && PC->bTutorialDone;
 
 	return SNew(SHorizontalBox)
 		+ SHorizontalBox::Slot().AutoWidth().Padding(70.f, 60.f).VAlign(VAlign_Center)
@@ -553,7 +689,19 @@ TSharedRef<SWidget> TaGUI::MakeTitle(FPCPtr PC, TSharedPtr<SWidget>& OutFocus)
 				]
 				+ SVerticalBox::Slot().AutoHeight().Padding(0.f, 5.f)
 				[
-					Button(T(TEXT("BOTと対戦")), [PC]() { if (PC.IsValid()) { PC->PlayOffline(); } }, true, &OutFocus, nullptr, 24.f)
+					bLearned
+					? Button(T(TEXT("すぐ遊ぶ（BOTと3on3）")), [PC]() { if (PC.IsValid()) { PC->QuickPlay(); } }, true, &OutFocus, nullptr, 24.f)
+					: Button(T(TEXT("チュートリアル（はじめての方へ）")), [PC]() { if (PC.IsValid()) { PC->StartTutorial(); } }, true, &OutFocus, nullptr, 24.f)
+				]
+				+ SVerticalBox::Slot().AutoHeight().Padding(0.f, 5.f)
+				[
+					bLearned
+					? Button(T(TEXT("チュートリアル")), [PC]() { if (PC.IsValid()) { PC->StartTutorial(); } }, false, nullptr, nullptr, 20.f)
+					: Button(T(TEXT("すぐ遊ぶ（BOTと3on3）")), [PC]() { if (PC.IsValid()) { PC->QuickPlay(); } }, false, nullptr, nullptr, 20.f)
+				]
+				+ SVerticalBox::Slot().AutoHeight().Padding(0.f, 5.f)
+				[
+					Button(T(TEXT("ヒーローを選んでBOTと対戦")), [PC]() { if (PC.IsValid()) { PC->PlayOffline(); } }, false, nullptr, nullptr, 20.f)
 				]
 				+ SVerticalBox::Slot().AutoHeight().Padding(0.f, 5.f)
 				[
@@ -573,7 +721,15 @@ TSharedRef<SWidget> TaGUI::MakeTitle(FPCPtr PC, TSharedPtr<SWidget>& OutFocus)
 				]
 				+ SVerticalBox::Slot().AutoHeight().Padding(0.f, 5.f)
 				[
-					Button(T(TEXT("終了")), [PC]() { if (PC.IsValid()) { PC->QuitGame(); } })
+					SNew(SHorizontalBox)
+					+ SHorizontalBox::Slot().AutoWidth().Padding(0.f, 0.f, 8.f, 0.f)
+					[
+						Button(T(TEXT("設定")), [PC]() { if (PC.IsValid()) { PC->SetSettingsOpen(true); } })
+					]
+					+ SHorizontalBox::Slot().AutoWidth()
+					[
+						Button(T(TEXT("終了")), [PC]() { if (PC.IsValid()) { PC->QuitGame(); } })
+					]
 				]
 				+ SVerticalBox::Slot().AutoHeight().Padding(0.f, 22.f, 0.f, 0.f)
 				[
@@ -878,6 +1034,8 @@ TSharedRef<SWidget> TaGUI::MakeResults(FPCPtr PC, TSharedPtr<SWidget>& OutFocus)
 
 TSharedRef<SWidget> TaGUI::MakePause(FPCPtr PC, TSharedPtr<SWidget>& OutFocus)
 {
+	const ATaGGameState* GS0 = GetGS(PC);
+	const bool bTutorial = GS0 && GS0->bTutorial;
 	return SNew(SBox).HAlign(HAlign_Center).VAlign(VAlign_Center)
 		[
 			SNew(SBorder).BorderImage(White()).BorderBackgroundColor(Panel).Padding(FMargin(40.f, 26.f))
@@ -893,26 +1051,27 @@ TSharedRef<SWidget> TaGUI::MakePause(FPCPtr PC, TSharedPtr<SWidget>& OutFocus)
 				]
 				+ SVerticalBox::Slot().AutoHeight().Padding(0.f, 4.f)
 				[
-					Button(T(TEXT("カメラ：一人称 / 三人称（T / View）")), [PC]()
+					bTutorial
+					? Button(T(TEXT("このレッスンをとばす")), [PC]()
+						{
+							if (PC.IsValid())
+							{
+								PC->ServerTutorialSkip();
+								PC->TogglePauseMenu();
+							}
+						})
+					: StaticCastSharedRef<SWidget>(SNew(SBox))
+				]
+				+ SVerticalBox::Slot().AutoHeight().Padding(0.f, 4.f)
+				[
+					Button(T(TEXT("カメラ：一人称 / 三人称（View / T）")), [PC]()
 					{
 						if (ATaGCharacter* Me = GetMe(PC)) { Me->SetThirdPerson(!Me->IsThirdPerson()); }
 					})
 				]
 				+ SVerticalBox::Slot().AutoHeight().Padding(0.f, 4.f)
 				[
-					SNew(SHorizontalBox)
-					+ SHorizontalBox::Slot().AutoWidth()
-					[
-						Button(T(TEXT("感度 −")), [PC]() { if (PC.IsValid()) { PC->SetLookSensitivity(PC->GetLookSensitivity() - 0.1f); } })
-					]
-					+ SHorizontalBox::Slot().AutoWidth().VAlign(VAlign_Center).Padding(12.f, 0.f)
-					[
-						SNew(STextBlock).Font(Font(20.f)).Text_Lambda([PC]() { return T(FString::Printf(TEXT("%.1f"), PC.IsValid() ? PC->GetLookSensitivity() : 1.f)); })
-					]
-					+ SHorizontalBox::Slot().AutoWidth()
-					[
-						Button(T(TEXT("感度 ＋")), [PC]() { if (PC.IsValid()) { PC->SetLookSensitivity(PC->GetLookSensitivity() + 0.1f); } })
-					]
+					Button(T(TEXT("設定（感度・上下反転・視野角・音量・振動）")), [PC]() { if (PC.IsValid()) { PC->SetSettingsOpen(true); } })
 				]
 				+ SVerticalBox::Slot().AutoHeight().Padding(0.f, 4.f)
 				[
@@ -922,11 +1081,133 @@ TSharedRef<SWidget> TaGUI::MakePause(FPCPtr PC, TSharedPtr<SWidget>& OutFocus)
 				[
 					SNew(STextBlock).Font(Font(14.f, false))
 					.Text(T(TEXT(
-						"移動 WASD/左スティック   視点 マウス/右スティック   ジャンプ・ブロック Space/A\n"
-						"シュート 左クリック/RT（押して溜め、跳んだ頂点で離す。スティックの向きで種類が変わる）\n"
-						"攻撃：突破 Q/LB   かわし E/RB   パス F・右クリック/X\n"
-						"守備：タックル Q/LB   シュート妨害 E/RB（長押し）   間合い Shift/B   スティール F/X\n"
-						"ヒーローの技 C/LT・V/Y   カメラ切替 T/View   ポーズ Esc/Start")))
+						"移動 左スティック/WASD   視点 右スティック/マウス   ジャンプ・ブロック A/Space\n"
+						"シュート RT/左クリック（押して溜め、跳んだ頂点で離す。スティックの向きで種類が変わる）\n"
+						"攻撃：突破 LB/Q   かわし RB/E   パス X/F・右クリック\n"
+						"守備：タックル LB/Q   シュート妨害 RB/E（長押し）   間合い B/Shift   スティール X/F\n"
+						"ヒーローの技 LT/C・Y/V   カメラ切替 View/T   ポーズ Start/Esc   メニューで戻る B")))
+				]
+			]
+		];
+}
+
+// ================================================================ Settings
+
+TSharedRef<SWidget> TaGUI::MakeSettings(FPCPtr PC, TSharedPtr<SWidget>& OutFocus)
+{
+	auto Apply = [PC](TFunction<void(ATaGPlayerController&)> Change)
+	{
+		if (PC.IsValid())
+		{
+			Change(*PC.Get());
+			PC->ApplySettings();
+		}
+	};
+	auto Percent = [](float V) { return T(FString::Printf(TEXT("%d%%"), FMath::RoundToInt(V * 100.f))); };
+
+	return SNew(SBox).HAlign(HAlign_Center).VAlign(VAlign_Center)
+		[
+			SNew(SBorder).BorderImage(White()).BorderBackgroundColor(Panel).Padding(FMargin(40.f, 26.f))
+			[
+				SNew(SVerticalBox)
+				+ SVerticalBox::Slot().AutoHeight().HAlign(HAlign_Center).Padding(0.f, 0.f, 0.f, 14.f)
+				[
+					SNew(STextBlock).Font(Font(40.f)).Text(T(TEXT("設定")))
+				]
+				+ SVerticalBox::Slot().AutoHeight().Padding(0.f, 4.f)
+				[
+					SettingRow(TEXT("視点の感度"), Stepper(
+						[PC]() { return T(FString::Printf(TEXT("%.1f"), PC.IsValid() ? PC->LookSensitivity : 1.f)); },
+						[Apply]() { Apply([](ATaGPlayerController& P) { P.LookSensitivity -= 0.1f; }); },
+						[Apply]() { Apply([](ATaGPlayerController& P) { P.LookSensitivity += 0.1f; }); }, &OutFocus))
+				]
+				+ SVerticalBox::Slot().AutoHeight().Padding(0.f, 4.f)
+				[
+					SettingRow(TEXT("右スティックの上下"), ValueButton(
+						[PC]() { return T(PC.IsValid() && PC->bInvertStickY ? TEXT("リバース（上に倒すと下を向く）") : TEXT("ノーマル（上に倒すと上を向く）")); },
+						[Apply]() { Apply([](ATaGPlayerController& P) { P.bInvertStickY = !P.bInvertStickY; }); }))
+				]
+				+ SVerticalBox::Slot().AutoHeight().Padding(0.f, 4.f)
+				[
+					SettingRow(TEXT("マウスの上下"), ValueButton(
+						[PC]() { return T(PC.IsValid() && PC->bInvertMouseY ? TEXT("リバース（前に動かすと下を向く）") : TEXT("ノーマル（前に動かすと上を向く）")); },
+						[Apply]() { Apply([](ATaGPlayerController& P) { P.bInvertMouseY = !P.bInvertMouseY; }); }))
+				]
+				+ SVerticalBox::Slot().AutoHeight().Padding(0.f, 4.f)
+				[
+					SettingRow(TEXT("視野角"), Stepper(
+						[PC]() { return T(FString::Printf(TEXT("%d°"), FMath::RoundToInt(PC.IsValid() ? PC->FieldOfView : 95.f))); },
+						[Apply]() { Apply([](ATaGPlayerController& P) { P.FieldOfView -= 5.f; }); },
+						[Apply]() { Apply([](ATaGPlayerController& P) { P.FieldOfView += 5.f; }); }))
+				]
+				+ SVerticalBox::Slot().AutoHeight().Padding(0.f, 4.f)
+				[
+					SettingRow(TEXT("全体の音量"), Stepper(
+						[PC, Percent]() { return Percent(PC.IsValid() ? PC->MasterVolume : 1.f); },
+						[Apply]() { Apply([](ATaGPlayerController& P) { P.MasterVolume -= 0.1f; }); },
+						[Apply]() { Apply([](ATaGPlayerController& P) { P.MasterVolume += 0.1f; }); }))
+				]
+				+ SVerticalBox::Slot().AutoHeight().Padding(0.f, 4.f)
+				[
+					SettingRow(TEXT("BGMの音量"), Stepper(
+						[PC, Percent]() { return Percent(PC.IsValid() ? PC->MusicVolume : 0.6f); },
+						[Apply]() { Apply([](ATaGPlayerController& P) { P.MusicVolume -= 0.1f; }); },
+						[Apply]() { Apply([](ATaGPlayerController& P) { P.MusicVolume += 0.1f; }); }))
+				]
+				+ SVerticalBox::Slot().AutoHeight().Padding(0.f, 4.f)
+				[
+					SettingRow(TEXT("振動"), ValueButton(
+						[PC]() { return T(PC.IsValid() && PC->bVibration ? TEXT("オン") : TEXT("オフ")); },
+						[Apply]() { Apply([](ATaGPlayerController& P) { P.bVibration = !P.bVibration; }); }))
+				]
+				+ SVerticalBox::Slot().AutoHeight().HAlign(HAlign_Center).Padding(0.f, 16.f, 0.f, 0.f)
+				[
+					Button(T(TEXT("戻る（B / Esc）")), [PC]() { if (PC.IsValid()) { PC->SetSettingsOpen(false); } }, true, nullptr, nullptr, 22.f)
+				]
+			]
+		];
+}
+
+// ================================================================ Tutorial finished
+
+TSharedRef<SWidget> TaGUI::MakeTutorialDone(FPCPtr PC, TSharedPtr<SWidget>& OutFocus)
+{
+	return SNew(SBox).HAlign(HAlign_Center).VAlign(VAlign_Center)
+		[
+			SNew(SBorder).BorderImage(White()).BorderBackgroundColor(Panel).Padding(FMargin(44.f, 30.f))
+			[
+				SNew(SBox).WidthOverride(820.f)
+				[
+					SNew(SVerticalBox)
+					+ SVerticalBox::Slot().AutoHeight().HAlign(HAlign_Center)
+					[
+						SNew(STextBlock).Font(Font(48.f)).ColorAndOpacity(Teal).Text(T(TEXT("チュートリアル完了！")))
+					]
+					+ SVerticalBox::Slot().AutoHeight().Padding(0.f, 12.f)
+					[
+						SNew(STextBlock).Font(Font(18.f)).AutoWrapText(true).Text(T(TaGTutorial::Get(TaGTutorial::Done).Text))
+					]
+					+ SVerticalBox::Slot().AutoHeight().Padding(0.f, 4.f)
+					[
+						SNew(STextBlock).Font(Font(15.f, false)).AutoWrapText(true).ColorAndOpacity(FLinearColor(0.8f, 0.82f, 0.86f))
+						.Text(T(TEXT("読み勝つと「ゾーン」：少しの間速くなり、次のシュートが入りやすい。パスでつなぐほどボールが光り、連携のシュートが決まりやすい。")))
+					]
+					+ SVerticalBox::Slot().AutoHeight().HAlign(HAlign_Center).Padding(0.f, 18.f, 0.f, 0.f)
+					[
+						SNew(SHorizontalBox)
+						+ SHorizontalBox::Slot().AutoWidth().Padding(6.f)
+						[
+							Button(T(TEXT("BOTと3on3で遊ぶ")), [PC]() { if (PC.IsValid()) { PC->QuickPlay(); } }, true, &OutFocus, nullptr, 22.f)
+						]
+						+ SHorizontalBox::Slot().AutoWidth().Padding(6.f)
+						[
+							Button(T(TEXT("ヒーローを選ぶ")), [PC]() { if (PC.IsValid()) { PC->PlayOffline(); } }, false, nullptr, nullptr, 20.f)
+						]
+						+ SHorizontalBox::Slot().AutoWidth().Padding(6.f)
+						[
+							Button(T(TEXT("タイトルへ")), [PC]() { if (PC.IsValid()) { PC->LeaveToTitle(); } }, false, nullptr, nullptr, 20.f)
+						]
+					]
 				]
 			]
 		];

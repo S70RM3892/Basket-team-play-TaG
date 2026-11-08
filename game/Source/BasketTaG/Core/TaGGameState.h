@@ -87,6 +87,13 @@ public:
 	UPROPERTY(Replicated) FTaGTeamStats TeamStats0;
 	UPROPERTY(Replicated) FTaGTeamStats TeamStats1;
 
+	// --- Tutorial (TaGTutorial.h): the lesson being played and how far along it is
+	UPROPERTY(Replicated) bool bTutorial = false;
+	UPROPERTY(Replicated) int32 TutorialStep = 0;
+	UPROPERTY(Replicated) int32 TutorialProgress = 0;
+	UPROPERTY(Replicated) int32 TutorialGoal = 1;
+	bool IsTutorialFinished() const;
+
 	int32 GetScore(int32 Team) const { return Team == 0 ? Score0 : Score1; }
 	bool NeedsClear(int32 Team) const { return Team == 0 ? bNeedsClear0 : bNeedsClear1; }
 	FTaGTeamStats& Stats(int32 Team) { return Team == 0 ? TeamStats0 : TeamStats1; }

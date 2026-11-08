@@ -1,8 +1,10 @@
 #include "Character/TaGPlayerController.h"
 #include "Character/TaGCharacter.h"
+#include "Core/TaGAudio.h"
 #include "Core/TaGGameMode.h"
 #include "Core/TaGGameState.h"
 #include "Core/TaGRules.h"
+#include "Core/TaGTutorial.h"
 #include "Core/TaGTypes.h"
 #include "Camera/CameraActor.h"
 #include "Camera/CameraComponent.h"
@@ -116,6 +118,7 @@ void ATaGPlayerController::BeginPlay()
 	}
 	// No engine debug text over the game (asset compile status, shadow warnings) in development builds.
 	ConsoleCommand(TEXT("DisableAllScreenMessages"));
+	ApplySettings();
 
 	FActorSpawnParameters Params;
 	Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
@@ -133,10 +136,55 @@ bool ATaGPlayerController::IsHost() const
 	return HasAuthority() && IsLocalController();
 }
 
+void ATaGPlayerController::EndPlay(const EEndPlayReason::Type EndPlayReason)
+{
+	if (IsLocalController())
+	{
+		// Leaving a match mid-rumble must not leave the pad (or the phone) buzzing.
+		PlayDynamicForceFeedback(0.f, 0.f, true, true, true, true, EDynamicForceFeedbackAction::Stop);
+	}
+	Super::EndPlay(EndPlayReason);
+}
+
 void ATaGPlayerController::SetLookSensitivity(float Value)
 {
-	LookSensitivity = FMath::Clamp(Value, 0.2f, 3.f);
+	LookSensitivity = Value;
+	ApplySettings();
+}
+
+void ATaGPlayerController::ApplySettings()
+{
+	LookSensitivity = FMath::Clamp(FMath::RoundToFloat(LookSensitivity * 10.f) / 10.f, 0.2f, 3.f);
+	FieldOfView = FMath::Clamp(FieldOfView, 80.f, 110.f);
+	MasterVolume = FMath::Clamp(MasterVolume, 0.f, 1.f);
+	MusicVolume = FMath::Clamp(MusicVolume, 0.f, 1.f);
+	if (IsLocalController())
+	{
+		TaGAudio::SetMasterVolume(this, MasterVolume);
+		TaGAudio::SetMusicVolume(MusicVolume);
+	}
 	SaveConfig();
+}
+
+void ATaGPlayerController::SetSettingsOpen(bool bOpen)
+{
+	bSettingsOpen = bOpen;
+}
+
+void ATaGPlayerController::Feedback(float Intensity, float Duration, float CameraKick)
+{
+	if (!IsLocalController())
+	{
+		return;
+	}
+	if (bVibration && Intensity > 0.f)
+	{
+		PlayDynamicForceFeedback(FMath::Clamp(Intensity, 0.f, 1.f), Duration, true, true, true, true);
+	}
+	if (ATaGCharacter* Me = Cast<ATaGCharacter>(GetPawn()))
+	{
+		Me->AddCameraKick(CameraKick);
+	}
 }
 
 void ATaGPlayerController::SetUIMode(bool bUI)
@@ -163,8 +211,13 @@ void ATaGPlayerController::SetUIMode(bool bUI)
 
 void ATaGPlayerController::TogglePauseMenu()
 {
+	if (bSettingsOpen)
+	{
+		SetSettingsOpen(false); // Esc / Start / the pause button backs out of the settings first
+		return;
+	}
 	const ATaGGameState* GS = GetWorld()->GetGameState<ATaGGameState>();
-	if (!GS || GS->Phase != ETaGPhase::Playing)
+	if (!GS || GS->Phase != ETaGPhase::Playing || GS->IsTutorialFinished())
 	{
 		return;
 	}
@@ -173,16 +226,6 @@ void ATaGPlayerController::TogglePauseMenu()
 	{
 		UGameplayStatics::SetGamePaused(this, bPauseMenu);
 	}
-}
-
-void ATaGPlayerController::OnPossess(APawn* InPawn)
-{
-	Super::OnPossess(InPawn);
-}
-
-void ATaGPlayerController::OnUnPossess()
-{
-	Super::OnUnPossess();
 }
 
 void ATaGPlayerController::Tick(float DeltaSeconds)
@@ -226,7 +269,11 @@ void ATaGPlayerController::Tick(float DeltaSeconds)
 	{
 		TickInputTest(DeltaSeconds);
 	}
-	const bool bWantUI = !bPlaying || bPauseMenu || !GetPawn();
+	if (FParse::Param(FCommandLine::Get(), TEXT("TaGTutorialTest")))
+	{
+		TickTutorialTest(DeltaSeconds);
+	}
+	const bool bWantUI = !bPlaying || bPauseMenu || bSettingsOpen || !GetPawn() || (GS && GS->IsTutorialFinished());
 	if (bWantUI != bUIMode)
 	{
 		SetUIMode(bWantUI);
@@ -335,11 +382,150 @@ void ATaGPlayerController::TickInputTest(float Dt)
 	}
 }
 
+// ================================================================ Tutorial test
+
+void ATaGPlayerController::TickTutorialTest(float Dt)
+{
+	const ATaGGameState* GS = GetWorld()->GetGameState<ATaGGameState>();
+	UEnhancedInputLocalPlayerSubsystem* Sub = ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(GetLocalPlayer());
+	if (!GS || !GS->bTutorial || !Sub)
+	{
+		return;
+	}
+	const float RealDt = FApp::GetDeltaTime();
+	TutTestClock += RealDt;
+	if (GS->TutorialStep != TutTestStep)
+	{
+		UE_LOG(LogTemp, Display, TEXT("TUTORIALTEST lesson %d -> %d at %.1f s"), TutTestStep, GS->TutorialStep, TutTestClock);
+		TutTestStep = GS->TutorialStep;
+		TutTestT = 0.f;
+		TutTestNext = 0.f;
+		bTutTestShootHeld = false;
+		bTutTestContestHeld = false;
+		for (UInputAction* A : { Actions.Move.Get(), Actions.Shoot.Get(), Actions.Secondary.Get() })
+		{
+			Sub->StopContinuousInputInjectionForAction(A);
+		}
+		if (TutTestStep >= TaGTutorial::Done)
+		{
+			UE_LOG(LogTemp, Display, TEXT("TUTORIALTEST done in %.1f s, finished=%d"), TutTestClock, GS->IsTutorialFinished() ? 1 : 0);
+			FPlatformMisc::RequestExit(false);
+		}
+		return;
+	}
+	if (TutTestClock > 300.f)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("TUTORIALTEST timeout in lesson %d (progress %d/%d)"), TutTestStep, GS->TutorialProgress, GS->TutorialGoal);
+		FPlatformMisc::RequestExit(false);
+		return;
+	}
+	ATaGCharacter* Me = Cast<ATaGCharacter>(GetPawn());
+	if (!Me)
+	{
+		return;
+	}
+	TutTestT += RealDt;
+	ATaGCharacter* Opp = Me->FindNearestOpponent();
+	uint8 Kind = 0;
+	const bool bTell = Opp && Opp->IsPretelling(Kind);
+	const ETaGAction OA = Opp ? Opp->GetAction() : ETaGAction::None;
+	const bool bFree = Me->GetAction() == ETaGAction::None;
+	auto Tap = [Sub](UInputAction* A) { Sub->InjectInputForAction(A, FInputActionValue(true), {}, {}); };
+
+	switch (TutTestStep)
+	{
+	case TaGTutorial::Move:
+		Sub->StartContinuousInputInjectionForAction(Actions.Move, FInputActionValue(FVector2D(0.f, 1.f)), {}, {});
+		break;
+	case TaGTutorial::Shoot:
+	case TaGTutorial::Perfect:
+		// Hold, release at the top of the jump (the perfect window), let go of the button between shots.
+		if (bTutTestShootHeld)
+		{
+			if ((Me->IsChargingShot() && Me->GetShotCharge() >= 0.74f) || (!Me->IsChargingShot() && TutTestT - TutTestHeldSince > 0.3f))
+			{
+				Sub->StopContinuousInputInjectionForAction(Actions.Shoot);
+				bTutTestShootHeld = false;
+			}
+		}
+		else if (Me->HasBall() && bFree && TutTestT > TutTestNext)
+		{
+			Sub->StartContinuousInputInjectionForAction(Actions.Shoot, FInputActionValue(true), {}, {});
+			bTutTestShootHeld = true;
+			TutTestHeldSince = TutTestT;
+			TutTestNext = TutTestT + 2.f;
+		}
+		break;
+	case TaGTutorial::Drive:
+		if (Me->HasBall() && bFree && TutTestT > TutTestNext)
+		{
+			Tap(Actions.Primary);
+			TutTestNext = TutTestT + 1.f;
+		}
+		break;
+	case TaGTutorial::DriveVsContest:
+		// Answer the contest with a drive once its hands are up.
+		if (Opp && (Opp->IsContesting() || Opp->IsContestStarting()) && Me->HasBall() && bFree)
+		{
+			Tap(Actions.Primary);
+		}
+		break;
+	case TaGTutorial::DodgeVsTackle:
+		// Answer the tackle with a dodge as it comes (a human reacting to the orange tell lands about here).
+		if (Opp && OA == ETaGAction::TackleStart && Me->HasBall() && bFree && TutTestT > TutTestNext)
+		{
+			Tap(Actions.Secondary);
+			TutTestNext = TutTestT + 0.6f;
+		}
+		break;
+	case TaGTutorial::TackleVsDrive:
+		// Answer the drive with a tackle as it starts.
+		if (Opp && (OA == ETaGAction::DriveStart || OA == ETaGAction::Drive) && bFree)
+		{
+			Tap(Actions.Primary);
+		}
+		break;
+	case TaGTutorial::ContestVsShot:
+		// Answer the shot with a held contest.
+		if (!bTutTestContestHeld && Opp && ((bTell && Kind == 4) || Opp->IsChargingShot()) && bFree)
+		{
+			Sub->StartContinuousInputInjectionForAction(Actions.Secondary, FInputActionValue(true), {}, {});
+			bTutTestContestHeld = true;
+			TutTestHeldSince = TutTestT;
+		}
+		else if (bTutTestContestHeld && TutTestT - TutTestHeldSince > 1.4f)
+		{
+			Sub->StopContinuousInputInjectionForAction(Actions.Secondary);
+			bTutTestContestHeld = false;
+		}
+		break;
+	case TaGTutorial::Art:
+		if (Me->HasBall() && bFree && TutTestT > 1.f && TutTestT > TutTestNext)
+		{
+			Tap(Actions.Art1);
+			TutTestNext = TutTestT + 2.f;
+		}
+		break;
+	default:
+		break;
+	}
+}
+
 // ================================================================ Title
 
 void ATaGPlayerController::PlayOffline()
 {
 	ServerEnterLobby(3, 1);
+}
+
+void ATaGPlayerController::QuickPlay()
+{
+	ServerQuickPlay();
+}
+
+void ATaGPlayerController::StartTutorial()
+{
+	ServerStartTutorial();
 }
 
 void ATaGPlayerController::HostOnline()
@@ -367,6 +553,7 @@ void ATaGPlayerController::LeaveToTitle()
 {
 	UGameplayStatics::SetGamePaused(this, false);
 	bPauseMenu = false;
+	bSettingsOpen = false;
 	if (GetNetMode() == NM_Client)
 	{
 		ConsoleCommand(TEXT("disconnect"));
@@ -444,6 +631,40 @@ void ATaGPlayerController::ServerBackToLobby_Implementation()
 		if (IsLocalController())
 		{
 			GM->BackToLobby();
+		}
+	}
+}
+
+void ATaGPlayerController::ServerQuickPlay_Implementation()
+{
+	if (ATaGGameMode* GM = GetWorld()->GetAuthGameMode<ATaGGameMode>())
+	{
+		if (IsLocalController())
+		{
+			GM->EnterLobby(3, 1);
+			GM->StartMatch();
+		}
+	}
+}
+
+void ATaGPlayerController::ServerStartTutorial_Implementation()
+{
+	if (ATaGGameMode* GM = GetWorld()->GetAuthGameMode<ATaGGameMode>())
+	{
+		if (IsLocalController())
+		{
+			GM->StartTutorial(this);
+		}
+	}
+}
+
+void ATaGPlayerController::ServerTutorialSkip_Implementation()
+{
+	if (ATaGGameMode* GM = GetWorld()->GetAuthGameMode<ATaGGameMode>())
+	{
+		if (IsLocalController())
+		{
+			GM->TutorialAdvance(true);
 		}
 	}
 }

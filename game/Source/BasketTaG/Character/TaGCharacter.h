@@ -204,6 +204,8 @@ public:
 	// ------------------------------------------------ Camera
 	void SetThirdPerson(bool bTPS);
 	bool IsThirdPerson() const { return bThirdPerson; }
+	/** Local camera shake (hits, read losses); decays on its own. */
+	void AddCameraKick(float Strength) { KickAmp = FMath::Max(KickAmp, Strength); }
 
 	// ------------------------------------------------ Cosmetic events (server -> everyone)
 	UFUNCTION(NetMulticast, Unreliable)
@@ -242,7 +244,7 @@ protected:
 	UPROPERTY(Replicated) float SlowActionFactor = 1.f;
 	UPROPERTY(Replicated) float TetherEnd = 0.f;
 	UPROPERTY(Replicated) TObjectPtr<ATaGCharacter> TetherPartner;
-	UPROPERTY(Replicated) uint8 PretellKind = 0;     // 1 tackle, 2 contest
+	UPROPERTY(Replicated) uint8 PretellKind = 0;     // 1 tackle, 2 contest, 3 drive, 4 shot (tutorial)
 	UPROPERTY(Replicated) float PretellEnd = 0.f;
 
 	UFUNCTION() void OnRep_HeroTeam();
@@ -282,6 +284,11 @@ protected:
 	bool bAbilitiesGiven = false;
 	bool bVisualsBuilt = false;
 	float LandCheckZ = 0.f;
+	float KickAmp = 0.f;
+	float KickT = 0.f;
+
+	/** The local player's own state changes (knocked down, staggered): rumble and camera kick. */
+	void OnLocalActionChanged(ETaGAction NewAction);
 
 	// ------------------------------------------------ Internals
 	void SetAction(ETaGAction NewAction, uint8 Variant = 0, const FVector& Dir = FVector::ForwardVector, float Length = 0.f);

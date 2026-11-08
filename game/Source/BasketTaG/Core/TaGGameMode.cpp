@@ -10,6 +10,7 @@
 #include "Core/TaGPlayerState.h"
 #include "Core/TaGRules.h"
 #include "Core/TaGStage.h"
+#include "Core/TaGTutorial.h"
 #include "Core/TaGTypes.h"
 #include "UI/TaGHUD.h"
 #include "Engine/Engine.h"
@@ -116,7 +117,7 @@ void ATaGGameMode::BeginPlay()
 		{
 			Size = FMath::Clamp(FCString::Atoi(*SizeValue), 1, 3);
 		}
-		if (SnapMode != TEXT("Title"))
+		if (SnapMode != TEXT("Title") && SnapMode != TEXT("Settings") && SnapMode != TEXT("Trail") && !SnapMode.StartsWith(TEXT("Tutorial")))
 		{
 			EnterLobby(Size, 1);
 		}
@@ -195,6 +196,7 @@ void ATaGGameMode::EnterLobby(int32 TeamSize, int32 BotSkill)
 	ClearPlayers();
 	bLive = false;
 	S->Phase = ETaGPhase::Lobby;
+	S->bTutorial = false;
 	S->TeamSize = FMath::Clamp(TeamSize, 1, 3);
 	S->BotSkill = FMath::Clamp(BotSkill, 0, 3);
 	S->Score0 = 0;
@@ -387,7 +389,8 @@ void ATaGGameMode::StartMatch()
 				continue;
 			}
 			AI->Skill = BotSkillValue(S->BotSkill);
-			const ETaGHero Hero = TaGHeroes::Random(Used);
+			// The tutorial bot is Minamo: none of her arts replace the plain hands the lessons teach.
+			const ETaGHero Hero = S->bTutorial ? ETaGHero::Minamo : TaGHeroes::Random(Used);
 			Used.Add(Hero);
 			if (ATaGPlayerState* P = AI->GetPlayerState<ATaGPlayerState>())
 			{
@@ -475,6 +478,10 @@ void ATaGGameMode::ScheduleTurnover(int32 ToTeam, float Delay)
 {
 	bLive = false;
 	bShotInFlight = false;
+	if (GS() && GS()->bTutorial)
+	{
+		ToTeam = TutorialAttackTeam(); // every lesson restarts with the side that practices
+	}
 	NextPossessionTeam = ToTeam;
 	DeadTimeLeft = Delay;
 	bRestartAfterDead = true;
@@ -561,6 +568,16 @@ void ATaGGameMode::Tick(float DeltaSeconds)
 	{
 		TickSnap(DeltaSeconds);
 	}
+	// -TaGTutorialTest: the tutorial from the title (the player controller answers the lessons)
+	if (FParse::Param(FCommandLine::Get(), TEXT("TaGTutorialTest")) && S->Phase == ETaGPhase::Title && SnapTimer < 100.f)
+	{
+		SnapTimer += DeltaSeconds;
+		if (SnapTimer > 1.f)
+		{
+			SnapTimer = 100.f;
+			StartTutorial(GetWorld()->GetFirstPlayerController());
+		}
+	}
 	// -TaGInputTest: a 1on1 against a practice bot with the hero from -TaGHero
 	if (FParse::Param(FCommandLine::Get(), TEXT("TaGInputTest")) && S->Phase != ETaGPhase::Playing && SnapTimer < 100.f)
 	{
@@ -611,6 +628,10 @@ void ATaGGameMode::Tick(float DeltaSeconds)
 		return;
 	}
 	S->MatchTime += DeltaSeconds;
+	if (S->bTutorial)
+	{
+		TickTutorial(DeltaSeconds);
+	}
 
 	if (!bLive)
 	{
@@ -705,6 +726,10 @@ void ATaGGameMode::ReadWin(ATaGCharacter* Winner, ATaGCharacter* Loser, const FS
 	S->Stats(Winner->GetTeam()).ReadWins++;
 	if (ATaGPlayerState* P = PS(Winner)) { P->Stats.ReadWins++; }
 	if (ATaGPlayerState* P = PS(Loser)) { P->Stats.ReadLosses++; }
+	if (S->bTutorial)
+	{
+		TutorialOnReadWin(Winner, Rule);
+	}
 	if (bAutoTest)
 	{
 		UE_LOG(LogTaG, Verbose, TEXT("READ %s by team %d"), *Rule, Winner->GetTeam());
@@ -783,6 +808,26 @@ void ATaGGameMode::OnDriveBeatsContest(ATaGCharacter* D, ATaGCharacter* O)
 
 void ATaGGameMode::OnDriveEnd(ATaGCharacter* D)
 {
+	if (D && GS() && GS()->bTutorial)
+	{
+		const int32 Step = GS()->TutorialStep;
+		if (D->IsPlayerControlled() && D->HadBallOnDrive() && Step == TaGTutorial::Drive)
+		{
+			TutorialProgress(1);
+			if (TutorialAdvanceT <= 0.f)
+			{
+				TutorialResetT = 1.f; // back to the top for the next try (no gather-and-shoot needed)
+			}
+		}
+		else if (D->IsPlayerControlled() && D->HadBallOnDrive() && Step == TaGTutorial::DriveVsContest)
+		{
+			TutorialRetry(TEXT("相手が手を上げて赤く光っている間に突破しよう"), 1.f);
+		}
+		else if (!D->IsPlayerControlled() && Step == TaGTutorial::TackleVsDrive)
+		{
+			TutorialRetry(TEXT("抜かれた！ 水色に光ったらすぐタックル"));
+		}
+	}
 	if (!D || !D->HadBallOnDrive() || !D->HasBall())
 	{
 		return;
@@ -808,6 +853,11 @@ void ATaGGameMode::OnDriveEnd(ATaGCharacter* D)
 void ATaGGameMode::OnDodgeWhiff(ATaGCharacter* D)
 {
 	// Spacing > evade: a defender who stayed patient takes the ball from the whiffed spin.
+	if (D && GS() && GS()->bTutorial && D->IsPlayerControlled() && GS()->TutorialStep == TaGTutorial::DodgeVsTackle)
+	{
+		D->ResetHandCooldowns(); // the lesson needs the next dodge ready for the tackle
+		Popup(TEXT("オレンジに光ってからかわそう"), -1);
+	}
 	if (!D || !D->HasBall())
 	{
 		return;
@@ -936,6 +986,10 @@ void ATaGGameMode::OnArtUsed(ATaGCharacter* U, ETaGArt Art)
 	GS()->Stats(U->GetTeam()).ArtsUsed++;
 	const FTaGArtDef& A = TaGHeroes::GetArt(Art);
 	Popup(FString::Printf(TEXT("%s：%s〔%s〕"), U->GetHeroDef().Name, A.Name, TaGHeroes::HandName(A.Hand)), U->GetTeam());
+	if (GS()->bTutorial && U->IsPlayerControlled() && GS()->TutorialStep == TaGTutorial::Art)
+	{
+		TutorialProgress(1);
+	}
 }
 
 // ================================================================ Ball events
@@ -971,6 +1025,33 @@ void ATaGGameMode::ResolveShot(ATaGCharacter* Shooter, float Charge, bool bConta
 	{
 		S->Stats(Team).Perfects++;
 		Popup(TEXT("パーフェクト・リリース！"), -1);
+	}
+	if (S->bTutorial)
+	{
+		if (Shooter->IsPlayerControlled())
+		{
+			if (S->TutorialStep == TaGTutorial::Shoot)
+			{
+				TutorialProgress(1);
+			}
+			else if (S->TutorialStep == TaGTutorial::Perfect)
+			{
+				TutorialShots++;
+				if (E.bPerfect)
+				{
+					TutorialProgress(1);
+				}
+				else if (TutorialShots >= 5)
+				{
+					Popup(TEXT("タイミングはつかめた。次へ進もう"), -1);
+					TutorialProgress(S->TutorialGoal);
+				}
+			}
+		}
+		else if (S->TutorialStep == TaGTutorial::ContestVsShot && !E.bContested)
+		{
+			TutorialRetry(TEXT("打たれた。金色に光ったらシュート妨害を押し続けよう"), 2.2f);
+		}
 	}
 
 	const bool bMake = FMath::FRand() < E.Chance;
@@ -1107,7 +1188,7 @@ void ATaGGameMode::OnBasket(ATaGCharacter* Shooter, int32 Points, bool bValid)
 	{
 		S->MulticastBasket(Team, Points);
 	}
-	if (S->GetScore(Team) >= TaG::TargetScore)
+	if (S->GetScore(Team) >= TaG::TargetScore && !S->bTutorial)
 	{
 		EndMatch(Team);
 		return;
@@ -1158,7 +1239,7 @@ void ATaGGameMode::OnBallPickedUp(ATaGCharacter* Picker, bool bFromPass)
 		LastPasser = nullptr;
 		LastCatcher = nullptr;
 		Ball->SetChain(0);
-		const bool bInside = !TaG::IsBeyondArc(Picker->GetFeetLocation());
+		const bool bInside = !S->bTutorial && !TaG::IsBeyondArc(Picker->GetFeetLocation());
 		SetNeedsClear(Team, bInside);
 		SetNeedsClear(1 - Team, false);
 		if (bInside)
@@ -1236,6 +1317,250 @@ void ATaGGameMode::LogStats() const
 		}
 	}
 	UE_LOG(LogTaG, Display, TEXT("STATS match_time=%.1f size=%d"), S->MatchTime, S->TeamSize);
+}
+
+// ================================================================ Tutorial
+
+bool ATaGGameMode::IsTutorial() const
+{
+	return GS() && GS()->bTutorial;
+}
+
+void ATaGGameMode::StartTutorial(APlayerController* PC)
+{
+	ATaGGameState* S = GS();
+	if (!S || !PC)
+	{
+		return;
+	}
+	EnterLobby(1, 0);
+	ATaGPlayerState* Me = PC->GetPlayerState<ATaGPlayerState>();
+	for (APlayerState* P : GameState->PlayerArray)
+	{
+		ATaGPlayerState* T = Cast<ATaGPlayerState>(P);
+		if (T && !T->bIsBotPlayer)
+		{
+			T->Team = T == Me ? 0 : -1; // a 1on1 lesson
+		}
+	}
+	if (Me)
+	{
+		Me->Hero = ETaGHero::Rei; // the art lesson talks about Rei's arts
+	}
+	S->bTutorial = true;
+	S->TutorialStep = TaGTutorial::Move;
+	S->TutorialProgress = 0;
+	S->TutorialGoal = TaGTutorial::Get(TaGTutorial::Move).Goal;
+	TutorialAdvanceT = 0.f;
+	TutorialResetT = 0.f;
+	TutorialShots = 0;
+	TutorialMoved = 0.f;
+	bTutorialHasLastPos = false;
+	StartMatch();
+	ApplyTutorialScripts();
+}
+
+int32 ATaGGameMode::TutorialAttackTeam() const
+{
+	// The learner is always team A (0); the scripted bot is team B.
+	return GS() && !TaGTutorial::Get(GS()->TutorialStep).bPlayerAttacks ? 1 : 0;
+}
+
+ATaGCharacter* ATaGGameMode::TutorialPlayer() const
+{
+	for (ATaGCharacter* C : Players)
+	{
+		if (C && C->IsPlayerControlled())
+		{
+			return C;
+		}
+	}
+	return nullptr;
+}
+
+void ATaGGameMode::ApplyTutorialScripts()
+{
+	using EScript = ATaGBotController::EScript;
+	EScript Script = EScript::Idle;
+	switch (GS()->TutorialStep)
+	{
+	case TaGTutorial::DriveVsContest: Script = EScript::ContestOnClose; break;
+	case TaGTutorial::DodgeVsTackle: Script = EScript::TackleOnClose; break;
+	case TaGTutorial::TackleVsDrive: Script = EScript::DriveAttack; break;
+	case TaGTutorial::ContestVsShot: Script = EScript::ShootAttack; break;
+	default: break;
+	}
+	for (ATaGBotController* B : Bots)
+	{
+		if (B)
+		{
+			B->SetScript(Script);
+		}
+	}
+}
+
+void ATaGGameMode::TickTutorial(float Dt)
+{
+	ATaGGameState* S = GS();
+	S->ShotClock = TaG::ShotClock; // no shot clock while learning
+	if (S->TutorialStep >= TaGTutorial::Done)
+	{
+		return;
+	}
+	if (TutorialAdvanceT > 0.f)
+	{
+		TutorialAdvanceT -= Dt;
+		if (TutorialAdvanceT <= 0.f)
+		{
+			TutorialAdvance(false);
+		}
+		return;
+	}
+	if (TutorialResetT > 0.f)
+	{
+		TutorialResetT -= Dt;
+		if (TutorialResetT <= 0.f)
+		{
+			for (ATaGCharacter* C : Players)
+			{
+				if (C)
+				{
+					C->ResetHandCooldowns();
+				}
+			}
+			ScheduleTurnover(TutorialAttackTeam(), 0.4f);
+		}
+		return;
+	}
+	ATaGCharacter* Me = TutorialPlayer();
+	if (!Me || !bLive || !Ball)
+	{
+		bTutorialHasLastPos = false;
+		return;
+	}
+	// Lesson 1: walk a few meters
+	if (S->TutorialStep == TaGTutorial::Move)
+	{
+		const FVector P = Me->GetActorLocation();
+		if (bTutorialHasLastPos)
+		{
+			TutorialMoved += FVector::Dist2D(P, TutorialLastPos);
+		}
+		TutorialLastPos = P;
+		bTutorialHasLastPos = true;
+		const int32 Meters = FMath::Min(FMath::FloorToInt(TutorialMoved / 100.f), S->TutorialGoal);
+		if (Meters > S->TutorialProgress)
+		{
+			TutorialProgress(Meters - S->TutorialProgress);
+		}
+	}
+	// The other side got the ball (rebound, steal, tackle): give it back to the side that practices.
+	const int32 Want = TutorialAttackTeam();
+	const ATaGCharacter* Holder = Ball->GetHolder();
+	if (Ball->GetBallState() == ETaGBallState::Held && Holder && Holder->GetTeam() != Want)
+	{
+		TutorialResetT = 0.8f;
+	}
+	else if (Want != Me->GetTeam() && Ball->GetBallState() == ETaGBallState::Loose)
+	{
+		TutorialResetT = 1.f; // defense lessons: the bot's attempt is over once the ball is loose
+	}
+}
+
+void ATaGGameMode::TutorialProgress(int32 Amount)
+{
+	ATaGGameState* S = GS();
+	if (!S || !S->bTutorial || TutorialAdvanceT > 0.f || S->TutorialStep >= TaGTutorial::Done)
+	{
+		return;
+	}
+	S->TutorialProgress = FMath::Min(S->TutorialProgress + Amount, S->TutorialGoal);
+	if (S->TutorialProgress >= S->TutorialGoal)
+	{
+		TutorialAdvanceT = 1.1f;
+		TutorialResetT = 0.f;
+		Popup(TEXT("できた！"), 0);
+		if (ATaGCharacter* Me = TutorialPlayer())
+		{
+			Sfx(TEXT("ReadWin"), Me->GetActorLocation(), 0.7f);
+		}
+	}
+}
+
+void ATaGGameMode::TutorialOnReadWin(ATaGCharacter* Winner, const FString& Rule)
+{
+	if (!Winner || !Winner->IsPlayerControlled())
+	{
+		return;
+	}
+	bool bLesson = false;
+	switch (GS()->TutorialStep)
+	{
+	case TaGTutorial::DriveVsContest: bLesson = Rule.StartsWith(TEXT("突破")); break;
+	case TaGTutorial::DodgeVsTackle: bLesson = Rule.StartsWith(TEXT("かわし")); break;
+	case TaGTutorial::TackleVsDrive: bLesson = Rule.StartsWith(TEXT("タックル")); break;
+	case TaGTutorial::ContestVsShot: bLesson = Rule.StartsWith(TEXT("シュート妨害")); break;
+	default: break;
+	}
+	if (bLesson)
+	{
+		TutorialProgress(1);
+	}
+}
+
+void ATaGGameMode::TutorialRetry(const FString& Hint, float Delay)
+{
+	if (!IsTutorial() || TutorialAdvanceT > 0.f || TutorialResetT > 0.f)
+	{
+		return;
+	}
+	Popup(Hint, -1);
+	TutorialResetT = Delay;
+}
+
+void ATaGGameMode::TutorialAdvance(bool bSkip)
+{
+	ATaGGameState* S = GS();
+	if (!S || !S->bTutorial || S->Phase != ETaGPhase::Playing || S->TutorialStep >= TaGTutorial::Done)
+	{
+		return;
+	}
+	TutorialAdvanceT = 0.f;
+	TutorialResetT = 0.f;
+	TutorialShots = 0;
+	S->TutorialStep++;
+	S->TutorialProgress = 0;
+	S->TutorialGoal = TaGTutorial::Get(S->TutorialStep).Goal;
+	for (ATaGCharacter* C : Players)
+	{
+		if (C)
+		{
+			C->ResetHandCooldowns();
+		}
+	}
+	ApplyTutorialScripts();
+	UE_LOG(LogTaG, Display, TEXT("TUTORIAL step=%d %s%s"), S->TutorialStep, TaGTutorial::Get(S->TutorialStep).Title, bSkip ? TEXT(" (skipped)") : TEXT(""));
+	if (S->TutorialStep >= TaGTutorial::Done)
+	{
+		bLive = false;
+		bRestartAfterDead = false;
+		if (Ball)
+		{
+			Ball->SetDead();
+		}
+		Sfx(TEXT("Buzzer"), TaG::RimCenter(), 0.6f);
+		for (FConstPlayerControllerIterator It = GetWorld()->GetPlayerControllerIterator(); It; ++It)
+		{
+			ATaGPlayerController* PC = Cast<ATaGPlayerController>(It->Get());
+			if (PC && PC->IsLocalController())
+			{
+				PC->bTutorialDone = true;
+				PC->SaveConfig();
+			}
+		}
+		return;
+	}
+	ScheduleTurnover(TutorialAttackTeam(), bSkip ? 0.4f : 1.f);
 }
 
 // ================================================================ Test modes
@@ -1325,6 +1650,39 @@ void ATaGGameMode::TickSnap(float Dt)
 	{
 		ScheduleTurnover(1, 0.2f); // the bots attack, you defend
 	}
+	APlayerController* SnapPC = GetWorld()->GetFirstPlayerController();
+	if (SnapStage == 0 && SnapMode.StartsWith(TEXT("Tutorial")) && SnapTimer > 2.f && S->Phase == ETaGPhase::Title && SnapPC)
+	{
+		StartTutorial(SnapPC);
+		// -TaGLesson=N shows a later lesson (TutorialDone: the finished screen)
+		int32 Lesson = SnapMode == TEXT("TutorialDone") ? TaGTutorial::Done : 0;
+		FParse::Value(FCommandLine::Get(), TEXT("TaGLesson="), Lesson);
+		for (int32 i = 0; i < Lesson; ++i)
+		{
+			TutorialAdvance(true);
+		}
+	}
+	// -TaGSnap=Trail: a shot from the top in the shooting lesson, photographed mid-flight (the ball trail)
+	if (SnapStage == 0 && SnapMode == TEXT("Trail") && SnapTimer > 2.f && S->Phase == ETaGPhase::Title && SnapPC)
+	{
+		StartTutorial(SnapPC);
+		TutorialAdvance(true);
+	}
+	if (SnapStage == 0 && SnapMode == TEXT("Trail") && SnapTimer > 6.f && SnapTimer - Dt <= 6.f)
+	{
+		if (ATaGCharacter* Shooter = TutorialPlayer())
+		{
+			Shooter->SetThirdPerson(true); // the whole arc in view
+			ResolveShot(Shooter, 0.75f, false);
+		}
+	}
+	if (SnapStage == 0 && SnapMode == TEXT("Settings") && SnapTimer > 2.f)
+	{
+		if (ATaGPlayerController* TPC = Cast<ATaGPlayerController>(SnapPC))
+		{
+			TPC->SetSettingsOpen(true);
+		}
+	}
 	if (SnapStage == 0 && (SnapMode == TEXT("Play") || SnapMode == TEXT("TPS") || SnapMode == TEXT("Results") || SnapMode == TEXT("Defense")) && SnapTimer > 2.f && S->Phase == ETaGPhase::Lobby)
 	{
 		FString HeroKey;
@@ -1353,7 +1711,11 @@ void ATaGGameMode::TickSnap(float Dt)
 		S->Score1 = 7;
 		EndMatch(0);
 	}
-	const float ShotAt = SnapMode == TEXT("Play") || SnapMode == TEXT("TPS") || SnapMode == TEXT("Defense") ? 9.5f : 8.f;
+	float ShotAt = SnapMode == TEXT("Play") || SnapMode == TEXT("TPS") || SnapMode == TEXT("Defense") || SnapMode == TEXT("Tutorial") ? 9.5f : 8.f;
+	if (SnapMode == TEXT("Trail"))
+	{
+		ShotAt = 6.55f;
+	}
 	if (SnapStage == 0 && SnapTimer > ShotAt)
 	{
 		SnapStage = 1;
