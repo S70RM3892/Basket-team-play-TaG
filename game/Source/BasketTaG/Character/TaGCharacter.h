@@ -135,6 +135,8 @@ public:
 	ETaGAction GetAction() const { return Action; }
 	float GetActionTime() const { return ActionT; }
 	bool IsChargingShot() const { return Action == ETaGAction::Shoot; }
+	/** Still on the floor in the dip of a set shot: LB pulls it back into a drive, X into a pass (shot fake). */
+	bool CanFakeShot() const;
 	float GetShotCharge() const { return ShotCharge; }
 	ETaGShotType GetShotType() const { return ShotType; }
 	bool IsContesting() const { return Action == ETaGAction::Contest; }

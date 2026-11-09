@@ -1345,6 +1345,13 @@ void ATaGCharacter::Tick(float DeltaSeconds)
 
 // ================================================================ Inputs
 
+bool ATaGCharacter::CanFakeShot() const
+{
+	return Action == ETaGAction::Shoot && !bShotJumped && !RunUp.bValid
+		&& (ShotType == ETaGShotType::Jumper || ShotType == ETaGShotType::StepBack || ShotType == ETaGShotType::Floater)
+		&& GetCharacterMovement()->IsMovingOnGround();
+}
+
 bool ATaGCharacter::CanUseInput(ETaGInput Input) const
 {
 	const ATaGGameMode* GM = GetWorld() ? GetWorld()->GetAuthGameMode<ATaGGameMode>() : nullptr;
@@ -1357,7 +1364,7 @@ bool ATaGCharacter::CanUseInput(ETaGInput Input) const
 	switch (Input)
 	{
 	case ETaGInput::Primary:
-		if (!bFree) { return false; }
+		if (!bFree) { return MyRole == 1 && CanFakeShot() && IsReady(ETaGSlot::Drive); }
 		if (MyRole == 1) { return IsReady(ETaGSlot::Drive); }
 		if (MyRole == 2) { return IsReady(ETaGSlot::Tackle); }
 		return IsReady(ETaGSlot::Drive);
@@ -1370,7 +1377,7 @@ bool ATaGCharacter::CanUseInput(ETaGInput Input) const
 	case ETaGInput::PassSteal:
 		if (MyRole == 1)
 		{
-			return (bFree || Action == ETaGAction::Gathered || Action == ETaGAction::Drive) && IsReady(ETaGSlot::Pass) && FindBestPassTarget(GetAimDirection()) != nullptr;
+			return (bFree || Action == ETaGAction::Gathered || Action == ETaGAction::Drive || CanFakeShot()) && IsReady(ETaGSlot::Pass) && FindBestPassTarget(GetAimDirection()) != nullptr;
 		}
 		if (MyRole == 2) { return bFree && IsReady(ETaGSlot::Steal); }
 		return false;
@@ -1392,6 +1399,19 @@ void ATaGCharacter::InputPressed(ETaGInput Input)
 		return;
 	}
 	const int32 MyRole = GetRole();
+	if (Action == ETaGAction::Shoot && (Input == ETaGInput::Primary || Input == ETaGInput::PassSteal))
+	{
+		// Shot fake: the ball comes back down before the jump
+		ShotCharge = 0.f;
+		SetAction(ETaGAction::None);
+		if (HasAuthority())
+		{
+			if (ATaGGameMode* GM = GetWorld()->GetAuthGameMode<ATaGGameMode>())
+			{
+				GM->OnShotFake(this, Input == ETaGInput::Primary);
+			}
+		}
+	}
 	switch (Input)
 	{
 	case ETaGInput::Primary:

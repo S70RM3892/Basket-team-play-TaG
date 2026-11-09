@@ -573,6 +573,26 @@ void ATaGBotController::Offense(ATaGCharacter* Me, ATaGBall* Ball, float Dt)
 
 	if (Me->IsChargingShot())
 	{
+		// Hands went up before the jump: pump fake, then drive past them (or kick it out)
+		if (!bFakeDecided && Me->CanFakeShot() && Opp && DOpp < 300.f && (Opp->IsContesting() || Opp->IsContestStarting()))
+		{
+			bFakeDecided = true;
+			if (FMath::FRand() < 0.25f + Skill * 0.5f)
+			{
+				const FVector Side = FVector::CrossProduct(ToRim.GetSafeNormal(), FVector::UpVector) * (FMath::FRand() < 0.5f ? 1.f : -1.f);
+				Wish(Me, ToRim.GetSafeNormal() + Side * 0.8f);
+				if (Me->CanUseInput(ETaGInput::Primary))
+				{
+					Press(Me, ETaGInput::Primary);
+					return;
+				}
+				if (Me->CanUseInput(ETaGInput::PassSteal))
+				{
+					Press(Me, ETaGInput::PassSteal);
+					return;
+				}
+			}
+		}
 		if (Me->GetShotCharge() >= ReleaseAt)
 		{
 			Me->InputReleased(ETaGInput::Shoot);
@@ -943,6 +963,7 @@ void ATaGBotController::StartShot(ATaGCharacter* Me)
 {
 	TryArts(Me, ETaGArtAI::OffenseShoot, 1000.f, 1.f); // shot buffs go up right before the shot
 	ReleaseAt = FMath::Clamp(0.74f + FMath::FRandRange(-1.f, 1.f) * 0.22f * (1.15f - Skill), 0.35f, 1.3f);
+	bFakeDecided = false;
 	Press(Me, ETaGInput::Shoot);
 }
 
@@ -1034,7 +1055,11 @@ void ATaGBotController::DefendBall(ATaGCharacter* Me, ATaGCharacter* Hd, float D
 		switch (Hd->GetAction())
 		{
 		case ETaGAction::Shoot:
-			if (D < 260.f && Me->CanUseInput(ETaGInput::Secondary) && FMath::FRand() < 0.05f + Skill * 0.45f)
+			if (D < 260.f && Me->CanUseInput(ETaGInput::Secondary) && Hd->CanFakeShot() && FMath::FRand() < Skill * 0.5f)
+			{
+				bContestOnJump = true; // do not bite on the dip
+			}
+			else if (D < 260.f && Me->CanUseInput(ETaGInput::Secondary) && FMath::FRand() < 0.05f + Skill * 0.45f)
 			{
 				Queue.Add({ React, EHand::Contest });
 			}
@@ -1057,6 +1082,18 @@ void ATaGBotController::DefendBall(ATaGCharacter* Me, ATaGCharacter* Hd, float D
 			break;
 		default:
 			break;
+		}
+	}
+	if (bContestOnJump)
+	{
+		if (!Hd->IsChargingShot())
+		{
+			bContestOnJump = false; // it was a fake: no hands went up
+		}
+		else if (!Hd->CanFakeShot())
+		{
+			bContestOnJump = false;
+			Queue.Add({ 0.06f, EHand::Contest });
 		}
 	}
 	if (Hd->GetAction() == ETaGAction::Drive && Me->GetAction() == ETaGAction::None)

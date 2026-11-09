@@ -84,6 +84,8 @@ protected:
 	float FadeWait = 0.f;
 	bool bDashShotRolled = false;
 	uint8 ReactedTo = 255;
+	bool bFakeDecided = false;   // this shot: already chose to fake or not
+	bool bContestOnJump = false; // defending: wait for the shooter to leave the floor before the hands go up
 	bool bBlockDecided = false;
 	float CutTimer = 3.f;
 	float CuttingFor = 0.f;

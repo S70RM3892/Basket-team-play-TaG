@@ -64,6 +64,7 @@ public:
 	void OnDriveBeatsContest(ATaGCharacter* Driver, ATaGCharacter* Contester);
 	void OnDriveEnd(ATaGCharacter* Driver);
 	void OnDodgeWhiff(ATaGCharacter* Dodger);
+	void OnShotFake(ATaGCharacter* Shooter, bool bIntoDrive);
 	void OnPullHit(ATaGCharacter* Puller, ATaGCharacter* Target);
 	void OnGuardBreak(ATaGCharacter* Victim);
 	void OnArtUsed(ATaGCharacter* User, ETaGArt Art);

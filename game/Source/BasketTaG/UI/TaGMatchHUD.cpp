@@ -699,6 +699,25 @@ namespace
 		auto At = [](float Charge) { return W * FMath::Clamp(Charge / TaG::ShotAutoRelease, 0.f, 1.f); };
 		return SNew(SVerticalBox)
 			.Visibility_Lambda([PC]() { const ATaGCharacter* Me = GetMe(PC); return Me && Me->IsChargingShot() && Me->GetShotType() != ETaGShotType::AlleyOop ? EVisibility::HitTestInvisible : EVisibility::Collapsed; })
+			+ SVerticalBox::Slot().AutoHeight().HAlign(HAlign_Center).Padding(0.f, 0.f, 0.f, 4.f)
+			[
+				SNew(STextBlock).Font(TaGUI::Font(18.f))
+				.Visibility_Lambda([PC]() { const ATaGCharacter* Me = GetMe(PC); return Me && Me->CanFakeShot() ? EVisibility::HitTestInvisible : EVisibility::Hidden; })
+				.Text_Lambda([PC]()
+				{
+					const ATaGCharacter* Me = GetMe(PC);
+					const ATaGCharacter* O = Me ? Me->FindNearestOpponent(320.f) : nullptr;
+					const bool bUp = O && (O->IsContesting() || O->IsContestStarting());
+					return T(bUp ? TEXT("手が上がった！ LB で突破 / X でパス（フェイク）") : TEXT("跳ぶ前なら LB 突破 / X パスでフェイク"));
+				})
+				.ColorAndOpacity_Lambda([PC]()
+				{
+					const ATaGCharacter* Me = GetMe(PC);
+					const ATaGCharacter* O = Me ? Me->FindNearestOpponent(320.f) : nullptr;
+					const bool bUp = O && (O->IsContesting() || O->IsContestStarting());
+					return FSlateColor(bUp ? FLinearColor(0.35f, 0.85f, 1.f) : FLinearColor(1.f, 1.f, 1.f, 0.6f));
+				})
+			]
 			+ SVerticalBox::Slot().AutoHeight().HAlign(HAlign_Center).Padding(0.f, 0.f, 0.f, 6.f)
 			[
 				SNew(SHorizontalBox)

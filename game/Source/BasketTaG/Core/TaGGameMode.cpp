@@ -933,6 +933,26 @@ void ATaGGameMode::OnDriveEnd(ATaGCharacter* D)
 	}
 }
 
+void ATaGGameMode::OnShotFake(ATaGCharacter* Shooter, bool bIntoDrive)
+{
+	// The read itself (drive > contest) is decided by the drive passing the raised hands; this only tells it
+	bool bBit = false;
+	for (TActorIterator<ATaGCharacter> It(GetWorld()); It; ++It)
+	{
+		if (It->GetTeam() != Shooter->GetTeam() && (It->IsContesting() || It->IsContestStarting())
+			&& FVector::Dist2D(It->GetActorLocation(), Shooter->GetActorLocation()) < 320.f)
+		{
+			bBit = true;
+			break;
+		}
+	}
+	if (bAutoTest)
+	{
+		UE_LOG(LogTaG, Display, TEXT("FAKE %s into %s bit=%d"), Shooter->GetHeroDef().Key, bIntoDrive ? TEXT("drive") : TEXT("pass"), bBit ? 1 : 0);
+	}
+	Popup(bBit ? TEXT("シュートフェイク！ 手が上がった") : TEXT("シュートフェイク"), Shooter->GetTeam());
+}
+
 void ATaGGameMode::OnDodgeWhiff(ATaGCharacter* D)
 {
 	// Spacing > evade: a defender who stayed patient takes the ball from the whiffed spin.
