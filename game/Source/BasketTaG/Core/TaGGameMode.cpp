@@ -2658,7 +2658,7 @@ void ATaGGameMode::TickSnap(float Dt)
 			TPC->SetSettingsOpen(true);
 		}
 	}
-	if (SnapStage == 0 && (SnapMode == TEXT("Play") || SnapMode == TEXT("TPS") || SnapMode == TEXT("Results") || SnapMode == TEXT("Defense") || SnapMode == TEXT("Lineup")) && SnapTimer > 2.f && S->Phase == ETaGPhase::Lobby)
+	if (SnapStage == 0 && (SnapMode == TEXT("Play") || SnapMode == TEXT("TPS") || SnapMode == TEXT("Results") || SnapMode == TEXT("Defense") || SnapMode == TEXT("Lineup") || SnapMode == TEXT("Threat")) && SnapTimer > 2.f && S->Phase == ETaGPhase::Lobby)
 	{
 		FString HeroKey;
 		if (FParse::Value(FCommandLine::Get(), TEXT("TaGHero="), HeroKey))
@@ -2694,6 +2694,26 @@ void ATaGGameMode::TickSnap(float Dt)
 	if (SnapMode == TEXT("Lineup"))
 	{
 		ShotAt = 3.4f; // about 1.3 s into the match, while the lineups are up
+	}
+	if (SnapMode == TEXT("Threat"))
+	{
+		ShotAt = 9.5f;
+		if (SnapStage == 0 && SnapTimer > ShotAt - 0.15f && SnapTimer - Dt <= ShotAt - 0.15f && SnapPC)
+		{
+			ATaGCharacter* Me = Cast<ATaGCharacter>(SnapPC->GetPawn());
+			ATaGCharacter* Opp = Me ? Me->FindNearestOpponent() : nullptr;
+			if (Me && Opp)
+			{
+				FString Side = TEXT("Behind");
+				FParse::Value(FCommandLine::Get(), TEXT("TaGThreatSide="), Side);
+				const FVector Off = Side == TEXT("Right") ? Me->GetActorRightVector() * 260.f : -Me->GetActorForwardVector() * 260.f;
+				const FVector At = Me->GetActorLocation() + Off;
+				Opp->SetActorLocation(At, false, nullptr, ETeleportType::TeleportPhysics);
+				Opp->SetActorRotation((Me->GetActorLocation() - At).GetSafeNormal2D().Rotation());
+				Opp->InputPressed(ETaGInput::Primary);
+				UE_LOG(LogTaG, Display, TEXT("SNAP threat from %s: action=%d"), *Side, static_cast<int32>(Opp->GetAction()));
+			}
+		}
 	}
 	if (SnapStage == 0 && SnapTimer > ShotAt)
 	{

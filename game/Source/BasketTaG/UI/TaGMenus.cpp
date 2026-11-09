@@ -264,7 +264,89 @@ int32 STaGWorldMarkers::OnPaint(const FPaintArgs& Args, const FGeometry& Allotte
 				Sub, SmallFont, ESlateDrawEffect::None, C == PassTarget ? TaG::GoldColor() : FLinearColor::White);
 		}
 	}
-	return LayerId + 2;
+
+	// Tackle warnings (first person sees little to the sides): the orange of the wind-up
+	if (Me)
+	{
+		const FSlateBrush* Bar = FCoreStyle::Get().GetBrush("WhiteBrush");
+		const FLinearColor WarnColor(1.f, 0.45f, 0.05f, 1.f);
+		const FSlateFontInfo WarnFont = TaGUI::Font(22.f);
+		const FVector2f View = FVector2f(AllottedGeometry.GetLocalSize());
+		const float Pulse = 0.75f + 0.25f * FMath::Sin(PC->GetWorld()->GetRealTimeSeconds() * 30.f);
+		for (TActorIterator<ATaGCharacter> It(PC->GetWorld()); It; ++It)
+		{
+			const ATaGCharacter* C = *It;
+			if (!C->IsTackleThreatTo(Me))
+			{
+				continue;
+			}
+			FVector2D Screen;
+			const FVector Chest = C->GetActorLocation() + FVector(0.f, 0.f, 40.f);
+			const bool bProj = PC->ProjectWorldLocationToScreen(Chest, Screen, true);
+			const FVector2f Local(Screen.X / Scale, Screen.Y / Scale);
+			const bool bOnScreen = bProj && Local.X > 40.f && Local.X < View.X - 40.f && Local.Y > 40.f && Local.Y < View.Y - 40.f;
+			const FString Warn = TEXT("タックル！");
+			const float WarnW = (float)Measure->Measure(Warn, WarnFont).X;
+			if (bOnScreen)
+			{
+				FSlateDrawElement::MakeText(OutDrawElements, LayerId + 2,
+					AllottedGeometry.ToPaintGeometry(FVector2f(WarnW, 30.f), FSlateLayoutTransform(Local - FVector2f(WarnW * 0.5f, 90.f))),
+					Warn, WarnFont, ESlateDrawEffect::None, WarnColor.CopyWithNewOpacity(Pulse));
+				continue;
+			}
+			// Off screen: which side, from the view direction
+			const FVector To = (C->GetActorLocation() - Me->GetActorLocation()).GetSafeNormal2D();
+			const float Delta = FMath::FindDeltaAngleDegrees(PC->GetControlRotation().Yaw, To.Rotation().Yaw);
+			const float Thick = 22.f;
+			FVector2f BarAt, BarSize, TextAt;
+			FString Label;
+			if (FMath::Abs(Delta) > 135.f)
+			{
+				BarAt = FVector2f(0.f, View.Y - Thick);
+				BarSize = FVector2f(View.X, Thick);
+				Label = TEXT("▼ 後ろからタックル！");
+				const float W = (float)Measure->Measure(Label, WarnFont).X;
+				TextAt = FVector2f(View.X * 0.5f - W * 0.5f, View.Y - Thick - 44.f);
+			}
+			else if (Delta > 0.f)
+			{
+				BarAt = FVector2f(View.X - Thick, 0.f);
+				BarSize = FVector2f(Thick, View.Y);
+				Label = TEXT("タックル！ ▶");
+				const float W = (float)Measure->Measure(Label, WarnFont).X;
+				TextAt = FVector2f(View.X - Thick - 16.f - W, View.Y * 0.5f - 15.f);
+			}
+			else
+			{
+				BarAt = FVector2f(0.f, 0.f);
+				BarSize = FVector2f(Thick, View.Y);
+				Label = TEXT("◀ タックル！");
+				TextAt = FVector2f(Thick + 16.f, View.Y * 0.5f - 15.f);
+			}
+			// The bar fades inward in three steps (a soft edge glow)
+			for (int32 k = 0; k < 3; ++k)
+			{
+				const float F = 1.f - k * 0.33f;
+				FVector2f At = BarAt, Sz = BarSize;
+				if (BarSize.X < BarSize.Y)
+				{
+					Sz.X = Thick * F;
+					if (BarAt.X > 0.f) { At.X = View.X - Sz.X; }
+				}
+				else
+				{
+					Sz.Y = Thick * F;
+					At.Y = View.Y - Sz.Y;
+				}
+				FSlateDrawElement::MakeBox(OutDrawElements, LayerId + 2, AllottedGeometry.ToPaintGeometry(Sz, FSlateLayoutTransform(At)),
+					Bar, ESlateDrawEffect::None, WarnColor.CopyWithNewOpacity(0.28f * Pulse));
+			}
+			FSlateDrawElement::MakeText(OutDrawElements, LayerId + 3,
+				AllottedGeometry.ToPaintGeometry(FVector2f(400.f, 30.f), FSlateLayoutTransform(TextAt)),
+				Label, WarnFont, ESlateDrawEffect::None, WarnColor.CopyWithNewOpacity(Pulse));
+		}
+	}
+	return LayerId + 4;
 }
 
 // ================================================================ Title

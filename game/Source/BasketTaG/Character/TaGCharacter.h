@@ -153,6 +153,8 @@ public:
 	bool IsTetheredWith(const ATaGCharacter* Other) const;
 	bool IsForcedMove() const;
 	bool IsPretelling(uint8& OutKind) const;
+	/** Winding up (or telegraphing) a tackle at Target, close enough and facing it: the warning the target gets. */
+	bool IsTackleThreatTo(const ATaGCharacter* Target) const;
 	float GetCooldownLeft(ETaGSlot Slot) const;
 	float GetCooldownFraction(ETaGSlot Slot) const;
 	float GetGuard() const { return Guard; }

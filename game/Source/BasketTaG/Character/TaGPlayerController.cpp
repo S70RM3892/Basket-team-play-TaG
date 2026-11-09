@@ -243,6 +243,26 @@ void ATaGPlayerController::Tick(float DeltaSeconds)
 	}
 	const ATaGGameState* GS = GetWorld()->GetGameState<ATaGGameState>();
 	const bool bPlaying = GS && GS->Phase == ETaGPhase::Playing;
+	// A tackle winding up at me: a cue sound and a short rumble, so it can be answered even from outside the view
+	if (ATaGCharacter* Me = bPlaying ? Cast<ATaGCharacter>(GetPawn()) : nullptr)
+	{
+		bool bThreat = false;
+		for (TActorIterator<ATaGCharacter> It(GetWorld()); It; ++It)
+		{
+			if (It->IsTackleThreatTo(Me))
+			{
+				bThreat = true;
+				break;
+			}
+		}
+		if (bThreat && !bThreatCued)
+		{
+			TaGAudio::Play2D(this, TEXT("TackleCue"), 0.9f);
+			Feedback(0.3f, 0.12f, 0.f);
+			UE_LOG(LogTemp, Display, TEXT("THREATCUE tackle at %s"), Me->GetHeroDef().Key);
+		}
+		bThreatCued = bThreat;
+	}
 	if (!bPlaying && bPauseMenu)
 	{
 		bPauseMenu = false;

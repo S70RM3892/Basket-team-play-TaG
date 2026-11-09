@@ -101,6 +101,7 @@ public:
 	UPROPERTY(Config) float MasterVolume = 1.f;
 	UPROPERTY(Config) float MusicVolume = 0.6f;
 	UPROPERTY(Config) bool bVibration = true;
+	bool bThreatCued = false;
 	UPROPERTY(Config) bool bTutorialDone = false;
 	UPROPERTY(Config) FString LastJoinAddress = TEXT("127.0.0.1");
 

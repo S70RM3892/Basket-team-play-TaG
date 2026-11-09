@@ -51,7 +51,7 @@ namespace TaG
 	constexpr float DodgeSpeed = 350.f;
 	constexpr float DodgeRecoverT = 0.35f;
 	constexpr float DodgeCD = 4.f;
-	constexpr float TackleStartT = 0.15f;
+	constexpr float TackleStartT = 0.3f;
 	constexpr float TackleT = 0.25f;
 	constexpr float TackleSpeed = 650.f;
 	constexpr float TackleRecoverT = 0.5f;

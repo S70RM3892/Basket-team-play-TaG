@@ -463,6 +463,23 @@ bool ATaGCharacter::IsScoped() const { return ServerNow() < ScopeEnd; }
 bool ATaGCharacter::IsCatchAndShoot() const { return ServerNow() < CatchShootEnd; }
 bool ATaGCharacter::IsSpottingUp() const { return ServerNow() < SpotUpEnd; }
 
+bool ATaGCharacter::IsTackleThreatTo(const ATaGCharacter* Target) const
+{
+	if (!Target || Target == this || Target->GetTeam() == Team)
+	{
+		return false;
+	}
+	uint8 Tell = 0;
+	if (Action != ETaGAction::TackleStart && !(IsPretelling(Tell) && Tell == 1))
+	{
+		return false;
+	}
+	FVector To = Target->GetActorLocation() - GetActorLocation();
+	To.Z = 0.f;
+	const float D = To.Size();
+	return D < 650.f && (D < 60.f || FVector::DotProduct(To / D, GetActorForwardVector()) > 0.5f);
+}
+
 void ATaGCharacter::MarkEvaded()
 {
 	if (bDodgeEvaded)
